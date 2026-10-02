@@ -1,0 +1,17 @@
+/* ==========================================================================
+   MAIN APPLICATION STYLES (BOOTSTRAP ENVIRONMENT)
+   ========================================================================== */
+
+/* Import Bootstrap Icons (kung kailangan sa views) */
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+/* Custom Global Styling */
+:root {
+    --bs-body-font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    --bs-body-bg: #f8fafc;
+}
+
+body {
+    background-color: var(--bs-body-bg);
+    font-family: var(--bs-body-font-family);
+}

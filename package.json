@@ -1,0 +1,13 @@
+{
+  "name": "e-poblacion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "e-Poblacion — Barangay Information System (Laravel/Blade).",
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist && cp -r public/* dist/ && echo \"Built static preview into dist/\"",
+    "dev": "echo \"Run: php artisan serve\" && exit 0"
+  },
+  "dependencies": {
+    "concurrently": "^10.0.3"
+  }
+}

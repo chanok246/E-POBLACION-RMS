@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="e-Poblacion — Record Management System for Barangay Poblacion, Bani, Pangasinan."
+    >
+
+    <title>
+        e-Poblacion | Record Management System
+    </title>
+
+    <link
+        rel="icon"
+        type="image/png"
+        href="public/icon.png"
+    >
+
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="css/login.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- ============================================================
+     HERO CAROUSEL
+     ============================================================ -->
+
+<section
+    class="hero"
+    id="top"
+    aria-label="e-Poblacion welcome carousel"
+>
+
+
+    <div
+        class="carousel"
+        id="carousel"
+    >
+
+
+        <!-- ====================================================
+             SLIDE 1 — BARANGAY HALL
+             ==================================================== -->
+
+        <div
+            class="slide is-active"
+            aria-hidden="false"
+            data-slide="0"
+        >
+
+            <img
+                class="slide-media"
+                src="images/brgy.png"
+                alt="Barangay Poblacion Hall"
+            >
+
+            <div class="slide-content">
+
+                <span class="slide-eyebrow">
+                    Barangay Poblacion · Bani, Pangasinan
+                </span>
+
+                <h2 class="slide-title">
+
+                    Welcome to
+
+                    <span class="gradient-e">
+                        e
+                    </span>-Poblacion
+
+                </h2>
+
+                <p class="slide-subtitle">
+                    A digital Record Management System designed
+                    to help Barangay Poblacion manage records,
+                    services, and community information efficiently.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             SLIDE 2 — BARANGAY PERSONNEL
+             ==================================================== -->
+
+        <div
+            class="slide"
+            aria-hidden="true"
+            data-slide="1"
+        >
+
+            <img
+                class="slide-media"
+                src="images/barangay-personnel.jpg"
+                alt="Barangay personnel"
+            >
+
+            <div class="slide-content">
+
+                <span class="slide-eyebrow">
+                    Barangay Personnel
+                </span>
+
+                <h2 class="slide-title">
+                    Serving the Community
+                </h2>
+
+                <p class="slide-subtitle">
+                    Supporting Barangay Poblacion personnel through
+                    organized records, faster transactions,
+                    and accessible digital information.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             SLIDE 3 — SK PERSONNEL
+             ==================================================== -->
+
+        <div
+            class="slide"
+            aria-hidden="true"
+            data-slide="2"
+        >
+
+            <img
+                class="slide-media"
+                src="images/sk-personnel.jpg"
+                alt="Sangguniang Kabataan personnel"
+            >
+
+            <div class="slide-content">
+
+                <span class="slide-eyebrow">
+                    Sangguniang Kabataan
+                </span>
+
+                <h2 class="slide-title">
+                    Empowering the Youth
+                </h2>
+
+                <p class="slide-subtitle">
+                    Helping support youth programs, activities,
+                    community participation, and organized
+                    barangay records.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             SLIDE 4 — DIGITAL RECORDS
+             ==================================================== -->
+
+        <div
+            class="slide"
+            aria-hidden="true"
+            data-slide="3"
+        >
+
+            <img
+                class="slide-media"
+                src="images/community-event.jpg"
+                alt="Barangay community activity"
+            >
+
+            <div class="slide-content">
+
+                <span class="slide-eyebrow">
+                    Digital Records
+                </span>
+
+                <h2 class="slide-title">
+                    Organized. Accessible. Efficient.
+                </h2>
+
+                <p class="slide-subtitle">
+                    Manage residents, households, clearances,
+                    certificates, reports, and other barangay
+                    records through one centralized system.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             SLIDE 5 — SERVICES
+             ==================================================== -->
+
+        <div
+            class="slide"
+            aria-hidden="true"
+            data-slide="4"
+        >
+
+            <img
+                class="slide-media"
+                src="images/local-scenery.jpg"
+                alt="Barangay Poblacion community"
+            >
+
+            <div class="slide-content">
+
+                <span class="slide-eyebrow">
+                    Barangay Services
+                </span>
+
+                <h2 class="slide-title">
+                    Better Records, Better Service
+                </h2>
+
+                <p class="slide-subtitle">
+                    e-Poblacion brings barangay records and
+                    administrative services together in one
+                    modern digital platform.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================================
+         PREVIOUS
+         ======================================================== -->
+
+    <button
+        class="carousel-nav prev"
+        id="carouselPrev"
+        type="button"
+        aria-label="Previous slide"
+    >
+
+        <i class="bi bi-chevron-left"></i>
+
+    </button>
+
+
+    <!-- ========================================================
+         NEXT
+         ======================================================== -->
+
+    <button
+        class="carousel-nav next"
+        id="carouselNext"
+        type="button"
+        aria-label="Next slide"
+    >
+
+        <i class="bi bi-chevron-right"></i>
+
+    </button>
+
+
+    <!-- ========================================================
+         INDICATORS
+         ======================================================== -->
+
+    <ul
+        class="carousel-indicators"
+        id="carouselIndicators"
+        role="tablist"
+        aria-label="Carousel navigation"
+    >
+
+        <li role="presentation">
+
+            <button
+                type="button"
+                role="tab"
+                class="is-active"
+                aria-label="Go to slide 1"
+                aria-selected="true"
+                data-slide-to="0"
+            ></button>
+
+        </li>
+
+
+        <li role="presentation">
+
+            <button
+                type="button"
+                role="tab"
+                aria-label="Go to slide 2"
+                aria-selected="false"
+                data-slide-to="1"
+            ></button>
+
+        </li>
+
+
+        <li role="presentation">
+
+            <button
+                type="button"
+                role="tab"
+                aria-label="Go to slide 3"
+                aria-selected="false"
+                data-slide-to="2"
+            ></button>
+
+        </li>
+
+
+        <li role="presentation">
+
+            <button
+                type="button"
+                role="tab"
+                aria-label="Go to slide 4"
+                aria-selected="false"
+                data-slide-to="3"
+            ></button>
+
+        </li>
+
+
+        <li role="presentation">
+
+            <button
+                type="button"
+                role="tab"
+                aria-label="Go to slide 5"
+                aria-selected="false"
+                data-slide-to="4"
+            ></button>
+
+        </li>
+
+    </ul>
+
+
+    <!-- ========================================================
+         SCROLL TO LOGIN
+         ======================================================== -->
+
+    <button
+        class="scroll-indicator"
+        id="scrollIndicator"
+        type="button"
+        aria-label="Scroll to login section"
+    >
+
+        <span>
+            Scroll to Explore
+        </span>
+
+        <span
+            class="mouse"
+            aria-hidden="true"
+        ></span>
+
+    </button>
+
+</section>
+
+
+<!-- ============================================================
+     LOGIN
+     ============================================================ -->
+
+<section
+    class="login-section"
+    id="login"
+    aria-label="Personnel sign in"
+>
+
+
+    <div class="login-card reveal">
+
+
+        <div class="login-brand">
+
+            <img
+                class="login-logo"
+                src="icon.png"
+                alt="e-Poblacion logo"
+            >
+
+            <h1>
+                e-Poblacion
+            </h1>
+
+            <p class="tagline">
+                Barangay Record Management System
+            </p>
+
+            <p class="welcome">
+                Official portal for Barangay Poblacion personnel.
+            </p>
+
+            <span class="portal-badge">
+
+                <i class="bi bi-shield-lock"></i>
+
+                <span>
+                    Administrator &amp; Staff Access Only
+                </span>
+
+            </span>
+
+        </div>
+
+
+        <!-- ROLE SELECTOR -->
+
+        <div
+            class="role-selector"
+            role="radiogroup"
+            aria-label="Select your role"
+        >
+
+            <span class="role-selector-label">
+                Sign in as
+            </span>
+
+
+            <div class="role-pills">
+
+
+                <button
+                    type="button"
+                    class="role-pill is-active"
+                    data-role="captain"
+                    role="radio"
+                    aria-checked="true"
+                >
+
+                    <i class="bi bi-person-badge"></i>
+
+                    <span>
+                        Captain
+                    </span>
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="role-pill"
+                    data-role="secretary"
+                    role="radio"
+                    aria-checked="false"
+                >
+
+                    <i class="bi bi-journal-text"></i>
+
+                    <span>
+                        Secretary
+                    </span>
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="role-pill"
+                    data-role="treasurer"
+                    role="radio"
+                    aria-checked="false"
+                >
+
+                    <i class="bi bi-cash-coin"></i>
+
+                    <span>
+                        Treasurer
+                    </span>
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="role-pill"
+                    data-role="staff"
+                    role="radio"
+                    aria-checked="false"
+                >
+
+                    <i class="bi bi-people"></i>
+
+                    <span>
+                        Staff
+                    </span>
+
+                </button>
+
+
+            </div>
+
+
+            <input
+                type="hidden"
+                name="role"
+                id="role"
+                value="captain"
+            >
+
+        </div>
+
+
+        <!-- STATIC PREVIEW LOGIN FORM -->
+
+        <form
+            method="POST"
+            action="/login"
+            novalidate
+        >
+
+
+            <!-- EMAIL -->
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="email"
+                >
+                    Email Address
+                </label>
+
+
+                <div class="input-wrap">
+
+                    <i
+                        class="bi bi-envelope input-icon left"
+                        aria-hidden="true"
+                    ></i>
+
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        class="form-input has-icon-left"
+                        placeholder="you@example.com"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- PASSWORD -->
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="password"
+                >
+                    Password
+                </label>
+
+
+                <div class="input-wrap">
+
+                    <i
+                        class="bi bi-lock input-icon left"
+                        aria-hidden="true"
+                    ></i>
+
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        class="form-input has-icon-left has-icon-right"
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+
+                    <button
+                        type="button"
+                        id="togglePassword"
+                        class="input-icon right"
+                        aria-label="Show or hide password"
+                    >
+
+                        <i
+                            id="togglePasswordIcon"
+                            class="bi bi-eye"
+                        ></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- REMEMBER -->
+
+            <div class="form-row">
+
+                <label class="checkbox-wrap">
+
+                    <input
+                        type="checkbox"
+                        name="remember"
+                        id="remember"
+                    >
+
+                    <span>
+                        Remember me
+                    </span>
+
+                </label>
+
+
+                <a
+                    class="forgot-link"
+                    href="#"
+                >
+                    Forgot Password?
+                </a>
+
+            </div>
+
+
+            <!-- SIGN IN -->
+
+            <button
+                type="submit"
+                class="btn-primary"
+            >
+
+                <i class="bi bi-box-arrow-in-right"></i>
+
+                <span>
+                    Sign In
+                </span>
+
+            </button>
+
+
+            <p class="signup-link">
+
+                <i class="bi bi-lock-fill"></i>
+
+                Authorized Barangay Poblacion personnel only.
+
+            </p>
+
+
+        </form>
+
+
+        <!-- RESIDENT PORTAL -->
+
+        <div class="residents-note">
+
+            <i class="bi bi-info-circle"></i>
+
+            <span>
+
+                Are you a resident?
+
+                Resident services are available separately.
+
+                <a href="#">
+                    Go to resident portal
+                </a>
+
+            </span>
+
+        </div>
+
+
+    </div>
+
+</section>
+
+
+<!-- ============================================================
+     TERMS & PRIVACY
+     ============================================================ -->
+
+<section
+    class="privacy-section"
+    id="privacy"
+    aria-label="Terms and privacy"
+>
+
+
+    <div class="privacy-inner">
+
+
+        <p class="section-eyebrow reveal">
+            Your Privacy Matters
+        </p>
+
+
+        <h2 class="section-title reveal">
+            Terms &amp; Privacy
+        </h2>
+
+
+        <p class="section-subtitle reveal">
+            We respect your data. Review the policies and notices
+            that govern how your information is handled.
+        </p>
+
+
+        <div class="privacy-grid">
+
+
+            <div class="privacy-card reveal">
+
+                <div class="pc-icon">
+                    <i class="bi bi-file-text"></i>
+                </div>
+
+                <h3>
+                    Terms &amp; Conditions
+                </h3>
+
+                <p>
+                    The rules and guidelines for using
+                    e-Poblacion services.
+                </p>
+
+                <a href="#">
+                    Read terms &rarr;
+                </a>
+
+            </div>
+
+
+            <div class="privacy-card reveal">
+
+                <div class="pc-icon">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+
+                <h3>
+                    Privacy Policy
+                </h3>
+
+                <p>
+                    How we collect, use, and protect
+                    your personal information.
+                </p>
+
+                <a href="#">
+                    Read policy &rarr;
+                </a>
+
+            </div>
+
+
+            <div class="privacy-card reveal">
+
+                <div class="pc-icon">
+                    <i class="bi bi-info-circle"></i>
+                </div>
+
+                <h3>
+                    Data Privacy Notice
+                </h3>
+
+                <p>
+                    A plain-language summary of your rights
+                    under Philippine data privacy law.
+                </p>
+
+                <a href="#privacy-notice">
+                    Read notice &rarr;
+                </a>
+
+            </div>
+
+
+            <div class="privacy-card reveal">
+
+                <div class="pc-icon">
+                    <i class="bi bi-telephone"></i>
+                </div>
+
+                <h3>
+                    Contact Barangay
+                </h3>
+
+                <p>
+                    Reach the Barangay Poblacion office
+                    for inquiries and assistance.
+                </p>
+
+                <a href="#">
+                    Contact us &rarr;
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <div
+            class="privacy-notice reveal"
+            id="privacy-notice"
+        >
+
+            <h2>
+                Data Privacy Notice
+            </h2>
+
+            <p class="pn-sub">
+                Barangay Poblacion, Bani, Pangasinan
+            </p>
+
+
+            <p>
+                e-Poblacion collects and processes personal information
+                to deliver barangay services such as resident records,
+                document requests, certifications, and community programs.
+            </p>
+
+
+            <ul>
+
+                <li>
+                    Full name
+                </li>
+
+                <li>
+                    Address and household details
+                </li>
+
+                <li>
+                    Contact information
+                </li>
+
+                <li>
+                    Valid identification documents
+                </li>
+
+                <li>
+                    Selfie or identity verification information
+                </li>
+
+            </ul>
+
+
+            <p>
+                Your personal data is collected only for legitimate
+                barangay purposes and is handled in accordance with
+                applicable Philippine data privacy requirements,
+                including the Data Privacy Act of 2012.
+            </p>
+
+
+            <p>
+                You have the right to be informed, to access,
+                and to request the correction of your personal data.
+            </p>
+
+
+            <p class="pn-disclaimer">
+                This notice is provided for general information and does not
+                constitute a certified legal compliance statement.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+
+<footer class="site-footer">
+
+
+    <div class="footer-grid">
+
+
+        <div class="footer-brand">
+
+            <h3>
+                e-Poblacion
+            </h3>
+
+            <p>
+                Barangay Record Management System
+            </p>
+
+            <p class="locale">
+                Barangay Poblacion<br>
+                Bani, Pangasinan, Philippines
+            </p>
+
+        </div>
+
+
+        <div class="footer-col">
+
+            <h4>
+                Quick Links
+            </h4>
+
+            <ul>
+
+                <li>
+                    <a href="#top">
+                        Home
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#login">
+                        Login
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#">
+                        Resident Portal
+                    </a>
+                </li>
+
+            </ul>
+
+        </div>
+
+
+        <div class="footer-col">
+
+            <h4>
+                Legal
+            </h4>
+
+            <ul>
+
+                <li>
+                    <a href="#">
+                        Terms &amp; Conditions
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#">
+                        Privacy Policy
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#privacy">
+                        Data Privacy
+                    </a>
+                </li>
+
+            </ul>
+
+        </div>
+
+    </div>
+
+
+    <div class="footer-bottom">
+
+        &copy; 2026 e-Poblacion.
+        All rights reserved.
+
+    </div>
+
+</footer>
+
+
+<!-- ============================================================
+     SCROLL TO TOP
+     ============================================================ -->
+
+<button
+    class="scroll-top"
+    id="scrollTop"
+    type="button"
+    aria-label="Scroll to top"
+>
+
+    <i class="bi bi-arrow-up"></i>
+
+</button>
+
+
+<script src="js/login.js"></script>
+
+</body>
+
+</html>
