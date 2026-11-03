@@ -143,9 +143,9 @@
         <a href="{{ route('relief-vouchers.index') }}" class="{{ $active === 'overview' ? 'is-on' : '' }}" @if($active === 'overview') aria-current="page" @endif>
             <i class="bi bi-grid-1x2"></i><span>Overview</span>
         </a>
-        <a href="{{ route('relief-assistance.masterlist') }}" class="{{ $active === 'masterlist' ? 'is-on' : '' }}">
+        {{-- <a href="{{ route('relief-assistance.masterlist') }}" class="{{ $active === 'masterlist' ? 'is-on' : '' }}">
             <i class="bi bi-list-check"></i><span>Masterlist</span>
-        </a>
+        </a> --}}
         <a href="{{ route('relief-vouchers.qr-verification') }}" class="{{ $active === 'scan' ? 'is-on' : '' }}" @if($active === 'scan') aria-current="page" @endif>
             <i class="bi bi-qr-code-scan"></i><span>Scan QR</span>
         </a>

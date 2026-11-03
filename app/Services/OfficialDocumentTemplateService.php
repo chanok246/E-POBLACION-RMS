@@ -131,6 +131,19 @@ class OfficialDocumentTemplateService
             : [];
 
         /*
+         * Barangay Clearance CTC number.
+         *
+         * The Create form submits this as:
+         * document_details[ctc_number]
+         *
+         * Keep it as a string because CTC numbers may contain
+         * leading zeroes or formatting characters.
+         */
+        $ctcNumber = trim((string) (
+            $documentDetails['ctc_number'] ?? ''
+        ));
+
+        /*
          * Compute resident age from birth date.
          */
         $age = null;
@@ -358,6 +371,11 @@ class OfficialDocumentTemplateService
             'remarks' => (string) (
                 $document->remarks ?? ''
             ),
+
+            /*
+             * Barangay Clearance.
+             */
+            'ctc_number' => $ctcNumber,
 
             /*
              * Certificate of Residency.
@@ -1153,6 +1171,23 @@ class OfficialDocumentTemplateService
             '7th day of September 2026',
             $this->ordinalDatePhrase()
         );
+
+        /*
+         * CTC number printed on page 2 of the official template.
+         *
+         * The label is split across Word runs ("CTC NUMBER" and ":"),
+         * so replaceAcrossRuns() is used to match the visible label
+         * without rebuilding the paragraph or changing the layout.
+         *
+         * If the field is blank, leave the original label unchanged.
+         */
+        if (trim((string) ($values['ctc_number'] ?? '')) !== '') {
+            $this->replaceAcrossRuns(
+                $xpath,
+                'CTC NUMBER:',
+                'CTC NUMBER: ' . trim((string) $values['ctc_number'])
+            );
+        }
 
         $this->setParagraphAlignmentContaining(
             $xpath,

@@ -78,6 +78,11 @@ return [
     | Resetting Passwords
     |--------------------------------------------------------------------------
     |
+    | NOTE: e-Poblacion does not use Laravel's emailed reset links (they need
+    | SMTP/internet, which the offline RMS cannot rely on). This broker config
+    | is kept only so framework defaults stay valid. Do not route a public
+    | reset flow through it.
+    |
     | These configuration options specify the behavior of Laravel's password
     | reset functionality, including the table utilized for token storage
     | and the user provider that is invoked to actually retrieve users.

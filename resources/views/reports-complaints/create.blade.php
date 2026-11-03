@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 rc-create">
 
     {{-- ================================================================
          PAGE HEADER
@@ -293,7 +293,7 @@
                     </select>
 
                     <div class="form-text">
-                        Select the person from the official Poblacion resident records.
+                        Type a name or address to search, or choose from the list of official Poblacion resident records.
                     </div>
 
                 </div>
@@ -575,7 +575,7 @@
                     </select>
 
                     <div class="form-text">
-                        Select the respondent from the official Poblacion resident records.
+                        Type a name or address to search, or choose from the list of official Poblacion resident records.
                     </div>
 
                 </div>
@@ -945,56 +945,21 @@
                             <span class="text-danger">*</span>
                         </label>
 
-                        <select
+                        <input
+                            type="text"
                             name="category"
                             id="category"
-                            class="form-select"
+                            class="form-control"
+                            value="{{ old('category') }}"
+                            placeholder="Choose from the list or type your own category"
+                            maxlength="100"
+                            autocomplete="off"
                             required
                         >
 
-                            <option value="">
-                                -- Select Category --
-                            </option>
-
-                            <optgroup
-                                label="Community Report"
-                                id="communityCategoryGroup"
-                            >
-
-                                @foreach ($communityCategories as $category)
-
-                                    <option
-                                        value="{{ $category }}"
-                                        data-report-type="community"
-                                        {{ old('category') === $category ? 'selected' : '' }}
-                                    >
-                                        {{ $category }}
-                                    </option>
-
-                                @endforeach
-
-                            </optgroup>
-
-                            <optgroup
-                                label="Person Complaint"
-                                id="personCategoryGroup"
-                            >
-
-                                @foreach ($personCategories as $category)
-
-                                    <option
-                                        value="{{ $category }}"
-                                        data-report-type="person"
-                                        {{ old('category') === $category ? 'selected' : '' }}
-                                    >
-                                        {{ $category }}
-                                    </option>
-
-                                @endforeach
-
-                            </optgroup>
-
-                        </select>
+                        <div class="form-text">
+                            Pick a suggested category or type your own.
+                        </div>
 
                     </div>
 
@@ -1143,9 +1108,89 @@
 
             <div class="card-body px-4 pb-4">
 
-                <div class="row g-3">
+                @php
+                    /*
+                     * Purok list clean-up (display only):
+                     *  - a stand-alone "Centro" entry is merged into Purok 1
+                     *    and shown as "Purok 1 - Centro"
+                     *  - Barangay Poblacion has 7 puroks, so Purok 1 to 7 are
+                     *    always listed. Any purok missing from $puroks is added
+                     *    using the same value format as the existing ones.
+                     *  - options are listed in order: Purok 1, 2, 3 ... 7
+                     * The submitted value is still the value that comes from
+                     * $puroks (or the generated one for a missing purok).
+                     */
+                    $totalPuroks = 7;
 
-                    {{-- Purok --}}
+                    $isCentro = fn ($p) => (bool) preg_match('/^\s*(centro|sentro)\s*$/i', (string) $p);
+
+                    $isPurokOne = fn ($p) => (bool) preg_match('/^\s*(purok\s*)?(1|uno)\s*([-,]?\s*(centro|sentro))?\s*$/i', (string) $p);
+
+                    $hasPurokOne = collect($puroks)->contains(fn ($p) => $isPurokOne($p));
+
+                    $purokOptions = [];
+
+                    foreach ($puroks as $p) {
+
+                        if ($isCentro($p)) {
+
+                            if ($hasPurokOne) {
+                                continue;
+                            }
+
+                            $purokOptions[] = ['value' => $p, 'label' => 'Purok 1 - Centro', 'order' => 1];
+
+                        } elseif ($isPurokOne($p)) {
+
+                            $purokOptions[] = ['value' => $p, 'label' => 'Purok 1 - Centro', 'order' => 1];
+
+                        } else {
+
+                            preg_match('/\d+/', (string) $p, $purokNumber);
+
+                            $purokOptions[] = [
+                                'value' => $p,
+                                'label' => $p,
+                                'order' => isset($purokNumber[0]) ? (int) $purokNumber[0] : 999,
+                            ];
+                        }
+                    }
+
+                    /*
+                     * Make sure Purok 1 to Purok 7 all exist.
+                     */
+                    $presentNumbers = collect($purokOptions)->pluck('order')->all();
+
+                    $purokPrefix = 'Purok ';
+                    $purokSuffix = '';
+
+                    $samplePurok = collect($puroks)->first(
+                        fn ($p) => ! $isCentro($p) && preg_match('/\d+/', (string) $p)
+                    );
+
+                    if ($samplePurok && preg_match('/^(\D*?)\d+(\D*)$/', trim((string) $samplePurok), $sampleParts)) {
+                        $purokPrefix = $sampleParts[1];
+                        $purokSuffix = $sampleParts[2];
+                    }
+
+                    for ($n = 1; $n <= $totalPuroks; $n++) {
+
+                        if (! in_array($n, $presentNumbers, true)) {
+
+                            $purokOptions[] = [
+                                'value' => $purokPrefix . $n . $purokSuffix,
+                                'label' => $n === 1 ? 'Purok 1 - Centro' : 'Purok ' . $n,
+                                'order' => $n,
+                            ];
+                        }
+                    }
+
+                    $purokOptions = collect($purokOptions)->sortBy('order')->values()->all();
+                @endphp
+
+                {{-- Row 1: Purok (editable) --}}
+                <div class="row g-3 mb-3">
+
                     <div class="col-md-4">
 
                         <label
@@ -1167,150 +1212,135 @@
                                 -- Select Purok --
                             </option>
 
-                            @foreach ($puroks as $purok)
+                            @foreach ($purokOptions as $purokOption)
 
                                 <option
-                                    value="{{ $purok }}"
-                                    {{ old('purok') === $purok ? 'selected' : '' }}
+                                    value="{{ $purokOption['value'] }}"
+                                    {{ old('purok') === $purokOption['value'] ? 'selected' : '' }}
                                 >
-                                    {{ $purok }}
+                                    {{ $purokOption['label'] }}
                                 </option>
 
                             @endforeach
 
                         </select>
+
+                        <div class="form-text">
+                            Choose where in Poblacion the incident happened.
+                        </div>
 
                     </div>
 
+                </div>
 
-                    {{-- Barangay --}}
-                    <div class="col-md-4">
 
-                        <label
-                            for="barangay"
-                            class="form-label fw-semibold"
-                        >
-                            Barangay
-                        </label>
+                {{-- Row 2: Fixed location (read-only) --}}
+                <div class="rc-fixed-group">
 
-                        <select
-                            name="barangay"
-                            id="barangay"
-                            class="form-select"
-                            required
-                        >
-
-                            @foreach ($barangays as $barangay)
-
-                                <option
-                                    value="{{ $barangay }}"
-                                    {{ old('barangay', 'Poblacion') === $barangay ? 'selected' : '' }}
-                                >
-                                    {{ $barangay }}
-                                </option>
-
-                            @endforeach
-
-                        </select>
-
+                    <div class="rc-fixed-title">
+                        <i class="bi bi-lock-fill me-1"></i>
+                        Fixed location
+                        <span class="rc-fixed-note">
+                            Set automatically, this system covers one barangay only.
+                        </span>
                     </div>
 
+                    <div class="row g-3">
 
-                    {{-- Municipality --}}
-                    <div class="col-md-4">
+                        {{-- Barangay (fixed) --}}
+                        <div class="col-md-4">
 
-                        <label
-                            for="municipality"
-                            class="form-label fw-semibold"
-                        >
-                            Municipality
-                        </label>
+                            <label
+                                for="barangay"
+                                class="form-label fw-semibold"
+                            >
+                                Barangay
+                            </label>
 
-                        <select
-                            name="municipality"
-                            id="municipality"
-                            class="form-select"
-                            required
-                        >
+                            <input
+                                type="text"
+                                name="barangay"
+                                id="barangay"
+                                class="form-control rc-fixed"
+                                value="Poblacion"
+                                readonly
+                                tabindex="-1"
+                                required
+                            >
 
-                            @foreach ($municipalities as $municipality)
-
-                                <option
-                                    value="{{ $municipality }}"
-                                    {{ old('municipality', 'Bani') === $municipality ? 'selected' : '' }}
-                                >
-                                    {{ $municipality }}
-                                </option>
-
-                            @endforeach
-
-                        </select>
-
-                    </div>
+                        </div>
 
 
-                    {{-- Province --}}
-                    <div class="col-md-4">
+                        {{-- Municipality (fixed) --}}
+                        <div class="col-md-4">
 
-                        <label
-                            for="province"
-                            class="form-label fw-semibold"
-                        >
-                            Province
-                        </label>
+                            <label
+                                for="municipality"
+                                class="form-label fw-semibold"
+                            >
+                                Municipality
+                            </label>
 
-                        <select
-                            name="province"
-                            id="province"
-                            class="form-select"
-                            required
-                        >
+                            <input
+                                type="text"
+                                name="municipality"
+                                id="municipality"
+                                class="form-control rc-fixed"
+                                value="Bani"
+                                readonly
+                                tabindex="-1"
+                                required
+                            >
 
-                            @foreach ($provinces as $province)
-
-                                <option
-                                    value="{{ $province }}"
-                                    {{ old('province', 'Pangasinan') === $province ? 'selected' : '' }}
-                                >
-                                    {{ $province }}
-                                </option>
-
-                            @endforeach
-
-                        </select>
-
-                    </div>
+                        </div>
 
 
-                    {{-- Region --}}
-                    <div class="col-md-4">
+                        {{-- Province (fixed) --}}
+                        <div class="col-md-4">
 
-                        <label
-                            for="region"
-                            class="form-label fw-semibold"
-                        >
-                            Region
-                        </label>
+                            <label
+                                for="province"
+                                class="form-label fw-semibold"
+                            >
+                                Province
+                            </label>
 
-                        <select
-                            name="region"
-                            id="region"
-                            class="form-select"
-                            required
-                        >
+                            <input
+                                type="text"
+                                name="province"
+                                id="province"
+                                class="form-control rc-fixed"
+                                value="Pangasinan"
+                                readonly
+                                tabindex="-1"
+                                required
+                            >
 
-                            @foreach ($regions as $region)
+                        </div>
 
-                                <option
-                                    value="{{ $region }}"
-                                    {{ old('region', 'Region I - Ilocos Region') === $region ? 'selected' : '' }}
-                                >
-                                    {{ $region }}
-                                </option>
 
-                            @endforeach
+                        {{-- Region (fixed) --}}
+                        <div class="col-md-12">
 
-                        </select>
+                            <label
+                                for="region"
+                                class="form-label fw-semibold"
+                            >
+                                Region
+                            </label>
+
+                            <input
+                                type="text"
+                                name="region"
+                                id="region"
+                                class="form-control rc-fixed"
+                                value="Region I - Ilocos Region"
+                                readonly
+                                tabindex="-1"
+                                required
+                            >
+
+                        </div>
 
                     </div>
 
@@ -1555,6 +1585,370 @@
         min-height: auto;
     }
 
+
+    /* =====================================================================
+       THEME-AWARE COLOURS (Light + Dark)
+       Scoped to .rc-create so no other page is affected.
+       The project switches themes with html[data-theme="dark"]
+       (Bootstrap's data-bs-theme="dark" is also supported).
+       Every surface sets its OWN text colour, so text always follows the
+       background it sits on.
+       ===================================================================== */
+    .rc-create {
+        --rc-text: #212529;
+        --rc-muted: #6c757d;
+        --rc-surface: #ffffff;
+        --rc-border: #dee2e6;
+        --rc-accent: var(--bs-primary);
+        --rc-accent-soft: rgba(var(--bs-primary-rgb), 0.07);
+        --rc-input-bg: #ffffff;
+        --rc-input-text: #212529;
+        --rc-placeholder: #6c757d;
+        --rc-disabled-bg: #e9ecef;
+        --rc-required: #dc3545;
+        --rc-info-bg: #cff4fc;
+        --rc-info-text: #055160;
+        --rc-info-border: #9eeaf9;
+        --rc-danger-bg: #f8d7da;
+        --rc-danger-text: #58151c;
+        --rc-danger-border: #f1aeb5;
+        color: var(--rc-text);
+    }
+
+    html[data-theme="dark"] .rc-create,
+    html[data-bs-theme="dark"] .rc-create {
+        --rc-text: #eef2f8;
+        --rc-muted: #a9b4c6;
+        --rc-surface: #1b2230;
+        --rc-border: #3a4660;
+        --rc-accent: #7aa7f0;
+        --rc-accent-soft: rgba(122, 167, 240, 0.16);
+        --rc-input-bg: #141a25;
+        --rc-input-text: #eef2f8;
+        --rc-placeholder: #8c98ac;
+        --rc-disabled-bg: #222b3b;
+        --rc-required: #ff8f8f;
+        --rc-info-bg: #0f3038;
+        --rc-info-text: #a8e6f1;
+        --rc-info-border: #1d5663;
+        --rc-danger-bg: #401a1d;
+        --rc-danger-text: #ffc2c2;
+        --rc-danger-border: #7a3036;
+        color-scheme: dark;
+    }
+
+    /* ---- Text ---- */
+    .rc-create h2,
+    .rc-create h5,
+    .rc-create .fw-bold,
+    .rc-create .fw-semibold,
+    .rc-create .form-label,
+    .rc-create .form-check-label {
+        color: var(--rc-text);
+    }
+
+    .rc-create .text-muted,
+    .rc-create .form-text {
+        color: var(--rc-muted) !important;
+    }
+
+    .rc-create .text-danger,
+    .rc-create .text-danger.fw-semibold {
+        color: var(--rc-required) !important;
+    }
+
+    .rc-create .text-primary {
+        color: var(--rc-accent) !important;
+    }
+
+    /* ---- Cards ---- */
+    .rc-create .card {
+        background-color: var(--rc-surface);
+        color: var(--rc-text);
+        --bs-card-bg: var(--rc-surface);
+        --bs-card-color: var(--rc-text);
+        --bs-card-border-color: var(--rc-border);
+    }
+
+    .rc-create .border {
+        border-color: var(--rc-border) !important;
+    }
+
+    /* ---- Report type + participant source selection ---- */
+    .rc-create .report-type-option,
+    .rc-create .participant-source-option {
+        background: var(--rc-surface);
+        color: var(--rc-text);
+        border-color: var(--rc-border);
+    }
+
+    .rc-create .report-type-option .text-muted {
+        color: var(--rc-muted) !important;
+    }
+
+    .rc-create .report-type-option:hover,
+    .rc-create .participant-source-option:hover {
+        border-color: var(--rc-accent);
+    }
+
+    .rc-create .btn-check:checked + .report-type-option {
+        border-color: var(--rc-accent);
+        background: var(--rc-accent-soft);
+        color: var(--rc-text);
+        box-shadow: 0 0 0 2px var(--rc-accent-soft);
+    }
+
+    .rc-create .btn-check:checked + .participant-source-option {
+        border-color: var(--rc-accent);
+        background: var(--rc-accent-soft);
+        color: var(--rc-accent);
+    }
+
+    .rc-create .btn-check:focus-visible + .report-type-option,
+    .rc-create .btn-check:focus-visible + .participant-source-option {
+        outline: 2px solid var(--rc-accent);
+        outline-offset: 2px;
+    }
+
+    .rc-create .report-type-icon,
+    .rc-create .section-icon {
+        background: var(--rc-accent-soft);
+        color: var(--rc-accent);
+    }
+
+    /* ---- Form fields ---- */
+    .rc-create .form-control,
+    .rc-create .form-select {
+        background-color: var(--rc-input-bg);
+        color: var(--rc-input-text);
+        border-color: var(--rc-border);
+    }
+
+    .rc-create .form-control::placeholder,
+    .rc-create textarea.form-control::placeholder {
+        color: var(--rc-placeholder);
+        opacity: 1;
+    }
+
+    .rc-create .form-control:focus,
+    .rc-create .form-select:focus {
+        background-color: var(--rc-input-bg);
+        color: var(--rc-input-text);
+        border-color: var(--rc-accent);
+        box-shadow: 0 0 0 0.2rem var(--rc-accent-soft);
+    }
+
+    .rc-create .form-control:disabled,
+    .rc-create .form-control[readonly],
+    .rc-create .form-select:disabled {
+        background-color: var(--rc-disabled-bg);
+        color: var(--rc-muted);
+        opacity: 1;
+    }
+
+    .rc-create .form-select option,
+    .rc-create .form-select optgroup {
+        background-color: var(--rc-input-bg);
+        color: var(--rc-input-text);
+    }
+
+    .rc-create .form-control.is-invalid,
+    .rc-create .form-select.is-invalid {
+        border-color: var(--rc-required);
+    }
+
+    .rc-create .invalid-feedback {
+        color: var(--rc-required);
+    }
+
+    html[data-theme="dark"] .rc-create .form-select,
+    html[data-bs-theme="dark"] .rc-create .form-select {
+        --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23c5cedd' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    }
+
+    .rc-create .form-check-input {
+        background-color: var(--rc-input-bg);
+        border-color: var(--rc-border);
+    }
+
+    .rc-create .form-check-input:checked {
+        background-color: var(--rc-accent);
+        border-color: var(--rc-accent);
+    }
+
+    /* ---- Alerts ---- */
+    .rc-create .alert-info {
+        --bs-alert-bg: var(--rc-info-bg);
+        --bs-alert-color: var(--rc-info-text);
+        --bs-alert-border-color: var(--rc-info-border);
+        background-color: var(--rc-info-bg);
+        color: var(--rc-info-text);
+    }
+
+    .rc-create .alert-danger {
+        --bs-alert-bg: var(--rc-danger-bg);
+        --bs-alert-color: var(--rc-danger-text);
+        --bs-alert-border-color: var(--rc-danger-border);
+        background-color: var(--rc-danger-bg);
+        color: var(--rc-danger-text);
+    }
+
+    /* ---- Buttons ---- */
+    html[data-theme="dark"] .rc-create .btn-outline-secondary,
+    html[data-bs-theme="dark"] .rc-create .btn-outline-secondary {
+        --bs-btn-color: #c9d2e0;
+        --bs-btn-border-color: #55617c;
+        --bs-btn-hover-color: #ffffff;
+        --bs-btn-hover-bg: #2a3447;
+        --bs-btn-hover-border-color: #7a869f;
+        --bs-btn-active-color: #ffffff;
+        --bs-btn-active-bg: #2a3447;
+        --bs-btn-active-border-color: #7a869f;
+    }
+
+
+    /* =====================================================================
+       SEARCHABLE RESIDENT PICKER
+       Replaces the long native dropdown. The original <select> stays in the
+       form (hidden) so submission, old() values and validation still work.
+       ===================================================================== */
+    .rc-create .rc-combo {
+        position: relative;
+    }
+
+    .rc-create .rc-combo-input {
+        padding-right: 2.4rem;
+    }
+
+    .rc-create .rc-combo-clear {
+        position: absolute;
+        top: 50%;
+        right: 0.5rem;
+        transform: translateY(-50%);
+        width: 1.9rem;
+        height: 1.9rem;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--rc-muted);
+        cursor: pointer;
+    }
+
+    .rc-create .rc-combo-clear:hover {
+        background: var(--rc-accent-soft);
+        color: var(--rc-text);
+    }
+
+    .rc-create .rc-combo.has-value .rc-combo-clear {
+        display: flex;
+    }
+
+    .rc-create .rc-combo-list {
+        position: absolute;
+        z-index: 1055;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        max-height: 280px;
+        overflow-y: auto;
+        margin: 0;
+        padding: 0.25rem;
+        list-style: none;
+        background: var(--rc-input-bg);
+        color: var(--rc-input-text);
+        border: 1px solid var(--rc-border);
+        border-radius: 0.65rem;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+    }
+
+    .rc-create .rc-combo-list[hidden] {
+        display: none;
+    }
+
+    .rc-create .rc-combo-item {
+        padding: 0.55rem 0.75rem;
+        border-radius: 0.45rem;
+        cursor: pointer;
+        font-size: 0.92rem;
+        color: var(--rc-input-text);
+    }
+
+    .rc-create .rc-combo-item small {
+        display: block;
+        color: var(--rc-muted);
+    }
+
+    .rc-create .rc-combo-item.is-active,
+    .rc-create .rc-combo-item:hover {
+        background: var(--rc-accent-soft);
+    }
+
+    .rc-create .rc-combo-item.is-selected {
+        font-weight: 600;
+        color: var(--rc-accent);
+    }
+
+    .rc-create .rc-combo-empty,
+    .rc-create .rc-combo-more {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.85rem;
+        color: var(--rc-muted);
+    }
+
+    .rc-create .rc-combo-custom {
+        margin-top: 0.25rem;
+        padding: 0.6rem 0.75rem;
+        border-top: 1px dashed var(--rc-border);
+        font-size: 0.85rem;
+        color: var(--rc-accent);
+        cursor: default;
+    }
+
+    /* =====================================================================
+       FIXED LOCATION FIELDS
+       Read-only, but they must NOT show the "not allowed" (block) cursor.
+       pointer-events: none removes any special cursor and click/focus
+       behaviour, so the fields simply look like plain information.
+       ===================================================================== */
+    .rc-create .rc-fixed-group {
+        padding: 1rem 1rem 1.1rem;
+        border: 1px dashed var(--rc-border);
+        border-radius: 0.75rem;
+        background: var(--rc-accent-soft);
+    }
+
+    .rc-create .rc-fixed-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem;
+        margin-bottom: 0.85rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: var(--rc-accent);
+    }
+
+    .rc-create .rc-fixed-note {
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--rc-muted);
+    }
+
+    .rc-create .form-control.rc-fixed,
+    .rc-create .form-control.rc-fixed[readonly] {
+        color: var(--rc-text);
+        cursor: default;
+        pointer-events: none;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
 </style>
 
 
@@ -1639,11 +2033,41 @@ document.addEventListener('DOMContentLoaded', function () {
     const category =
         document.getElementById('category');
 
-    const communityCategoryGroup =
-        document.getElementById('communityCategoryGroup');
+    /*
+     * Category suggestions per report type. Category is a
+     * type-or-choose field: staff may pick a suggestion or type their own.
+     */
+    const categoryData = @json(['community' => collect($communityCategories)->values()->all(), 'person' => collect($personCategories)->values()->all()]);
 
-    const personCategoryGroup =
-        document.getElementById('personCategoryGroup');
+    function clearCategoryIfOtherType(otherType) {
+
+        if (!category) {
+            return;
+        }
+
+        const value = normalizeText(category.value).trim();
+
+        if (!value) {
+            return;
+        }
+
+        function isPreset(type) {
+            return (categoryData[type] || []).some(function (item) {
+                return normalizeText(item).trim() === value;
+            });
+        }
+
+        if (isPreset(otherType) && !isPreset(getReportType())) {
+
+            category.value = '';
+
+            const wrap = category.closest('.rc-combo');
+
+            if (wrap) {
+                wrap.classList.remove('has-value');
+            }
+        }
+    }
 
 
     /*
@@ -1746,36 +2170,10 @@ document.addEventListener('DOMContentLoaded', function () {
             updateSubjectSourceUI();
 
             /*
-             * Enable person categories.
+             * If the current category is a preset that belongs to community
+             * reports, reset it. A category the user typed is kept.
              */
-            Array.from(
-                personCategoryGroup.querySelectorAll('option')
-            ).forEach(function (option) {
-                option.hidden = false;
-            });
-
-            /*
-             * Hide community category options.
-             */
-            Array.from(
-                communityCategoryGroup.querySelectorAll('option')
-            ).forEach(function (option) {
-                option.hidden = true;
-            });
-
-            /*
-             * If current category belongs to community,
-             * reset it.
-             */
-            const selectedOption =
-                category.options[category.selectedIndex];
-
-            if (
-                selectedOption &&
-                selectedOption.dataset.reportType === 'community'
-            ) {
-                category.value = '';
-            }
+            clearCategoryIfOtherType('community');
 
         } else {
 
@@ -1793,36 +2191,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             /*
-             * Show community categories.
+             * If the current category is a preset that belongs to person
+             * complaints, reset it. A category the user typed is kept.
              */
-            Array.from(
-                communityCategoryGroup.querySelectorAll('option')
-            ).forEach(function (option) {
-                option.hidden = false;
-            });
-
-            /*
-             * Hide person categories.
-             */
-            Array.from(
-                personCategoryGroup.querySelectorAll('option')
-            ).forEach(function (option) {
-                option.hidden = true;
-            });
-
-            /*
-             * If current category belongs to person complaint,
-             * reset it.
-             */
-            const selectedOption =
-                category.options[category.selectedIndex];
-
-            if (
-                selectedOption &&
-                selectedOption.dataset.reportType === 'person'
-            ) {
-                category.value = '';
-            }
+            clearCategoryIfOtherType('person');
         }
 
         /*
@@ -2098,6 +2470,26 @@ document.addEventListener('DOMContentLoaded', function () {
             const type = getReportType();
 
             /*
+             * Category is a type-or-choose field, so make sure it is
+             * not empty or only spaces.
+             */
+            if (category) {
+
+                category.value = category.value.trim();
+
+                if (!category.value) {
+
+                    event.preventDefault();
+
+                    alert('Please choose or type a category.');
+
+                    category.focus();
+
+                    return;
+                }
+            }
+
+            /*
              * Validate complainant.
              */
             if (
@@ -2223,6 +2615,558 @@ document.addEventListener('DOMContentLoaded', function () {
 
         });
     }
+
+
+    /*
+     * ---------------------------------------------------------------
+     * Searchable resident picker
+     * ---------------------------------------------------------------
+     *
+     * Turns a long resident <select> into a type-to-search field.
+     * The original <select> is kept (hidden) and remains the field that
+     * is submitted, so the controller, old() values, and the existing
+     * validation code keep working. Any code that sets select.value
+     * (for example when switching to "Non-resident") also refreshes
+     * the visible search box.
+     * ---------------------------------------------------------------
+     */
+
+    function normalizeText(text) {
+        return (text || '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .toLowerCase();
+    }
+
+    function makeSearchableSelect(select, placeholder) {
+
+        if (!select) {
+            return;
+        }
+
+        const MAX_RESULTS = 100;
+
+        const items = Array.from(select.options)
+            .filter(function (option) {
+                return option.value !== '';
+            })
+            .map(function (option) {
+                const label =
+                    option.textContent.replace(/\s+/g, ' ').trim();
+
+                const parts = label.split(' — ');
+
+                return {
+                    value: option.value,
+                    label: label,
+                    name: parts[0],
+                    address: parts.slice(1).join(' — '),
+                    search: normalizeText(label)
+                };
+            });
+
+        const nativeValue = Object.getOwnPropertyDescriptor(
+            HTMLSelectElement.prototype,
+            'value'
+        );
+
+        const wrap = document.createElement('div');
+        wrap.className = 'rc-combo';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = select.id + '_search';
+        input.className = 'form-control rc-combo-input';
+        input.placeholder = placeholder;
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-autocomplete', 'list');
+        input.setAttribute('aria-expanded', 'false');
+
+        const clearButton = document.createElement('button');
+        clearButton.type = 'button';
+        clearButton.className = 'rc-combo-clear';
+        clearButton.setAttribute('aria-label', 'Clear selected resident');
+        clearButton.innerHTML = '<i class="bi bi-x-lg"></i>';
+
+        const list = document.createElement('ul');
+        list.className = 'rc-combo-list';
+        list.setAttribute('role', 'listbox');
+        list.hidden = true;
+
+        select.parentNode.insertBefore(wrap, select);
+        wrap.appendChild(input);
+        wrap.appendChild(clearButton);
+        wrap.appendChild(list);
+
+        select.style.display = 'none';
+        select.tabIndex = -1;
+
+        /* Clicking the <label> should focus the search box. */
+        const label = document.querySelector(
+            'label[for="' + select.id + '"]'
+        );
+
+        if (label) {
+            label.setAttribute('for', input.id);
+        }
+
+        /* Existing code calls select.focus() on validation errors. */
+        select.focus = function () {
+            input.focus();
+        };
+
+        let activeIndex = -1;
+        let visible = [];
+
+        function selectedItem() {
+            const current = nativeValue.get.call(select);
+
+            return items.find(function (item) {
+                return item.value === current;
+            }) || null;
+        }
+
+        function syncFromSelect() {
+            const item = selectedItem();
+
+            input.value = item ? item.label : '';
+            wrap.classList.toggle('has-value', !!item);
+        }
+
+        function close() {
+            list.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+            activeIndex = -1;
+        }
+
+        function setActive(index) {
+
+            const nodes = list.querySelectorAll('.rc-combo-item');
+
+            if (!nodes.length) {
+                activeIndex = -1;
+                return;
+            }
+
+            activeIndex = (index + nodes.length) % nodes.length;
+
+            nodes.forEach(function (node, i) {
+                node.classList.toggle('is-active', i === activeIndex);
+            });
+
+            nodes[activeIndex].scrollIntoView({ block: 'nearest' });
+        }
+
+        function render(query) {
+
+            const tokens = normalizeText(query)
+                .split(/\s+/)
+                .filter(Boolean);
+
+            const matches = items.filter(function (item) {
+                return tokens.every(function (token) {
+                    return item.search.indexOf(token) !== -1;
+                });
+            });
+
+            visible = matches.slice(0, MAX_RESULTS);
+
+            const current = nativeValue.get.call(select);
+
+            list.innerHTML = '';
+
+            if (!visible.length) {
+                const empty = document.createElement('li');
+                empty.className = 'rc-combo-empty';
+                empty.textContent =
+                    'No matching resident found. Use "Non-resident / Not Found" if the person is not registered.';
+                list.appendChild(empty);
+            }
+
+            visible.forEach(function (item, index) {
+
+                const row = document.createElement('li');
+                row.className = 'rc-combo-item';
+                row.setAttribute('role', 'option');
+                row.dataset.index = index;
+
+                if (item.value === current) {
+                    row.classList.add('is-selected');
+                }
+
+                row.appendChild(document.createTextNode(item.name));
+
+                if (item.address) {
+                    const small = document.createElement('small');
+                    small.textContent = item.address;
+                    row.appendChild(small);
+                }
+
+                list.appendChild(row);
+            });
+
+            if (matches.length > MAX_RESULTS) {
+                const more = document.createElement('li');
+                more.className = 'rc-combo-more';
+                more.textContent =
+                    'Showing the first ' + MAX_RESULTS + ' of ' +
+                    matches.length + ' matches. Keep typing to narrow the list.';
+                list.appendChild(more);
+            }
+
+            list.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+
+            setActive(visible.length ? 0 : -1);
+        }
+
+        function choose(item) {
+
+            nativeValue.set.call(select, item.value);
+
+            syncFromSelect();
+            close();
+
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function clearSelection() {
+
+            nativeValue.set.call(select, '');
+
+            syncFromSelect();
+
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        /*
+         * Keep the visible box in sync when other code assigns
+         * select.value (e.g. clearing it when the person source changes).
+         */
+        Object.defineProperty(select, 'value', {
+            configurable: true,
+            get: function () {
+                return nativeValue.get.call(select);
+            },
+            set: function (newValue) {
+                nativeValue.set.call(select, newValue);
+                syncFromSelect();
+            }
+        });
+
+        input.addEventListener('focus', function () {
+            input.select();
+            render('');
+        });
+
+        input.addEventListener('click', function () {
+            if (list.hidden) {
+                render('');
+            }
+        });
+
+        input.addEventListener('input', function () {
+            render(input.value);
+        });
+
+        input.addEventListener('keydown', function (event) {
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+
+                if (list.hidden) {
+                    render(input.value);
+                } else {
+                    setActive(activeIndex + 1);
+                }
+
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                setActive(activeIndex - 1);
+
+            } else if (event.key === 'Enter') {
+
+                /* Never submit the form from this field. */
+                event.preventDefault();
+
+                if (!list.hidden && visible[activeIndex]) {
+                    choose(visible[activeIndex]);
+                }
+
+            } else if (event.key === 'Escape') {
+                close();
+                syncFromSelect();
+
+            } else if (event.key === 'Tab') {
+                close();
+                syncFromSelect();
+            }
+        });
+
+        input.addEventListener('blur', function () {
+            close();
+            syncFromSelect();
+        });
+
+        /* mousedown (not click) so the input does not lose focus first. */
+        list.addEventListener('mousedown', function (event) {
+
+            event.preventDefault();
+
+            const row = event.target.closest('.rc-combo-item');
+
+            if (row && visible[row.dataset.index]) {
+                choose(visible[row.dataset.index]);
+            }
+        });
+
+        clearButton.addEventListener('mousedown', function (event) {
+            event.preventDefault();
+            clearSelection();
+            input.focus();
+        });
+
+        syncFromSelect();
+    }
+
+    makeSearchableSelect(
+        complainantId,
+        'Type a name or address to search residents…'
+    );
+
+    makeSearchableSelect(
+        subjectResidentId,
+        'Type a name or address to search residents…'
+    );
+
+
+    /*
+     * ---------------------------------------------------------------
+     * Category: choose a suggestion OR type your own
+     * ---------------------------------------------------------------
+     *
+     * Suggestions follow the selected report type (community / person).
+     * Whatever is in the box is what gets submitted, so staff can type
+     * a category that is not on the list.
+     * ---------------------------------------------------------------
+     */
+
+    function makeCategoryCombo(input) {
+
+        if (!input) {
+            return;
+        }
+
+        const MAX_RESULTS = 100;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'rc-combo';
+
+        input.classList.add('rc-combo-input');
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-autocomplete', 'list');
+        input.setAttribute('aria-expanded', 'false');
+
+        const clearButton = document.createElement('button');
+        clearButton.type = 'button';
+        clearButton.className = 'rc-combo-clear';
+        clearButton.setAttribute('aria-label', 'Clear category');
+        clearButton.innerHTML = '<i class="bi bi-x-lg"></i>';
+
+        const list = document.createElement('ul');
+        list.className = 'rc-combo-list';
+        list.setAttribute('role', 'listbox');
+        list.hidden = true;
+
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        wrap.appendChild(clearButton);
+        wrap.appendChild(list);
+
+        let activeIndex = -1;
+        let visible = [];
+
+        function updateClear() {
+            wrap.classList.toggle('has-value', input.value.trim() !== '');
+        }
+
+        function close() {
+            list.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+            activeIndex = -1;
+        }
+
+        function setActive(index) {
+
+            const nodes = list.querySelectorAll('.rc-combo-item');
+
+            if (!nodes.length) {
+                activeIndex = -1;
+                return;
+            }
+
+            activeIndex = (index + nodes.length) % nodes.length;
+
+            nodes.forEach(function (node, i) {
+                node.classList.toggle('is-active', i === activeIndex);
+            });
+
+            nodes[activeIndex].scrollIntoView({ block: 'nearest' });
+        }
+
+        function render(query) {
+
+            const items = categoryData[getReportType()] || [];
+
+            const tokens = normalizeText(query)
+                .split(/\s+/)
+                .filter(Boolean);
+
+            const matches = items.filter(function (item) {
+                const text = normalizeText(item);
+
+                return tokens.every(function (token) {
+                    return text.indexOf(token) !== -1;
+                });
+            });
+
+            visible = matches.slice(0, MAX_RESULTS);
+
+            const typed = input.value.trim();
+            const typedKey = normalizeText(typed).trim();
+
+            const exact = items.some(function (item) {
+                return normalizeText(item).trim() === typedKey;
+            });
+
+            list.innerHTML = '';
+
+            visible.forEach(function (item, index) {
+
+                const row = document.createElement('li');
+                row.className = 'rc-combo-item';
+                row.setAttribute('role', 'option');
+                row.dataset.index = index;
+                row.textContent = item;
+
+                if (normalizeText(item).trim() === typedKey) {
+                    row.classList.add('is-selected');
+                }
+
+                list.appendChild(row);
+            });
+
+            if (typed && !exact) {
+                const custom = document.createElement('li');
+                custom.className = 'rc-combo-custom';
+                custom.textContent =
+                    'Press Enter or click away to use “' + typed + '” as your own category';
+                list.appendChild(custom);
+            }
+
+            if (!list.children.length) {
+                close();
+                return;
+            }
+
+            list.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+            activeIndex = -1;
+        }
+
+        function choose(item) {
+            input.value = item;
+            updateClear();
+            close();
+        }
+
+        input.addEventListener('focus', function () {
+            render('');
+        });
+
+        input.addEventListener('click', function () {
+            if (list.hidden) {
+                render('');
+            }
+        });
+
+        input.addEventListener('input', function () {
+            updateClear();
+            render(input.value);
+        });
+
+        input.addEventListener('keydown', function (event) {
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+
+                if (list.hidden) {
+                    render(input.value);
+                }
+
+                setActive(activeIndex + 1);
+
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                setActive(activeIndex - 1);
+
+            } else if (event.key === 'Enter') {
+
+                /* Never submit the form from this field. */
+                event.preventDefault();
+
+                if (!list.hidden && activeIndex >= 0 && visible[activeIndex]) {
+                    choose(visible[activeIndex]);
+                } else {
+                    input.value = input.value.trim();
+                    updateClear();
+                    close();
+                }
+
+            } else if (event.key === 'Escape' || event.key === 'Tab') {
+                close();
+            }
+        });
+
+        input.addEventListener('blur', function () {
+            input.value = input.value.trim();
+            updateClear();
+            close();
+        });
+
+        /* mousedown (not click) so the input does not lose focus first. */
+        list.addEventListener('mousedown', function (event) {
+
+            event.preventDefault();
+
+            const row = event.target.closest('.rc-combo-item');
+
+            if (row && visible[row.dataset.index]) {
+                choose(visible[row.dataset.index]);
+                return;
+            }
+
+            if (event.target.closest('.rc-combo-custom')) {
+                input.value = input.value.trim();
+                close();
+            }
+        });
+
+        clearButton.addEventListener('mousedown', function (event) {
+            event.preventDefault();
+            input.value = '';
+            updateClear();
+            input.focus();
+            render('');
+        });
+
+        updateClear();
+    }
+
+    makeCategoryCombo(category);
 
 
     /*

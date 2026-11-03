@@ -371,6 +371,14 @@
         display: block;
     }
 
+    .student-level-wrap {
+        display: none;
+    }
+
+    .student-level-wrap.show {
+        display: block;
+    }
+
     [data-theme="dark"] .breadcrumb-text {
         color: #94a3b8;
     }
@@ -505,102 +513,67 @@
     </div>
 
 
-
-    {{-- =========================================================
-        WORKFLOW
-    ========================================================== --}}
+    {{-- WORKFLOW --}}
     <div class="workflow-card mb-4">
 
         <div class="row g-2 align-items-center">
 
-            {{-- STEP 1 --}}
             <div class="col-12 col-lg-4">
 
                 <div class="workflow-step active"
                      id="workflowHeadStep">
 
-                    <div class="workflow-number">
-                        1
-                    </div>
+                    <div class="workflow-number">1</div>
 
                     <div>
-
-                        <div class="workflow-title">
-                            Household Head
-                        </div>
-
+                        <div class="workflow-title">Household Head</div>
                         <div class="workflow-text">
                             Select an existing resident or register a new head.
                         </div>
-
                     </div>
 
                 </div>
 
             </div>
 
-
             <div class="col-lg-1 d-none d-lg-flex">
-
                 <div class="workflow-line"></div>
-
             </div>
 
-
-            {{-- STEP 2 --}}
             <div class="col-12 col-lg-3">
 
                 <div class="workflow-step"
                      id="workflowLocationStep">
 
-                    <div class="workflow-number">
-                        2
-                    </div>
+                    <div class="workflow-number">2</div>
 
                     <div>
-
-                        <div class="workflow-title">
-                            Location & GPS
-                        </div>
-
+                        <div class="workflow-title">Location & GPS</div>
                         <div class="workflow-text">
                             Record the household address, purok, and house location.
                         </div>
-
                     </div>
 
                 </div>
 
             </div>
 
-
             <div class="col-lg-1 d-none d-lg-flex">
-
                 <div class="workflow-line"></div>
-
             </div>
 
-
-            {{-- STEP 3 --}}
             <div class="col-12 col-lg-3">
 
                 <div class="workflow-step"
                      id="workflowMembersStep">
 
-                    <div class="workflow-number">
-                        3
-                    </div>
+                    <div class="workflow-number">3</div>
 
                     <div>
-
-                        <div class="workflow-title">
-                            Add Members
-                        </div>
-
+                        <div class="workflow-title">Add Members</div>
                         <div class="workflow-text">
                             Add every other person in the household.
                         </div>
-
                     </div>
 
                 </div>
@@ -619,9 +592,36 @@
         @csrf
 
 
-        {{-- =====================================================
-            1. HOUSEHOLD HEAD
-        ====================================================== --}}
+        {{-- VALIDATION ERROR SUMMARY --}}
+        @if ($errors->any())
+
+            <div class="alert alert-danger mb-4"
+                 role="alert">
+
+                <div class="fw-bold mb-1">
+
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+
+                    Please correct the following before registering:
+
+                </div>
+
+                <ul class="mb-0 small">
+
+                    @foreach ($errors->all() as $error)
+
+                        <li>{{ $error }}</li>
+
+                    @endforeach
+
+                </ul>
+
+            </div>
+
+        @endif
+
+
+        {{-- 1. HOUSEHOLD HEAD --}}
         <div class="section-card mb-4">
 
             <div class="section-header">
@@ -631,16 +631,11 @@
                 </div>
 
                 <div>
-
-                    <h4>
-                        1. Household Head
-                    </h4>
-
+                    <h4>1. Household Head</h4>
                     <p>
                         The household head must be identified first.
                         Existing residents are reused instead of creating duplicates.
                     </p>
-
                 </div>
 
             </div>
@@ -661,7 +656,6 @@
                     </div>
 
                 </div>
-
 
                 <div id="selectedHeadCard"
                      class="d-none">
@@ -703,16 +697,12 @@
 
                     </div>
 
-
                     <div id="headSearchResults"
                          class="search-results d-none">
                     </div>
 
-
                     <div class="required-note mt-2">
-
                         Only active residents are available for selection.
-
                     </div>
 
                 </div>
@@ -729,7 +719,6 @@
                         Register New Household Head
 
                     </button>
-
 
                     <button type="button"
                             class="btn btn-outline-secondary d-none"
@@ -751,9 +740,7 @@
         </div>
 
 
-        {{-- =====================================================
-            2. LOCATION & GPS
-        ====================================================== --}}
+        {{-- 2. LOCATION & GPS --}}
         <div class="section-card mb-4">
 
             <div class="section-header">
@@ -763,29 +750,21 @@
                 </div>
 
                 <div>
-
-                    <h4>
-                        2. Location & GPS
-                    </h4>
-
+                    <h4>2. Location & GPS</h4>
                     <p>
                         Record the household address, purok, and the
                         house location collected during the BHW home visit.
                     </p>
-
                 </div>
 
             </div>
 
 
-            {{-- HOUSEHOLD INFORMATION --}}
             <div class="row g-4 mb-4">
 
                 <div class="col-md-6">
 
-                    <label class="form-label">
-                        Household Number
-                    </label>
+                    <label class="form-label">Household Number</label>
 
                     <input type="text"
                            class="form-control"
@@ -794,12 +773,9 @@
 
                 </div>
 
-
                 <div class="col-md-6">
 
-                    <label class="form-label">
-                        Status
-                    </label>
+                    <label class="form-label">Status</label>
 
                     <input type="text"
                            class="form-control"
@@ -807,7 +783,6 @@
                            disabled>
 
                 </div>
-
 
                 <div class="col-12 col-md-8">
 
@@ -828,15 +803,10 @@
                               required>{{ old('address') }}</textarea>
 
                     @error('address')
-
-                        <div class="invalid-feedback">
-                            {{ $message }}
-                        </div>
-
+                        <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
 
                 </div>
-
 
                 <div class="col-12 col-md-4">
 
@@ -845,29 +815,78 @@
 
                         Purok
 
+                        <span class="text-danger">*</span>
+
                     </label>
 
                     <select name="purok"
                             id="purok"
-                            class="form-select">
+                            class="form-select @error('purok') is-invalid @enderror"
+                            required>
 
-                        <option value="">
-                            Select Purok
-                        </option>
+                        <option value="">Select Purok</option>
 
                         @for($p = 1; $p <= 7; $p++)
-
                             <option value="Purok {{ $p }}"
                                 {{ old('purok') === 'Purok '.$p ? 'selected' : '' }}>
-
                                 Purok {{ $p }}
-
                             </option>
-
                         @endfor
 
                     </select>
 
+                    @error('purok')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+
+                </div>
+
+            </div>
+
+
+            {{-- HOUSEHOLD CLASSIFICATIONS --}}
+            <div class="gps-box mb-4">
+
+                <div class="mb-3">
+                    <div class="fw-bold">Household Classification</div>
+                    <div class="text-muted small mt-1">
+                        Select the classifications that apply to the household as a whole.
+                        Both may be selected if applicable.
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-4">
+
+                    <div class="form-check">
+                        <input type="hidden" name="is_low_income" value="0">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="is_low_income"
+                               name="is_low_income"
+                               value="1"
+                               {{ old('is_low_income') ? 'checked' : '' }}>
+                        <label class="form-check-label" for="is_low_income">
+                            Indigent / Low-Income Family
+                        </label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="hidden" name="is_4ps_beneficiary" value="0">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="is_4ps_beneficiary"
+                               name="is_4ps_beneficiary"
+                               value="1"
+                               {{ old('is_4ps_beneficiary') ? 'checked' : '' }}>
+                        <label class="form-check-label" for="is_4ps_beneficiary">
+                            4Ps Beneficiary Family
+                        </label>
+                    </div>
+
+                </div>
+
+                <div class="required-note mt-2">
+                    These are household-level classifications. Staff must verify supporting information before using them for assistance decisions.
                 </div>
 
             </div>
@@ -889,16 +908,13 @@
 
                 </div>
 
-
                 <div class="row g-3">
 
                     <div class="col-md-6">
 
                         <label for="latitude"
                                class="form-label">
-
                             Latitude
-
                         </label>
 
                         <input type="text"
@@ -910,14 +926,11 @@
 
                     </div>
 
-
                     <div class="col-md-6">
 
                         <label for="longitude"
                                class="form-label">
-
                             Longitude
-
                         </label>
 
                         <input type="text"
@@ -929,7 +942,6 @@
 
                     </div>
 
-
                     <div class="col-12">
 
                         <div class="notice-box">
@@ -938,9 +950,7 @@
 
                             <div>
 
-                                <strong>
-                                    Human-collected location.
-                                </strong>
+                                <strong>Human-collected location.</strong>
 
                                 GPS coordinates identify the household
                                 location for the barangay map.
@@ -960,9 +970,7 @@
         </div>
 
 
-        {{-- =====================================================
-            3. ADD HOUSEHOLD MEMBERS
-        ====================================================== --}}
+        {{-- 3. ADD HOUSEHOLD MEMBERS --}}
         <div class="section-card mb-4">
 
             <div class="section-header">
@@ -972,16 +980,11 @@
                 </div>
 
                 <div>
-
-                    <h4>
-                        3. Add Household Members
-                    </h4>
-
+                    <h4>3. Add Household Members</h4>
                     <p>
                         Add all other people identified during the
                         BHW house-to-house visit.
                     </p>
-
                 </div>
 
             </div>
@@ -993,14 +996,9 @@
                 <i class="bi bi-lock-fill"></i>
 
                 <div>
-
-                    <strong>
-                        Household Head First.
-                    </strong>
-
+                    <strong>Household Head First.</strong>
                     Select or register the household head before
                     adding other members.
-
                 </div>
 
             </div>
@@ -1015,9 +1013,7 @@
 
                         <label for="memberResidentSearch"
                                class="form-label">
-
                             Add Existing Resident as Member
-
                         </label>
 
                         <div class="input-group">
@@ -1042,13 +1038,11 @@
 
                         </div>
 
-
                         <div id="memberSearchResults"
                              class="search-results d-none">
                         </div>
 
                     </div>
-
 
                     <div class="col-12 col-lg-4 d-flex align-items-end">
 
@@ -1102,7 +1096,6 @@
                         <thead>
 
                             <tr>
-
                                 <th>#</th>
                                 <th>Full Name</th>
                                 <th>Birth Date</th>
@@ -1114,7 +1107,6 @@
                                 <th>Classification</th>
                                 <th>Record</th>
                                 <th>Action</th>
-
                             </tr>
 
                         </thead>
@@ -1133,9 +1125,7 @@
         </div>
 
 
-        {{-- =====================================================
-            FINAL CONFIRMATION
-        ====================================================== --}}
+        {{-- FINAL CONFIRMATION --}}
         <div class="section-card">
 
             <div class="notice-box mb-4">
@@ -1144,9 +1134,7 @@
 
                 <div>
 
-                    <strong>
-                        Before registering:
-                    </strong>
+                    <strong>Before registering:</strong>
 
                     confirm that the household head is correct,
                     all household members collected by the BHW are listed,
@@ -1164,11 +1152,8 @@
 
                 <a href="{{ route('households.index') }}"
                    class="btn btn-outline-secondary">
-
                     Cancel
-
                 </a>
-
 
                 <button type="submit"
                         id="submitHouseholdButton"
@@ -1189,9 +1174,7 @@
 </div>
 
 
-{{-- =============================================================
-    RESIDENT FORM MODAL
-============================================================= --}}
+{{-- RESIDENT FORM MODAL --}}
 <div class="modal fade"
      id="residentFormModal"
      tabindex="-1"
@@ -1207,20 +1190,15 @@
 
                     <h5 class="modal-title fw-bold"
                         id="residentModalTitle">
-
                         Register Resident
-
                     </h5>
 
                     <div class="text-muted small"
                          id="residentModalSubtitle">
-
                         Enter the person's details.
-
                     </div>
 
                 </div>
-
 
                 <button type="button"
                         class="btn-close"
@@ -1244,11 +1222,8 @@
                     <div class="col-md-4">
 
                         <label class="form-label">
-
                             First Name
-
                             <span class="text-danger">*</span>
-
                         </label>
 
                         <input id="resident_first_name"
@@ -1256,27 +1231,20 @@
 
                     </div>
 
-
                     <div class="col-md-4">
 
-                        <label class="form-label">
-                            Middle Name
-                        </label>
+                        <label class="form-label">Middle Name</label>
 
                         <input id="resident_middle_name"
                                class="form-control">
 
                     </div>
 
-
                     <div class="col-md-4">
 
                         <label class="form-label">
-
                             Last Name
-
                             <span class="text-danger">*</span>
-
                         </label>
 
                         <input id="resident_last_name"
@@ -1284,12 +1252,9 @@
 
                     </div>
 
-
                     <div class="col-md-3">
 
-                        <label class="form-label">
-                            Suffix
-                        </label>
+                        <label class="form-label">Suffix</label>
 
                         <input id="resident_suffix"
                                class="form-control"
@@ -1297,16 +1262,12 @@
 
                     </div>
 
-
                     {{-- BIRTH / SEX --}}
                     <div class="col-md-3">
 
                         <label class="form-label">
-
                             Birth Date
-
                             <span class="text-danger">*</span>
-
                         </label>
 
                         <input id="resident_birth_date"
@@ -1315,193 +1276,100 @@
 
                     </div>
 
-
                     <div class="col-md-3">
 
                         <label class="form-label">
-
                             Sex
-
                             <span class="text-danger">*</span>
-
                         </label>
 
                         <select id="resident_sex"
                                 class="form-select">
 
-                            <option value="">
-                                Select
-                            </option>
-
-                            <option value="Male">
-                                Male
-                            </option>
-
-                            <option value="Female">
-                                Female
-                            </option>
+                            <option value="">Select</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
 
                         </select>
 
                     </div>
-
 
                     {{-- CIVIL STATUS --}}
                     <div class="col-md-3">
 
                         <label class="form-label">
-
                             Civil Status
-
                             <span class="text-danger">*</span>
-
                         </label>
 
                         <select id="resident_civil_status"
                                 class="form-select">
 
-                            <option value="">
-                                Select
-                            </option>
-
-                            <option value="Single">
-                                Single
-                            </option>
-
-                            <option value="Married">
-                                Married
-                            </option>
-
-                            <option value="Widowed">
-                                Widowed
-                            </option>
-
-                            <option value="Divorced">
-                                Divorced
-                            </option>
-
-                            <option value="Separated">
-                                Separated
-                            </option>
-
-                            <option value="Live-in / Cohabiting">
-                                Live-in / Cohabiting
-                            </option>
-
-                            <option value="Annulled">
-                                Annulled
-                            </option>
-
-                            <option value="Not Applicable">
-                                Not Applicable
-                            </option>
-
-                            <option value="Prefer not to say">
-                                Prefer not to say
-                            </option>
+                            <option value="">Select</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                            <option value="Widowed">Widowed</option>
+                            <option value="Divorced">Divorced</option>
+                            <option value="Separated">Separated</option>
+                            <option value="Live-in / Cohabiting">Live-in / Cohabiting</option>
+                            <option value="Annulled">Annulled</option>
+                            <option value="Not Applicable">Not Applicable</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
 
                         </select>
 
                     </div>
-
 
                     {{-- RELATIONSHIP --}}
                     <div class="col-md-6"
                          id="relationshipField">
 
                         <label class="form-label">
-
                             Relationship to Household Head
-
                             <span class="text-danger">*</span>
-
                         </label>
 
                         <select id="resident_relationship"
                                 class="form-select">
 
-                            <option value="">
-                                Select relationship
-                            </option>
-
-                            <option value="Spouse">
-                                Spouse
-                            </option>
-
-                            <option value="Son">
-                                Son
-                            </option>
-
-                            <option value="Daughter">
-                                Daughter
-                            </option>
-
-                            <option value="Parent">
-                                Parent
-                            </option>
-
-                            <option value="Sibling">
-                                Sibling
-                            </option>
-
-                            <option value="Grandparent">
-                                Grandparent
-                            </option>
-
-                            <option value="Grandchild">
-                                Grandchild
-                            </option>
-
-                            <option value="Relative">
-                                Relative
-                            </option>
-
-                            <option value="Other">
-                                Other
-                            </option>
+                            <option value="">Select relationship</option>
+                            <option value="Spouse">Spouse</option>
+                            <option value="Son">Son</option>
+                            <option value="Daughter">Daughter</option>
+                            <option value="Parent">Parent</option>
+                            <option value="Sibling">Sibling</option>
+                            <option value="Grandparent">Grandparent</option>
+                            <option value="Grandchild">Grandchild</option>
+                            <option value="Relative">Relative</option>
+                            <option value="Other">Other</option>
 
                         </select>
 
                     </div>
-
 
                     {{-- RESIDENCY TYPE --}}
                     <div class="col-md-6">
 
                         <label class="form-label">
-
                             Residency Type
-
                             <span class="text-danger">*</span>
-
                         </label>
 
                         <select id="resident_residency_type"
                                 class="form-select">
 
-                            <option value="">
-                                Select residency type
-                            </option>
-
-                            <option value="Original Resident">
-                                Original Resident
-                            </option>
-
-                            <option value="Migrant Resident">
-                                Migrant Resident
-                            </option>
+                            <option value="">Select residency type</option>
+                            <option value="Original Resident">Original Resident</option>
+                            <option value="Migrant Resident">Migrant Resident</option>
 
                         </select>
 
                     </div>
 
-
                     {{-- RESIDENCY YEAR --}}
                     <div class="col-md-6">
 
-                        <label class="form-label">
-                            Residency Start Year
-                        </label>
+                        <label class="form-label">Residency Start Year</label>
 
                         <input id="resident_residency_start_year"
                                type="number"
@@ -1511,14 +1379,11 @@
                                placeholder="e.g. 2018">
 
                         <div class="required-note mt-1">
-
                             Enter the year the person started residing
                             in the barangay, if known.
-
                         </div>
 
                     </div>
-
 
                     {{-- ESTIMATED YEAR --}}
                     <div class="col-md-6 d-flex align-items-center">
@@ -1531,42 +1396,32 @@
 
                             <label class="form-check-label"
                                    for="resident_residency_year_estimated">
-
                                 Residency year is estimated
-
                             </label>
 
                         </div>
 
                     </div>
 
-
                     {{-- CONTACT --}}
                     <div class="col-md-6">
 
-                        <label class="form-label">
-                            Contact Number
-                        </label>
+                        <label class="form-label">Contact Number</label>
 
                         <input id="resident_contact_number"
                                class="form-control"
                                placeholder="Optional">
 
                         <div class="required-note mt-1">
-
                             Leave blank if the resident has no contact number.
-
                         </div>
 
                     </div>
 
-
                     {{-- EMAIL --}}
                     <div class="col-md-6">
 
-                        <label class="form-label">
-                            Email
-                        </label>
+                        <label class="form-label">Email</label>
 
                         <input id="resident_email"
                                type="text"
@@ -1574,13 +1429,10 @@
                                placeholder="Optional or N/A">
 
                         <div class="required-note mt-1">
-
                             Enter a valid email address, N/A, or leave blank.
-
                         </div>
 
                     </div>
-
 
                     {{-- OCCUPATION --}}
                     <div class="col-md-6">
@@ -1592,66 +1444,24 @@
                         <select id="resident_occupation"
                                 class="form-select">
 
-                            <option value="">
-                                Select occupation / status
-                            </option>
-
-                            <option value="Student">
-                                Student
-                            </option>
-
-                            <option value="Employed">
-                                Employed
-                            </option>
-
-                            <option value="Self-Employed">
-                                Self-Employed
-                            </option>
-
-                            <option value="Business Owner">
-                                Business Owner
-                            </option>
-
-                            <option value="Farmer">
-                                Farmer
-                            </option>
-
-                            <option value="Fisherman">
-                                Fisherman
-                            </option>
-
-                            <option value="Homemaker">
-                                Homemaker
-                            </option>
-
-                            <option value="Unemployed">
-                                Unemployed
-                            </option>
-
-                            <option value="Retired">
-                                Retired
-                            </option>
-
-                            <option value="Senior Citizen">
-                                Senior Citizen
-                            </option>
-
-                            <option value="Child / Not Yet School-Age">
-                                Child / Not Yet School-Age
-                            </option>
-
-                            <option value="Infant">
-                                Infant
-                            </option>
-
-                            <option value="Other">
-                                Other
-                            </option>
+                            <option value="">Select occupation / status</option>
+                            <option value="Student">Student</option>
+                            <option value="Employed">Employed</option>
+                            <option value="Self-Employed">Self-Employed</option>
+                            <option value="Business Owner">Business Owner</option>
+                            <option value="Farmer">Farmer</option>
+                            <option value="Fisherman">Fisherman</option>
+                            <option value="Homemaker">Homemaker</option>
+                            <option value="Unemployed">Unemployed</option>
+                            <option value="Retired">Retired</option>
+                            <option value="Senior Citizen">Senior Citizen</option>
+                            <option value="Child / Not Yet School-Age">Child / Not Yet School-Age</option>
+                            <option value="Infant">Infant</option>
+                            <option value="Other">Other</option>
 
                         </select>
 
                     </div>
-
 
                     {{-- OCCUPATION OTHER --}}
                     <div class="col-md-6 occupation-other-wrap"
@@ -1667,89 +1477,74 @@
 
                     </div>
 
-
-                    {{-- HOUSEHOLD CLASSIFICATION --}}
+                    {{-- INDIVIDUAL CLASSIFICATIONS --}}
                     <div class="col-12">
 
-                        <label class="form-label d-block mb-2">
-                            Household Classification
-                        </label>
+                        <label class="form-label d-block mb-2">Individual Classification</label>
 
                         <div class="d-flex flex-wrap gap-4">
 
                             <div class="form-check">
-
-                                <input class="form-check-input"
-                                       type="checkbox"
-                                       id="resident_is_pwd">
-
-                                <label class="form-check-label"
-                                       for="resident_is_pwd">
-
-                                    PWD
-
-                                </label>
-
+                                <input class="form-check-input" type="checkbox" id="resident_is_pwd">
+                                <label class="form-check-label" for="resident_is_pwd">PWD</label>
                             </div>
-
 
                             <div class="form-check">
-
-                                <input class="form-check-input"
-                                       type="checkbox"
-                                       id="resident_is_solo_parent">
-
-                                <label class="form-check-label"
-                                       for="resident_is_solo_parent">
-
-                                    Solo Parent
-
-                                </label>
-
+                                <input class="form-check-input" type="checkbox" id="resident_is_senior_citizen">
+                                <label class="form-check-label" for="resident_is_senior_citizen">Senior Citizen</label>
                             </div>
-
 
                             <div class="form-check">
-
-                                <input class="form-check-input"
-                                       type="checkbox"
-                                       id="resident_is_high_school">
-
-                                <label class="form-check-label"
-                                       for="resident_is_high_school">
-
-                                    High School Student
-
-                                </label>
-
+                                <input class="form-check-input" type="checkbox" id="resident_is_solo_parent">
+                                <label class="form-check-label" for="resident_is_solo_parent">Solo Parent</label>
                             </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="resident_is_student">
+                                <label class="form-check-label" for="resident_is_student">Student</label>
+                            </div>
+
+                        </div>
+
+                        <div class="student-level-wrap mt-3"
+                             id="studentEducationWrap">
+
+                            <label class="form-label"
+                                   for="resident_student_education_level">
+                                Education Level
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <select id="resident_student_education_level"
+                                    class="form-select">
+
+                                <option value="">Select education level</option>
+                                <option value="Elementary">Elementary</option>
+                                <option value="High School">High School</option>
+                                <option value="College">College</option>
+
+                            </select>
 
                         </div>
 
                         <div class="required-note mt-2">
-
-                            A person may have more than one classification, or none.
-                            This does not affect the resident's record status.
-
+                            Multiple classifications may be selected for one person.
+                            These apply only to this person, not to the rest of the household.
+                            A Student must have an education level.
                         </div>
 
                     </div>
 
-
                     {{-- INHERITED ADDRESS --}}
                     <div class="col-12">
 
-                        <label class="form-label">
-                            Resident Address
-                        </label>
+                        <label class="form-label">Resident Address</label>
 
                         <div class="readonly-address-box">
 
                             <i class="bi bi-house-fill me-1"></i>
 
-                            <strong>
-                                Address inherited from household:
-                            </strong>
+                            <strong>Address inherited from household:</strong>
 
                             <span id="modalHouseholdAddress">
                                 Please enter the household address above.
@@ -1758,10 +1553,8 @@
                         </div>
 
                         <div class="required-note mt-2">
-
                             Individual members do not enter a separate address.
                             Their resident address is synchronized with the household address.
-
                         </div>
 
                     </div>
@@ -1781,11 +1574,8 @@
                 <button type="button"
                         class="btn btn-outline-secondary"
                         data-bs-dismiss="modal">
-
                     Cancel
-
                 </button>
-
 
                 <button type="button"
                         class="btn btn-primary"
@@ -1823,109 +1613,46 @@ document.addEventListener('DOMContentLoaded', function () {
     const oldHead =
         @json(old('head', []));
 
-    const oldHeadId =
-        @json(old('head.resident_id'));
-
 
     /* =========================================================
        ELEMENTS
     ========================================================== */
 
-    const householdForm =
-        document.getElementById('householdForm');
+    const householdForm = document.getElementById('householdForm');
+    const headPanel = document.getElementById('headPanel');
+    const headEmptyState = document.getElementById('headEmptyState');
+    const selectedHeadCard = document.getElementById('selectedHeadCard');
+    const headSearch = document.getElementById('headResidentSearch');
+    const headResults = document.getElementById('headSearchResults');
+    const clearHeadSearch = document.getElementById('clearHeadSearch');
+    const registerNewHeadButton = document.getElementById('registerNewHeadButton');
+    const changeHeadButton = document.getElementById('changeHeadButton');
+    const memberSection = document.getElementById('memberSection');
+    const memberLockedNotice = document.getElementById('memberLockedNotice');
+    const addMemberButton = document.getElementById('addMemberButton');
+    const memberSearch = document.getElementById('memberResidentSearch');
+    const memberResults = document.getElementById('memberSearchResults');
+    const clearMemberSearch = document.getElementById('clearMemberSearch');
+    const emptyMembers = document.getElementById('emptyMembers');
+    const memberTableWrap = document.getElementById('memberTableWrap');
+    const membersTableBody = document.getElementById('membersTableBody');
+    const headHiddenFields = document.getElementById('headHiddenFields');
+    const memberHiddenFields = document.getElementById('memberHiddenFields');
 
-    const headPanel =
-        document.getElementById('headPanel');
+    const modalElement = document.getElementById('residentFormModal');
+    const residentModal = new bootstrap.Modal(modalElement);
+    const modalTitle = document.getElementById('residentModalTitle');
+    const modalSubtitle = document.getElementById('residentModalSubtitle');
+    const modalExistingNotice = document.getElementById('modalExistingNotice');
+    const modalError = document.getElementById('residentModalError');
+    const saveResidentButton = document.getElementById('saveResidentButton');
+    const modalHouseholdAddress = document.getElementById('modalHouseholdAddress');
+    const occupationOtherWrap = document.getElementById('occupationOtherWrap');
+    const studentEducationWrap = document.getElementById('studentEducationWrap');
 
-    const headEmptyState =
-        document.getElementById('headEmptyState');
-
-    const selectedHeadCard =
-        document.getElementById('selectedHeadCard');
-
-    const headSearch =
-        document.getElementById('headResidentSearch');
-
-    const headResults =
-        document.getElementById('headSearchResults');
-
-    const clearHeadSearch =
-        document.getElementById('clearHeadSearch');
-
-    const registerNewHeadButton =
-        document.getElementById('registerNewHeadButton');
-
-    const changeHeadButton =
-        document.getElementById('changeHeadButton');
-
-    const memberSection =
-        document.getElementById('memberSection');
-
-    const memberLockedNotice =
-        document.getElementById('memberLockedNotice');
-
-    const addMemberButton =
-        document.getElementById('addMemberButton');
-
-    const memberSearch =
-        document.getElementById('memberResidentSearch');
-
-    const memberResults =
-        document.getElementById('memberSearchResults');
-
-    const clearMemberSearch =
-        document.getElementById('clearMemberSearch');
-
-    const emptyMembers =
-        document.getElementById('emptyMembers');
-
-    const memberTableWrap =
-        document.getElementById('memberTableWrap');
-
-    const membersTableBody =
-        document.getElementById('membersTableBody');
-
-    const headHiddenFields =
-        document.getElementById('headHiddenFields');
-
-    const memberHiddenFields =
-        document.getElementById('memberHiddenFields');
-
-    const modalElement =
-        document.getElementById('residentFormModal');
-
-    const residentModal =
-        new bootstrap.Modal(modalElement);
-
-    const modalTitle =
-        document.getElementById('residentModalTitle');
-
-    const modalSubtitle =
-        document.getElementById('residentModalSubtitle');
-
-    const modalExistingNotice =
-        document.getElementById('modalExistingNotice');
-
-    const modalError =
-        document.getElementById('residentModalError');
-
-    const saveResidentButton =
-        document.getElementById('saveResidentButton');
-
-    const modalHouseholdAddress =
-        document.getElementById('modalHouseholdAddress');
-
-    const occupationOtherWrap =
-        document.getElementById('occupationOtherWrap');
-
-    const workflowHeadStep =
-        document.getElementById('workflowHeadStep');
-
-    const workflowLocationStep =
-        document.getElementById('workflowLocationStep');
-
-    const workflowMembersStep =
-        document.getElementById('workflowMembersStep');
+    const workflowHeadStep = document.getElementById('workflowHeadStep');
+    const workflowLocationStep = document.getElementById('workflowLocationStep');
+    const workflowMembersStep = document.getElementById('workflowMembersStep');
 
 
     /* =========================================================
@@ -1933,61 +1660,26 @@ document.addEventListener('DOMContentLoaded', function () {
     ========================================================== */
 
     const fields = {
-
-        first_name:
-            document.getElementById('resident_first_name'),
-
-        middle_name:
-            document.getElementById('resident_middle_name'),
-
-        last_name:
-            document.getElementById('resident_last_name'),
-
-        suffix:
-            document.getElementById('resident_suffix'),
-
-        birth_date:
-            document.getElementById('resident_birth_date'),
-
-        sex:
-            document.getElementById('resident_sex'),
-
-        civil_status:
-            document.getElementById('resident_civil_status'),
-
-        relationship:
-            document.getElementById('resident_relationship'),
-
-        residency_type:
-            document.getElementById('resident_residency_type'),
-
-        residency_start_year:
-            document.getElementById('resident_residency_start_year'),
-
-        residency_year_estimated:
-            document.getElementById('resident_residency_year_estimated'),
-
-        contact_number:
-            document.getElementById('resident_contact_number'),
-
-        email:
-            document.getElementById('resident_email'),
-
-        occupation:
-            document.getElementById('resident_occupation'),
-
-        occupation_other:
-            document.getElementById('resident_occupation_other'),
-
-        is_pwd:
-            document.getElementById('resident_is_pwd'),
-
-        is_solo_parent:
-            document.getElementById('resident_is_solo_parent'),
-
-        is_high_school:
-            document.getElementById('resident_is_high_school')
-
+        first_name: document.getElementById('resident_first_name'),
+        middle_name: document.getElementById('resident_middle_name'),
+        last_name: document.getElementById('resident_last_name'),
+        suffix: document.getElementById('resident_suffix'),
+        birth_date: document.getElementById('resident_birth_date'),
+        sex: document.getElementById('resident_sex'),
+        civil_status: document.getElementById('resident_civil_status'),
+        relationship: document.getElementById('resident_relationship'),
+        residency_type: document.getElementById('resident_residency_type'),
+        residency_start_year: document.getElementById('resident_residency_start_year'),
+        residency_year_estimated: document.getElementById('resident_residency_year_estimated'),
+        contact_number: document.getElementById('resident_contact_number'),
+        email: document.getElementById('resident_email'),
+        occupation: document.getElementById('resident_occupation'),
+        occupation_other: document.getElementById('resident_occupation_other'),
+        is_pwd: document.getElementById('resident_is_pwd'),
+        is_senior_citizen: document.getElementById('resident_is_senior_citizen'),
+        is_solo_parent: document.getElementById('resident_is_solo_parent'),
+        is_student: document.getElementById('resident_is_student'),
+        student_education_level: document.getElementById('resident_student_education_level')
     };
 
 
@@ -1996,13 +1688,9 @@ document.addEventListener('DOMContentLoaded', function () {
     ========================================================== */
 
     let householdHead = null;
-
     let members = [];
-
     let modalMode = 'head-new';
-
     let editingIndex = null;
-
     let selectedExistingResidentId = null;
 
 
@@ -2013,6 +1701,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const validResidencyTypes = [
         'Original Resident',
         'Migrant Resident'
+    ];
+
+    const educationLevels = [
+        'Elementary',
+        'High School',
+        'College'
     ];
 
     const occupationOptions = [
@@ -2057,10 +1751,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     /*
-     * Old input restored from the server (and hidden fields we
-     * generate ourselves) can arrive as the string "1"/"0" rather
-     * than a real boolean. This keeps every classification check
-     * (badges, hidden-field output, checkbox state) consistent.
+     * Old input restored from the server can arrive as "1"/"0"
+     * strings rather than real booleans.
      */
     function toBool(value) {
 
@@ -2094,23 +1786,17 @@ document.addEventListener('DOMContentLoaded', function () {
             return '';
         }
 
-        const birth =
-            new Date(birthDate + 'T00:00:00');
+        const birth = new Date(birthDate + 'T00:00:00');
 
         if (Number.isNaN(birth.getTime())) {
             return '';
         }
 
-        const today =
-            new Date();
+        const today = new Date();
 
-        let age =
-            today.getFullYear() -
-            birth.getFullYear();
+        let age = today.getFullYear() - birth.getFullYear();
 
-        const monthDifference =
-            today.getMonth() -
-            birth.getMonth();
+        const monthDifference = today.getMonth() - birth.getMonth();
 
         if (
             monthDifference < 0 ||
@@ -2137,26 +1823,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     /*
-     * Current system values:
-     * Original Resident
-     * Migrant Resident
-     *
-     * Legacy values are normalized here so old resident
-     * records/form data do not trigger "selected residency_type
-     * is invalid".
+     * Current system values: Original Resident / Migrant Resident.
+     * Legacy values are normalized so old records stay valid.
      */
     function normalizeResidencyType(value) {
 
-        const normalized =
-            normalize(value);
+        const normalized = normalize(value);
 
         if (
             normalized === 'original resident' ||
             normalized === 'permanent'
         ) {
-
             return 'Original Resident';
-
         }
 
         if (
@@ -2164,16 +1842,9 @@ document.addEventListener('DOMContentLoaded', function () {
             normalized === 'migrant' ||
             normalized === 'temporary'
         ) {
-
             return 'Migrant Resident';
-
         }
 
-        /*
-         * Database default is Original Resident.
-         * This also keeps existing records with an empty value
-         * valid when they are reused.
-         */
         if (!normalized) {
             return 'Original Resident';
         }
@@ -2185,17 +1856,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function normalizeOccupation(person) {
 
-        const occupation =
-            person.occupation || '';
+        const occupation = person.occupation || '';
 
-        if (
-            occupationOptions.includes(occupation)
-        ) {
+        if (occupationOptions.includes(occupation)) {
 
             return {
                 occupation: occupation,
-                occupation_other:
-                    person.occupation_other || ''
+                occupation_other: person.occupation_other || ''
             };
 
         }
@@ -2205,8 +1872,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return {
                 occupation: 'Other',
                 occupation_other:
-                    person.occupation_other ||
-                    occupation
+                    person.occupation_other || occupation
             };
 
         }
@@ -2220,43 +1886,86 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     /*
-     * Bootstrap badges shown in the member table so staff can
-     * see each person's classification(s) before submitting.
-     * A person may have any combination of PWD / Solo Parent /
-     * High School Student, or none at all.
+     * Individual classification normalizer.
+     *
+     * Each person is normalized on their own. The legacy
+     * `is_high_school` flag is DERIVED from the education level
+     * (Student + High School) and is only read as input when an old
+     * record has no education level yet.
+     */
+    function normalizeClassification(person) {
+
+        const legacyHighSchool = toBool(person.is_high_school);
+
+        const isStudent =
+            toBool(person.is_student) || legacyHighSchool;
+
+        let level = '';
+
+        if (isStudent) {
+
+            level = String(
+                person.student_education_level ||
+                person.education_level ||
+                ''
+            ).trim();
+
+            if (!educationLevels.includes(level)) {
+                level = '';
+            }
+
+            if (!level && legacyHighSchool) {
+                level = 'High School';
+            }
+
+        }
+
+        return {
+            is_pwd: toBool(person.is_pwd),
+            is_senior_citizen: toBool(person.is_senior_citizen),
+            is_solo_parent: toBool(person.is_solo_parent),
+            is_student: isStudent,
+            student_education_level: level,
+            is_high_school: isStudent && level === 'High School'
+        };
+
+    }
+
+
+    /*
+     * Badges shown in the member table so staff can see each
+     * person's own classification(s) before submitting.
      */
     function classificationBadges(person) {
 
         const badges = [];
 
         if (toBool(person.is_pwd)) {
+            badges.push('<span class="badge bg-danger">PWD</span>');
+        }
 
-            badges.push(
-                '<span class="badge bg-danger">PWD</span>'
-            );
-
+        if (toBool(person.is_senior_citizen)) {
+            badges.push('<span class="badge bg-secondary">Senior Citizen</span>');
         }
 
         if (toBool(person.is_solo_parent)) {
-
-            badges.push(
-                '<span class="badge bg-warning text-dark">Solo Parent</span>'
-            );
-
+            badges.push('<span class="badge bg-warning text-dark">Solo Parent</span>');
         }
 
-        if (toBool(person.is_high_school)) {
+        if (toBool(person.is_student)) {
+
+            const level = person.student_education_level || '';
 
             badges.push(
-                '<span class="badge bg-info text-dark">High School</span>'
+                '<span class="badge bg-primary">Student' +
+                (level ? ' – ' + esc(level) : ' – level needed') +
+                '</span>'
             );
 
         }
 
         if (!badges.length) {
-
             return '<span class="text-muted">None</span>';
-
         }
 
         return badges.join(' ');
@@ -2264,16 +1973,110 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
+    /*
+     * Classification controls on the household head card, so an
+     * EXISTING resident chosen as head can also be classified
+     * (no modal is opened for existing heads).
+     */
+    const headFlagOptions = [
+        { key: 'is_pwd', label: 'PWD' },
+        { key: 'is_senior_citizen', label: 'Senior Citizen' },
+        { key: 'is_solo_parent', label: 'Solo Parent' },
+        { key: 'is_student', label: 'Student' }
+    ];
+
+
+    function headClassificationControls(person) {
+
+        const isStudent = toBool(person.is_student);
+
+        return `
+
+            <div class="mt-3">
+
+                <div class="form-label mb-1">
+                    Head Classification
+                </div>
+
+                <div class="d-flex flex-wrap gap-3">
+
+                    ${headFlagOptions.map(
+                        function (option) {
+
+                            return `
+
+                                <div class="form-check">
+
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="head_flag_${option.key}"
+                                           data-head-flag="${option.key}"
+                                           ${toBool(person[option.key]) ? 'checked' : ''}>
+
+                                    <label class="form-check-label"
+                                           for="head_flag_${option.key}">
+                                        ${option.label}
+                                    </label>
+
+                                </div>
+
+                            `;
+
+                        }
+                    ).join('')}
+
+                </div>
+
+                <div class="mt-2 ${isStudent ? '' : 'd-none'}"
+                     style="max-width: 260px;">
+
+                    <label class="form-label mb-1"
+                           for="head_education_level">
+                        Education Level
+                        <span class="text-danger">*</span>
+                    </label>
+
+                    <select class="form-select form-select-sm"
+                            id="head_education_level"
+                            data-head-education>
+
+                        <option value="">Select education level</option>
+
+                        ${educationLevels.map(
+                            function (level) {
+
+                                return `
+                                    <option value="${level}"
+                                        ${person.student_education_level === level ? 'selected' : ''}>
+                                        ${level}
+                                    </option>
+                                `;
+
+                            }
+                        ).join('')}
+
+                    </select>
+
+                </div>
+
+                <div class="required-note mt-1">
+                    Optional. A Student must have an education level.
+                    Staff must verify before these are used for assistance decisions.
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
     function identityKey(person) {
 
-        const id =
-            person.resident_id ||
-            person.id;
+        const id = person.resident_id || person.id;
 
         if (id) {
-
             return 'id:' + Number(id);
-
         }
 
         return [
@@ -2291,8 +2094,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function householdAddress() {
 
-        const address =
-            document.getElementById('address');
+        const address = document.getElementById('address');
 
         return address
             ? address.value.trim()
@@ -2303,11 +2105,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateModalHouseholdAddress() {
 
-        const address =
-            householdAddress();
-
         modalHouseholdAddress.textContent =
-            address ||
+            householdAddress() ||
             'Please enter the household address above.';
 
     }
@@ -2315,18 +2114,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateOccupationOtherVisibility() {
 
-        const isOther =
-            fields.occupation.value === 'Other';
+        const isOther = fields.occupation.value === 'Other';
 
-        occupationOtherWrap.classList.toggle(
-            'show',
-            isOther
-        );
+        occupationOtherWrap.classList.toggle('show', isOther);
 
         if (!isOther) {
-
             fields.occupation_other.value = '';
+        }
 
+    }
+
+
+    function updateStudentEducationVisibility() {
+
+        const isStudent = fields.is_student.checked;
+
+        studentEducationWrap.classList.toggle('show', isStudent);
+
+        if (!isStudent) {
+            fields.student_education_level.value = '';
         }
 
     }
@@ -2334,62 +2140,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateWorkflow() {
 
-        const hasHead =
-            !!householdHead;
+        const hasHead = !!householdHead;
+        const hasAddress = !!householdAddress();
 
-        const hasAddress =
-            !!householdAddress();
-
-        workflowHeadStep.classList.remove(
-            'active',
-            'complete'
-        );
-
-        workflowLocationStep.classList.remove(
-            'active',
-            'complete'
-        );
-
-        workflowMembersStep.classList.remove(
-            'active',
-            'complete'
-        );
-
+        workflowHeadStep.classList.remove('active', 'complete');
+        workflowLocationStep.classList.remove('active', 'complete');
+        workflowMembersStep.classList.remove('active', 'complete');
 
         if (!hasHead) {
-
-            workflowHeadStep.classList.add(
-                'active'
-            );
-
+            workflowHeadStep.classList.add('active');
             return;
-
         }
 
-
-        workflowHeadStep.classList.add(
-            'complete'
-        );
-
+        workflowHeadStep.classList.add('complete');
 
         if (!hasAddress) {
-
-            workflowLocationStep.classList.add(
-                'active'
-            );
-
+            workflowLocationStep.classList.add('active');
             return;
-
         }
 
-
-        workflowLocationStep.classList.add(
-            'complete'
-        );
-
-        workflowMembersStep.classList.add(
-            'active'
-        );
+        workflowLocationStep.classList.add('complete');
+        workflowMembersStep.classList.add('active');
 
     }
 
@@ -2404,36 +2175,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 if (field.type === 'checkbox') {
-
                     field.checked = false;
-
                 } else {
-
                     field.value = '';
-
                 }
 
             }
         );
 
-        modalError.classList.add(
-            'd-none'
-        );
-
+        modalError.classList.add('d-none');
         modalError.textContent = '';
 
-        modalExistingNotice.classList.add(
-            'd-none'
-        );
-
+        modalExistingNotice.classList.add('d-none');
         modalExistingNotice.innerHTML = '';
 
         editingIndex = null;
-
         selectedExistingResidentId = null;
 
         updateOccupationOtherVisibility();
-
+        updateStudentEducationVisibility();
         updateModalHouseholdAddress();
 
     }
@@ -2449,15 +2209,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         modalMode = 'head-new';
 
-        modalTitle.textContent =
-            'Register New Household Head';
+        modalTitle.textContent = 'Register New Household Head';
 
         modalSubtitle.textContent =
             'This person will be saved as an individual resident record and assigned as the household head.';
 
-        document
-            .getElementById('relationshipField')
-            .classList.add('d-none');
+        document.getElementById('relationshipField').classList.add('d-none');
 
         updateModalHouseholdAddress();
 
@@ -2472,15 +2229,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         modalMode = 'member-new';
 
-        modalTitle.textContent =
-            'Register New Household Member';
+        modalTitle.textContent = 'Register New Household Member';
 
         modalSubtitle.textContent =
             'This person will be saved as an individual resident record and linked to this household.';
 
-        document
-            .getElementById('relationshipField')
-            .classList.remove('d-none');
+        document.getElementById('relationshipField').classList.remove('d-none');
 
         updateModalHouseholdAddress();
 
@@ -2489,10 +2243,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-    function openExistingMemberModal(
-        person,
-        index = null
-    ) {
+    function openExistingMemberModal(person, index = null) {
 
         resetModal();
 
@@ -2501,10 +2252,7 @@ document.addEventListener('DOMContentLoaded', function () {
         editingIndex = index;
 
         selectedExistingResidentId =
-            Number(
-                person.resident_id ||
-                person.id
-            );
+            Number(person.resident_id || person.id);
 
         modalTitle.textContent =
             index === null
@@ -2514,9 +2262,7 @@ document.addEventListener('DOMContentLoaded', function () {
         modalSubtitle.textContent =
             'The existing resident record will be linked; a duplicate resident record will not be created.';
 
-        modalExistingNotice.classList.remove(
-            'd-none'
-        );
+        modalExistingNotice.classList.remove('d-none');
 
         modalExistingNotice.innerHTML =
             '<strong>' +
@@ -2526,87 +2272,57 @@ document.addEventListener('DOMContentLoaded', function () {
             esc(fullName(person));
 
 
-        fields.first_name.value =
-            person.first_name || '';
+        fields.first_name.value = person.first_name || '';
+        fields.middle_name.value = person.middle_name || '';
+        fields.last_name.value = person.last_name || '';
+        fields.suffix.value = person.suffix || '';
+        fields.birth_date.value = person.birth_date || '';
+        fields.sex.value = person.sex || '';
+        fields.civil_status.value = person.civil_status || '';
+        fields.relationship.value = person.relationship || '';
 
-        fields.middle_name.value =
-            person.middle_name || '';
-
-        fields.last_name.value =
-            person.last_name || '';
-
-        fields.suffix.value =
-            person.suffix || '';
-
-        fields.birth_date.value =
-            person.birth_date || '';
-
-        fields.sex.value =
-            person.sex || '';
-
-        fields.civil_status.value =
-            person.civil_status || '';
-
-        fields.relationship.value =
-            person.relationship || '';
-
-
-        /*
-         * IMPORTANT:
-         * Normalize old residency values here.
-         */
         fields.residency_type.value =
-            normalizeResidencyType(
-                person.residency_type
-            );
-
+            normalizeResidencyType(person.residency_type);
 
         fields.residency_start_year.value =
             person.residency_start_year || '';
 
         fields.residency_year_estimated.checked =
-            Boolean(
-                person.residency_year_estimated
-            );
+            toBool(person.residency_year_estimated);
 
-        fields.contact_number.value =
-            person.contact_number || '';
+        fields.contact_number.value = person.contact_number || '';
+        fields.email.value = person.email || '';
 
-        fields.email.value =
-            person.email || '';
+        const occupationData = normalizeOccupation(person);
 
-
-        const occupationData =
-            normalizeOccupation(person);
-
-        fields.occupation.value =
-            occupationData.occupation;
-
-        fields.occupation_other.value =
-            occupationData.occupation_other;
+        fields.occupation.value = occupationData.occupation;
+        fields.occupation_other.value = occupationData.occupation_other;
 
 
         /*
-         * Household classification.
-         * Loads existing values when editing/re-adding a person
-         * that already carries classification data; defaults to
-         * unchecked otherwise (handled by resetModal above).
+         * This person's OWN classification only.
          */
-        fields.is_pwd.checked =
-            toBool(person.is_pwd);
+        const classification = normalizeClassification(person);
 
-        fields.is_solo_parent.checked =
-            toBool(person.is_solo_parent);
-
-        fields.is_high_school.checked =
-            toBool(person.is_high_school);
+        fields.is_pwd.checked = classification.is_pwd;
+        fields.is_senior_citizen.checked = classification.is_senior_citizen;
+        fields.is_solo_parent.checked = classification.is_solo_parent;
+        fields.is_student.checked = classification.is_student;
+        fields.student_education_level.value =
+            classification.student_education_level;
 
 
         updateOccupationOtherVisibility();
+        updateStudentEducationVisibility();
 
-        document
-            .getElementById('relationshipField')
-            .classList.remove('d-none');
+        // updateStudentEducationVisibility clears the level when unchecked;
+        // restore it for students.
+        if (classification.is_student) {
+            fields.student_education_level.value =
+                classification.student_education_level;
+        }
+
+        document.getElementById('relationshipField').classList.remove('d-none');
 
         updateModalHouseholdAddress();
 
@@ -2617,17 +2333,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function openEditMemberModal(index) {
 
-        const person =
-            members[index];
+        const person = members[index];
 
         if (!person || person.isHead) {
             return;
         }
 
-        openExistingMemberModal(
-            person,
-            index
-        );
+        openExistingMemberModal(person, index);
 
     }
 
@@ -2640,10 +2352,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return residents.find(
             function (resident) {
-
-                return Number(resident.id) ===
-                    Number(id);
-
+                return Number(resident.id) === Number(id);
             }
         );
 
@@ -2656,56 +2365,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
             ...resident,
 
-            resident_id:
-                resident.id,
+            resident_id: resident.id,
 
             residency_type:
-                normalizeResidencyType(
-                    resident.residency_type
-                ),
+                normalizeResidencyType(resident.residency_type),
 
-            mode:
-                'existing',
+            mode: 'existing',
 
-            isHead:
-                true,
+            isHead: true,
 
-            relationship:
-                'Head',
+            relationship: 'Head',
 
-            is_pwd:
-                toBool(resident.is_pwd),
-
-            is_solo_parent:
-                toBool(resident.is_solo_parent),
-
-            is_high_school:
-                toBool(resident.is_high_school)
+            ...normalizeClassification(resident)
 
         };
 
 
-        members =
-            members.filter(
-                function (member) {
+        members = members.filter(
+            function (member) {
+                return !member.isHead;
+            }
+        );
 
-                    return !member.isHead;
-
-                }
-            );
-
-
-        members.unshift({
-            ...householdHead
-        });
-
+        members.unshift({ ...householdHead });
 
         renderHead();
-
         renderMembers();
-
         hideHeadResults();
-
         updateWorkflow();
 
     }
@@ -2713,43 +2399,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderHead() {
 
-        const hasHead =
-            !!householdHead;
+        const hasHead = !!householdHead;
 
-        headPanel.classList.toggle(
-            'has-head',
-            hasHead
-        );
-
-        headEmptyState.classList.toggle(
-            'd-none',
-            hasHead
-        );
-
-        selectedHeadCard.classList.toggle(
-            'd-none',
-            !hasHead
-        );
-
-        changeHeadButton.classList.toggle(
-            'd-none',
-            !hasHead
-        );
-
-        registerNewHeadButton.classList.toggle(
-            'd-none',
-            hasHead
-        );
-
-        memberSection.classList.toggle(
-            'd-none',
-            !hasHead
-        );
-
-        memberLockedNotice.classList.toggle(
-            'd-none',
-            hasHead
-        );
+        headPanel.classList.toggle('has-head', hasHead);
+        headEmptyState.classList.toggle('d-none', hasHead);
+        selectedHeadCard.classList.toggle('d-none', !hasHead);
+        changeHeadButton.classList.toggle('d-none', !hasHead);
+        registerNewHeadButton.classList.toggle('d-none', hasHead);
+        memberSection.classList.toggle('d-none', !hasHead);
+        memberLockedNotice.classList.toggle('d-none', hasHead);
 
 
         if (!hasHead) {
@@ -2777,10 +2435,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         <div class="person-meta mt-1">
 
-                            ${esc(
-                                householdHead.birth_date ||
-                                'No birth date'
-                            )}
+                            ${esc(householdHead.birth_date || 'No birth date')}
 
                             ${
                                 householdHead.sex
@@ -2818,6 +2473,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         </div>
 
+                        ${headClassificationControls(householdHead)}
+
                     </div>
 
 
@@ -2834,11 +2491,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="text-muted small mt-1">
 
                             Age:
-                            ${esc(
-                                ageOf(
-                                    householdHead.birth_date
-                                )
-                            )}
+                            ${esc(ageOf(householdHead.birth_date))}
 
                         </div>
 
@@ -2858,27 +2511,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderMembers() {
 
-        const additional =
-            members.filter(
-                function (member) {
-
-                    return !member.isHead;
-
-                }
-            );
-
-
-        emptyMembers.classList.toggle(
-            'd-none',
-            additional.length > 0
+        const additional = members.filter(
+            function (member) {
+                return !member.isHead;
+            }
         );
 
+        emptyMembers.classList.toggle('d-none', additional.length > 0);
 
-        memberTableWrap.classList.toggle(
-            'd-none',
-            members.length === 0
-        );
-
+        memberTableWrap.classList.toggle('d-none', members.length === 0);
 
         membersTableBody.innerHTML = '';
 
@@ -2886,37 +2527,21 @@ document.addEventListener('DOMContentLoaded', function () {
         members.forEach(
             function (member, index) {
 
-                const row =
-                    document.createElement('tr');
-
+                const row = document.createElement('tr');
 
                 row.innerHTML = `
 
-                    <td>
-                        ${index + 1}
-                    </td>
+                    <td>${index + 1}</td>
 
                     <td>
-                        <strong>
-                            ${esc(fullName(member))}
-                        </strong>
+                        <strong>${esc(fullName(member))}</strong>
                     </td>
 
-                    <td>
-                        ${esc(
-                            member.birth_date || '—'
-                        )}
-                    </td>
+                    <td>${esc(member.birth_date || '—')}</td>
 
-                    <td>
-                        ${esc(
-                            ageOf(member.birth_date) || '—'
-                        )}
-                    </td>
+                    <td>${esc(ageOf(member.birth_date) || '—')}</td>
 
-                    <td>
-                        ${esc(member.sex || '—')}
-                    </td>
+                    <td>${esc(member.sex || '—')}</td>
 
                     <td>
                         ${
@@ -2927,11 +2552,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </td>
 
                     <td>
-                        ${esc(
-                            normalizeResidencyType(
-                                member.residency_type
-                            ) || '—'
-                        )}
+                        ${esc(normalizeResidencyType(member.residency_type) || '—')}
                     </td>
 
                     <td>
@@ -2942,9 +2563,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     </td>
 
-                    <td>
-                        ${classificationBadges(member)}
-                    </td>
+                    <td>${classificationBadges(member)}</td>
 
                     <td>
                         ${
@@ -2988,7 +2607,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 `;
 
-
                 membersTableBody.appendChild(row);
 
             }
@@ -2999,58 +2617,49 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function hideHeadResults() {
 
-        headResults.classList.add(
-            'd-none'
-        );
-
+        headResults.classList.add('d-none');
         headResults.innerHTML = '';
+
+    }
+
+
+    function residentSearchHaystack(resident) {
+
+        return normalize(
+            [
+                resident.first_name,
+                resident.middle_name,
+                resident.last_name,
+                resident.suffix
+            ]
+            .filter(Boolean)
+            .join(' ')
+        );
 
     }
 
 
     function renderHeadResults(term) {
 
-        const query =
-            normalize(term);
+        const query = normalize(term);
 
         if (!query) {
-
             hideHeadResults();
-
             return;
-
         }
-
 
         const results =
             residents
                 .filter(
                     function (resident) {
-
-                        const haystack =
-                            normalize(
-                                [
-                                    resident.first_name,
-                                    resident.middle_name,
-                                    resident.last_name,
-                                    resident.suffix
-                                ]
-                                .filter(Boolean)
-                                .join(' ')
-                            );
-
-                        return haystack.includes(query);
-
+                        return residentSearchHaystack(resident).includes(query);
                     }
                 )
                 .slice(0, 20);
 
+        headResults.classList.remove('d-none');
 
         if (!results.length) {
-
-            headResults.classList.remove(
-                'd-none'
-            );
 
             headResults.innerHTML =
                 '<div class="p-3 text-muted small">' +
@@ -3062,12 +2671,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         }
 
-
-        headResults.classList.remove(
-            'd-none'
-        );
-
-
         headResults.innerHTML =
             results.map(
                 function (resident) {
@@ -3078,16 +2681,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                 class="search-result"
                                 data-resident-id="${resident.id}">
 
-                            <strong>
-                                ${esc(fullName(resident))}
-                            </strong>
+                            <strong>${esc(fullName(resident))}</strong>
 
                             <div class="small text-muted">
 
-                                ${esc(
-                                    resident.birth_date ||
-                                    'No birth date'
-                                )}
+                                ${esc(resident.birth_date || 'No birth date')}
 
                                 ${
                                     resident.sex
@@ -3109,10 +2707,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function hideMemberResults() {
 
-        memberResults.classList.add(
-            'd-none'
-        );
-
+        memberResults.classList.add('d-none');
         memberResults.innerHTML = '';
 
     }
@@ -3120,17 +2715,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderMemberResults(term) {
 
-        const query =
-            normalize(term);
+        const query = normalize(term);
 
         if (!query) {
-
             hideMemberResults();
-
             return;
-
         }
-
 
         const results =
             residents
@@ -3142,41 +2732,22 @@ document.addEventListener('DOMContentLoaded', function () {
                                 function (member) {
 
                                     return Number(
-                                        member.resident_id ||
-                                        member.id
+                                        member.resident_id || member.id
                                     ) === Number(resident.id);
 
                                 }
                             );
 
-
-                        const haystack =
-                            normalize(
-                                [
-                                    resident.first_name,
-                                    resident.middle_name,
-                                    resident.last_name,
-                                    resident.suffix
-                                ]
-                                .filter(Boolean)
-                                .join(' ')
-                            );
-
-
                         return (
                             !alreadyAdded &&
-                            haystack.includes(query)
+                            residentSearchHaystack(resident).includes(query)
                         );
 
                     }
                 )
                 .slice(0, 20);
 
-
-        memberResults.classList.remove(
-            'd-none'
-        );
-
+        memberResults.classList.remove('d-none');
 
         if (!results.length) {
 
@@ -3189,7 +2760,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         }
 
-
         memberResults.innerHTML =
             results.map(
                 function (resident) {
@@ -3200,16 +2770,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                 class="search-result"
                                 data-member-resident-id="${resident.id}">
 
-                            <strong>
-                                ${esc(fullName(resident))}
-                            </strong>
+                            <strong>${esc(fullName(resident))}</strong>
 
                             <div class="small text-muted">
 
-                                ${esc(
-                                    resident.birth_date ||
-                                    'No birth date'
-                                )}
+                                ${esc(resident.birth_date || 'No birth date')}
 
                                 ${
                                     resident.sex
@@ -3233,133 +2798,75 @@ document.addEventListener('DOMContentLoaded', function () {
        PERSON VALIDATION
     ========================================================== */
 
-    function validatePerson(
-        person,
-        requireRelationship
-    ) {
+    function validatePerson(person, requireRelationship) {
 
         const errors = [];
 
-
         if (!person.first_name) {
-
-            errors.push(
-                'First name is required.'
-            );
-
+            errors.push('First name is required.');
         }
-
 
         if (!person.last_name) {
-
-            errors.push(
-                'Last name is required.'
-            );
-
+            errors.push('Last name is required.');
         }
-
 
         if (!person.birth_date) {
-
-            errors.push(
-                'Birth date is required.'
-            );
-
+            errors.push('Birth date is required.');
         }
-
 
         if (!person.sex) {
-
-            errors.push(
-                'Sex is required.'
-            );
-
+            errors.push('Sex is required.');
         }
-
 
         if (!person.civil_status) {
-
-            errors.push(
-                'Civil status is required.'
-            );
-
+            errors.push('Civil status is required.');
         }
-
 
         const normalizedResidency =
-            normalizeResidencyType(
-                person.residency_type
-            );
+            normalizeResidencyType(person.residency_type);
 
-
-        if (
-            !validResidencyTypes.includes(
-                normalizedResidency
-            )
-        ) {
-
-            errors.push(
-                'Please select a valid residency type.'
-            );
-
+        if (!validResidencyTypes.includes(normalizedResidency)) {
+            errors.push('Please select a valid residency type.');
         }
-
 
         if (requireRelationship && !person.relationship) {
-
-            errors.push(
-                'Relationship to the household head is required.'
-            );
-
+            errors.push('Relationship to the household head is required.');
         }
-
 
         if (
             person.residency_start_year &&
             (
                 Number(person.residency_start_year) < 1900 ||
-                Number(person.residency_start_year) >
-                new Date().getFullYear()
+                Number(person.residency_start_year) > new Date().getFullYear()
             )
         ) {
-
-            errors.push(
-                'Residency start year must be a valid year.'
-            );
-
+            errors.push('Residency start year must be a valid year.');
         }
 
-
-        const age =
-            ageOf(person.birth_date);
-
+        const age = ageOf(person.birth_date);
 
         if (
             modalMode === 'head-new' &&
-            (
-                age === '' ||
-                Number(age) < 18
-            )
+            (age === '' || Number(age) < 18)
         ) {
-
-            errors.push(
-                'The household head must be at least 18 years old.'
-            );
-
+            errors.push('The household head must be at least 18 years old.');
         }
-
 
         if (
             person.occupation === 'Other' &&
             !person.occupation_other
         ) {
-
-            errors.push(
-                'Please specify the other occupation/status.'
-            );
-
+            errors.push('Please specify the other occupation/status.');
         }
 
+        if (
+            toBool(person.is_student) &&
+            !educationLevels.includes(person.student_education_level)
+        ) {
+            errors.push(
+                'Please select the education level (Elementary, High School, or College) for a student.'
+            );
+        }
 
         return errors;
 
@@ -3374,91 +2881,57 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const occupationData =
             normalizeOccupation({
-                occupation:
-                    fields.occupation.value,
-
-                occupation_other:
-                    fields.occupation_other.value.trim()
+                occupation: fields.occupation.value,
+                occupation_other: fields.occupation_other.value.trim()
             });
 
+        const isStudent = fields.is_student.checked;
+
+        const level = isStudent
+            ? fields.student_education_level.value
+            : '';
 
         return {
 
-            resident_id:
-                selectedExistingResidentId || null,
+            resident_id: selectedExistingResidentId || null,
 
-            first_name:
-                fields.first_name.value.trim(),
-
-            middle_name:
-                fields.middle_name.value.trim(),
-
-            last_name:
-                fields.last_name.value.trim(),
-
-            suffix:
-                fields.suffix.value.trim(),
-
-            birth_date:
-                fields.birth_date.value,
-
-            sex:
-                fields.sex.value,
-
-            civil_status:
-                fields.civil_status.value,
-
-            relationship:
-                fields.relationship.value,
+            first_name: fields.first_name.value.trim(),
+            middle_name: fields.middle_name.value.trim(),
+            last_name: fields.last_name.value.trim(),
+            suffix: fields.suffix.value.trim(),
+            birth_date: fields.birth_date.value,
+            sex: fields.sex.value,
+            civil_status: fields.civil_status.value,
+            relationship: fields.relationship.value,
 
             residency_type:
-                normalizeResidencyType(
-                    fields.residency_type.value
-                ),
+                normalizeResidencyType(fields.residency_type.value),
 
-            residency_start_year:
-                fields.residency_start_year.value,
+            residency_start_year: fields.residency_start_year.value,
+            residency_year_estimated: fields.residency_year_estimated.checked,
+            contact_number: fields.contact_number.value.trim(),
+            email: fields.email.value.trim(),
 
-            residency_year_estimated:
-                fields.residency_year_estimated.checked,
+            occupation: occupationData.occupation,
+            occupation_other: occupationData.occupation_other,
 
-            contact_number:
-                fields.contact_number.value.trim(),
+            is_pwd: fields.is_pwd.checked,
+            is_senior_citizen: fields.is_senior_citizen.checked,
+            is_solo_parent: fields.is_solo_parent.checked,
+            is_student: isStudent,
+            student_education_level: level,
+            is_high_school: isStudent && level === 'High School',
 
-            email:
-                fields.email.value.trim(),
-
-            occupation:
-                occupationData.occupation,
-
-            occupation_other:
-                occupationData.occupation_other,
-
-            is_pwd:
-                fields.is_pwd.checked,
-
-            is_solo_parent:
-                fields.is_solo_parent.checked,
-
-            is_high_school:
-                fields.is_high_school.checked,
-
-            address:
-                householdAddress()
+            address: householdAddress()
 
         };
 
     }
 
 
-    function duplicateInHousehold(
-        person,
-        ignoreIndex = null
-    ) {
+    function duplicateInHousehold(person, ignoreIndex = null) {
 
-        const key =
-            identityKey(person);
-
+        const key = identityKey(person);
 
         const duplicateMember =
             members.some(
@@ -3472,15 +2945,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             );
 
-
         const duplicateHead =
             householdHead &&
             identityKey(householdHead) === key &&
             ignoreIndex === null;
 
-
-        return duplicateMember ||
-            duplicateHead;
+        return duplicateMember || duplicateHead;
 
     }
 
@@ -3491,74 +2961,49 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function savePerson() {
 
-        const person =
-            readModalPerson();
-
+        const person = readModalPerson();
 
         const errors =
-            validatePerson(
-                person,
-                modalMode !== 'head-new'
-            );
-
+            validatePerson(person, modalMode !== 'head-new');
 
         if (errors.length) {
 
-            modalError.textContent =
-                errors.join(' ');
+            modalError.textContent = errors.join(' ');
 
-            modalError.classList.remove(
-                'd-none'
-            );
+            modalError.classList.remove('d-none');
 
             return;
 
         }
 
 
-        /* -----------------------------------------------------
-           NEW HEAD
-        ------------------------------------------------------ */
-
+        /* NEW HEAD */
         if (modalMode === 'head-new') {
 
             householdHead = {
 
                 ...person,
 
-                mode:
-                    'new',
+                mode: 'new',
 
-                isHead:
-                    true,
+                isHead: true,
 
-                relationship:
-                    'Head'
+                relationship: 'Head'
 
             };
 
+            members = members.filter(
+                function (member) {
+                    return !member.isHead;
+                }
+            );
 
-            members =
-                members.filter(
-                    function (member) {
-
-                        return !member.isHead;
-
-                    }
-                );
-
-
-            members.unshift({
-                ...householdHead
-            });
-
+            members.unshift({ ...householdHead });
 
             residentModal.hide();
 
             renderHead();
-
             renderMembers();
-
             updateWorkflow();
 
             return;
@@ -3566,18 +3011,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
 
-        /* -----------------------------------------------------
-           EDIT EXISTING MEMBER
-        ------------------------------------------------------ */
-
+        /* EDIT EXISTING MEMBER */
         if (
             modalMode === 'member-existing' &&
             editingIndex !== null
         ) {
 
-            const original =
-                members[editingIndex];
-
+            const original = members[editingIndex];
 
             members[editingIndex] = {
 
@@ -3586,22 +3026,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 ...person,
 
                 resident_id:
-                    original.resident_id ||
-                    person.resident_id,
+                    original.resident_id || person.resident_id,
 
                 residency_type:
-                    normalizeResidencyType(
-                        person.residency_type
-                    ),
+                    normalizeResidencyType(person.residency_type),
 
-                mode:
-                    'existing',
+                mode: 'existing',
 
-                isHead:
-                    false
+                isHead: false
 
             };
-
 
             residentModal.hide();
 
@@ -3612,61 +3046,42 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
 
-        /* -----------------------------------------------------
-           NEW / EXISTING MEMBER
-        ------------------------------------------------------ */
-
+        /* NEW / EXISTING MEMBER */
         const newPerson = {
 
             ...person,
 
             residency_type:
-                normalizeResidencyType(
-                    person.residency_type
-                ),
+                normalizeResidencyType(person.residency_type),
 
             mode:
                 modalMode === 'member-existing'
                     ? 'existing'
                     : 'new',
 
-            isHead:
-                false
+            isHead: false
 
         };
-
 
         if (
             modalMode === 'member-existing' &&
             selectedExistingResidentId
         ) {
-
-            newPerson.resident_id =
-                selectedExistingResidentId;
-
+            newPerson.resident_id = selectedExistingResidentId;
         }
 
-
-        if (
-            duplicateInHousehold(newPerson)
-        ) {
+        if (duplicateInHousehold(newPerson)) {
 
             modalError.textContent =
                 'This resident is already included in the household.';
 
-            modalError.classList.remove(
-                'd-none'
-            );
+            modalError.classList.remove('d-none');
 
             return;
 
         }
 
-
-        members.push(
-            newPerson
-        );
-
+        members.push(newPerson);
 
         residentModal.hide();
 
@@ -3677,86 +3092,59 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function addExistingMember(resident) {
 
-        const residentId =
-            Number(resident.id);
-
+        const residentId = Number(resident.id);
 
         if (
             members.some(
                 function (member) {
 
                     return Number(
-                        member.resident_id ||
-                        member.id
+                        member.resident_id || member.id
                     ) === residentId;
 
                 }
             )
         ) {
 
-            alert(
-                'This resident is already included in the household.'
-            );
+            alert('This resident is already included in the household.');
 
             return;
 
         }
-
 
         if (
             householdHead &&
             Number(
-                householdHead.resident_id ||
-                householdHead.id
+                householdHead.resident_id || householdHead.id
             ) === residentId
         ) {
 
-            alert(
-                'This resident is already the household head.'
-            );
+            alert('This resident is already the household head.');
 
             return;
 
         }
-
 
         const person = {
 
             ...resident,
 
-            resident_id:
-                resident.id,
+            resident_id: resident.id,
 
             residency_type:
-                normalizeResidencyType(
-                    resident.residency_type
-                ),
+                normalizeResidencyType(resident.residency_type),
 
-            mode:
-                'existing',
+            mode: 'existing',
 
-            isHead:
-                false,
+            isHead: false,
 
-            relationship:
-                '',
+            relationship: '',
 
-            is_pwd:
-                toBool(resident.is_pwd),
-
-            is_solo_parent:
-                toBool(resident.is_solo_parent),
-
-            is_high_school:
-                toBool(resident.is_high_school)
+            ...normalizeClassification(resident)
 
         };
 
-
-        openExistingMemberModal(
-            person,
-            null
-        );
+        openExistingMemberModal(person, null);
 
     }
 
@@ -3765,14 +3153,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!householdHead) {
 
-            alert(
-                'Please select or register the household head first.'
-            );
+            alert('Please select or register the household head first.');
 
             return;
 
         }
-
 
         openNewMemberModal();
 
@@ -3783,83 +3168,33 @@ document.addEventListener('DOMContentLoaded', function () {
        HIDDEN INPUTS
     ========================================================== */
 
-    function appendHidden(
-        container,
-        name,
-        value
-    ) {
+    function appendHidden(container, name, value) {
 
-        const input =
-            document.createElement('input');
+        const input = document.createElement('input');
 
-        input.type =
-            'hidden';
-
-        input.name =
-            name;
-
-        input.value =
-            value ?? '';
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value ?? '';
 
         container.appendChild(input);
 
     }
 
 
-    function appendPersonFields(
-        container,
-        prefix,
-        person
-    ) {
+    function appendPersonFields(container, prefix, person) {
 
-        appendHidden(
-            container,
-            `${prefix}[first_name]`,
-            person.first_name
-        );
-
-        appendHidden(
-            container,
-            `${prefix}[middle_name]`,
-            person.middle_name
-        );
-
-        appendHidden(
-            container,
-            `${prefix}[last_name]`,
-            person.last_name
-        );
-
-        appendHidden(
-            container,
-            `${prefix}[suffix]`,
-            person.suffix
-        );
-
-        appendHidden(
-            container,
-            `${prefix}[birth_date]`,
-            person.birth_date
-        );
-
-        appendHidden(
-            container,
-            `${prefix}[sex]`,
-            person.sex
-        );
-
-        appendHidden(
-            container,
-            `${prefix}[civil_status]`,
-            person.civil_status
-        );
+        appendHidden(container, `${prefix}[first_name]`, person.first_name);
+        appendHidden(container, `${prefix}[middle_name]`, person.middle_name);
+        appendHidden(container, `${prefix}[last_name]`, person.last_name);
+        appendHidden(container, `${prefix}[suffix]`, person.suffix);
+        appendHidden(container, `${prefix}[birth_date]`, person.birth_date);
+        appendHidden(container, `${prefix}[sex]`, person.sex);
+        appendHidden(container, `${prefix}[civil_status]`, person.civil_status);
 
         appendHidden(
             container,
             `${prefix}[residency_type]`,
-            normalizeResidencyType(
-                person.residency_type
-            )
+            normalizeResidencyType(person.residency_type)
         );
 
         appendHidden(
@@ -3871,64 +3206,53 @@ document.addEventListener('DOMContentLoaded', function () {
         appendHidden(
             container,
             `${prefix}[residency_year_estimated]`,
-            person.residency_year_estimated
-                ? '1'
-                : '0'
+            person.residency_year_estimated ? '1' : '0'
         );
 
-        appendHidden(
-            container,
-            `${prefix}[contact_number]`,
-            person.contact_number
-        );
-
-        appendHidden(
-            container,
-            `${prefix}[email]`,
-            person.email
-        );
-
-        appendHidden(
-            container,
-            `${prefix}[occupation]`,
-            person.occupation
-        );
-
-        appendHidden(
-            container,
-            `${prefix}[occupation_other]`,
-            person.occupation_other
-        );
+        appendHidden(container, `${prefix}[contact_number]`, person.contact_number);
+        appendHidden(container, `${prefix}[email]`, person.email);
+        appendHidden(container, `${prefix}[occupation]`, person.occupation);
+        appendHidden(container, `${prefix}[occupation_other]`, person.occupation_other);
 
 
         /*
-         * Household classification — belongs to the
-         * HouseholdMember record, never to the Resident record.
-         * Always submitted (checked or not) so unchecked boxes
-         * still reach the controller as 0.
+         * Individual classification (this person only).
+         * Always submitted, checked or not, so unchecked values reach
+         * the controller as 0. `is_high_school` is DERIVED from the
+         * education level for legacy compatibility.
          */
+        const classification = normalizeClassification(person);
+
+        appendHidden(container, `${prefix}[is_pwd]`, classification.is_pwd ? '1' : '0');
+
         appendHidden(
             container,
-            `${prefix}[is_pwd]`,
-            toBool(person.is_pwd)
-                ? '1'
-                : '0'
+            `${prefix}[is_senior_citizen]`,
+            classification.is_senior_citizen ? '1' : '0'
         );
 
         appendHidden(
             container,
             `${prefix}[is_solo_parent]`,
-            toBool(person.is_solo_parent)
-                ? '1'
-                : '0'
+            classification.is_solo_parent ? '1' : '0'
+        );
+
+        appendHidden(
+            container,
+            `${prefix}[is_student]`,
+            classification.is_student ? '1' : '0'
+        );
+
+        appendHidden(
+            container,
+            `${prefix}[student_education_level]`,
+            classification.student_education_level
         );
 
         appendHidden(
             container,
             `${prefix}[is_high_school]`,
-            toBool(person.is_high_school)
-                ? '1'
-                : '0'
+            classification.is_high_school ? '1' : '0'
         );
 
     }
@@ -3937,67 +3261,39 @@ document.addEventListener('DOMContentLoaded', function () {
     function buildHiddenFields() {
 
         headHiddenFields.innerHTML = '';
-
         memberHiddenFields.innerHTML = '';
-
 
         if (!householdHead) {
             return;
         }
 
+        /* HOUSEHOLD HEAD */
+        const headPrefix = 'head';
 
-        /* -----------------------------------------------------
-           HOUSEHOLD HEAD
-        ------------------------------------------------------ */
-
-        const headPrefix =
-            'head';
-
-
-        /*
-         * Existing heads also send their complete data.
-         * resident_id is still included so the controller can
-         * reuse the existing resident record.
-         */
-        if (
-            householdHead.mode === 'existing'
-        ) {
+        if (householdHead.mode === 'existing') {
 
             appendHidden(
                 headHiddenFields,
                 `${headPrefix}[resident_id]`,
-                householdHead.resident_id ||
-                householdHead.id
+                householdHead.resident_id || householdHead.id
             );
 
         }
 
-
-        appendPersonFields(
-            headHiddenFields,
-            headPrefix,
-            householdHead
-        );
+        appendPersonFields(headHiddenFields, headPrefix, householdHead);
 
 
-        /* -----------------------------------------------------
-           MEMBERS
-        ------------------------------------------------------ */
-
+        /* MEMBERS */
         members
             .filter(
                 function (member) {
-
                     return !member.isHead;
-
                 }
             )
             .forEach(
                 function (member, index) {
 
-                    const prefix =
-                        `members[${index}]`;
-
+                    const prefix = `members[${index}]`;
 
                     appendHidden(
                         memberHiddenFields,
@@ -4005,20 +3301,15 @@ document.addEventListener('DOMContentLoaded', function () {
                         member.mode
                     );
 
-
-                    if (
-                        member.mode === 'existing'
-                    ) {
+                    if (member.mode === 'existing') {
 
                         appendHidden(
                             memberHiddenFields,
                             `${prefix}[resident_id]`,
-                            member.resident_id ||
-                            member.id
+                            member.resident_id || member.id
                         );
 
                     }
-
 
                     appendHidden(
                         memberHiddenFields,
@@ -4026,12 +3317,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         member.relationship
                     );
 
-
-                    appendPersonFields(
-                        memberHiddenFields,
-                        prefix,
-                        member
-                    );
+                    appendPersonFields(memberHiddenFields, prefix, member);
 
                 }
             );
@@ -4046,11 +3332,7 @@ document.addEventListener('DOMContentLoaded', function () {
     headSearch.addEventListener(
         'input',
         function () {
-
-            renderHeadResults(
-                this.value
-            );
-
+            renderHeadResults(this.value);
         }
     );
 
@@ -4075,19 +3357,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 !headResults.contains(event.target) &&
                 event.target !== headSearch
             ) {
-
                 hideHeadResults();
-
             }
-
 
             if (
                 !memberResults.contains(event.target) &&
                 event.target !== memberSearch
             ) {
-
                 hideMemberResults();
-
             }
 
         }
@@ -4099,38 +3376,23 @@ document.addEventListener('DOMContentLoaded', function () {
         function (event) {
 
             const button =
-                event.target.closest(
-                    '[data-resident-id]'
-                );
-
+                event.target.closest('[data-resident-id]');
 
             if (!button) {
                 return;
             }
 
-
-            const resident =
-                findResident(
-                    button.dataset.residentId
-                );
-
+            const resident = findResident(button.dataset.residentId);
 
             if (resident) {
-
-                selectExistingHead(
-                    resident
-                );
-
+                selectExistingHead(resident);
             }
 
         }
     );
 
 
-    registerNewHeadButton.addEventListener(
-        'click',
-        openNewHeadModal
-    );
+    registerNewHeadButton.addEventListener('click', openNewHeadModal);
 
 
     changeHeadButton.addEventListener(
@@ -4142,7 +3404,6 @@ document.addEventListener('DOMContentLoaded', function () {
             members = [];
 
             renderHead();
-
             renderMembers();
 
             headSearch.focus();
@@ -4153,20 +3414,88 @@ document.addEventListener('DOMContentLoaded', function () {
     );
 
 
-    addMemberButton.addEventListener(
-        'click',
-        addMemberChooser
+    /*
+     * Head classification controls (inside the head card).
+     * Updates the head state AND the head entry in the members list,
+     * then re-renders so badges and hidden fields stay in sync.
+     */
+    function syncHeadMember() {
+
+        const headMember = members.find(
+            function (member) {
+                return member.isHead;
+            }
+        );
+
+        if (!headMember) {
+            return;
+        }
+
+        headMember.is_pwd = householdHead.is_pwd;
+        headMember.is_senior_citizen = householdHead.is_senior_citizen;
+        headMember.is_solo_parent = householdHead.is_solo_parent;
+        headMember.is_student = householdHead.is_student;
+        headMember.student_education_level = householdHead.student_education_level;
+        headMember.is_high_school = householdHead.is_high_school;
+
+    }
+
+
+    selectedHeadCard.addEventListener(
+        'change',
+        function (event) {
+
+            if (!householdHead) {
+                return;
+            }
+
+            const flag = event.target.closest('[data-head-flag]');
+            const education = event.target.closest('[data-head-education]');
+
+            if (!flag && !education) {
+                return;
+            }
+
+            if (flag) {
+
+                householdHead[flag.dataset.headFlag] = flag.checked;
+
+                if (
+                    flag.dataset.headFlag === 'is_student' &&
+                    !flag.checked
+                ) {
+                    householdHead.student_education_level = '';
+                }
+
+            }
+
+            if (education) {
+
+                householdHead.student_education_level = education.value;
+
+            }
+
+            Object.assign(
+                householdHead,
+                normalizeClassification(householdHead)
+            );
+
+            syncHeadMember();
+
+            renderHead();
+            renderMembers();
+
+        }
     );
+
+
+    addMemberButton.addEventListener('click', addMemberChooser);
 
 
     memberSearch.addEventListener(
         'input',
         function () {
-
-            renderMemberResults(
-                this.value
-            );
-
+            renderMemberResults(this.value);
         }
     );
 
@@ -4188,27 +3517,17 @@ document.addEventListener('DOMContentLoaded', function () {
         function (event) {
 
             const button =
-                event.target.closest(
-                    '[data-member-resident-id]'
-                );
-
+                event.target.closest('[data-member-resident-id]');
 
             if (!button) {
                 return;
             }
 
-
-            const resident =
-                findResident(
-                    button.dataset.memberResidentId
-                );
-
+            const resident = findResident(button.dataset.memberResidentId);
 
             if (resident) {
 
-                addExistingMember(
-                    resident
-                );
+                addExistingMember(resident);
 
                 memberSearch.value = '';
 
@@ -4224,35 +3543,16 @@ document.addEventListener('DOMContentLoaded', function () {
         'click',
         function (event) {
 
-            const edit =
-                event.target.closest(
-                    '.edit-member'
-                );
-
-            const remove =
-                event.target.closest(
-                    '.remove-member'
-                );
-
+            const edit = event.target.closest('.edit-member');
+            const remove = event.target.closest('.remove-member');
 
             if (edit) {
-
-                openEditMemberModal(
-                    Number(
-                        edit.dataset.index
-                    )
-                );
-
+                openEditMemberModal(Number(edit.dataset.index));
             }
-
 
             if (remove) {
 
-                const index =
-                    Number(
-                        remove.dataset.index
-                    );
-
+                const index = Number(remove.dataset.index);
 
                 if (
                     confirm(
@@ -4260,10 +3560,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     )
                 ) {
 
-                    members.splice(
-                        index,
-                        1
-                    );
+                    members.splice(index, 1);
 
                     renderMembers();
 
@@ -4275,15 +3572,18 @@ document.addEventListener('DOMContentLoaded', function () {
     );
 
 
-    saveResidentButton.addEventListener(
-        'click',
-        savePerson
-    );
+    saveResidentButton.addEventListener('click', savePerson);
 
 
     fields.occupation.addEventListener(
         'change',
         updateOccupationOtherVisibility
+    );
+
+
+    fields.is_student.addEventListener(
+        'change',
+        updateStudentEducationVisibility
     );
 
 
@@ -4309,61 +3609,68 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 event.preventDefault();
 
-                alert(
-                    'Please select or register the household head first.'
-                );
+                alert('Please select or register the household head first.');
 
                 return;
 
             }
 
+            const headAge = ageOf(householdHead.birth_date);
 
-            const headAge =
-                ageOf(
-                    householdHead.birth_date
-                );
-
-
-            if (
-                headAge === '' ||
-                Number(headAge) < 18
-            ) {
+            if (headAge === '' || Number(headAge) < 18) {
 
                 event.preventDefault();
 
-                alert(
-                    'The household head must be at least 18 years old.'
-                );
+                alert('The household head must be at least 18 years old.');
 
                 return;
 
             }
-
 
             if (!householdAddress()) {
 
                 event.preventDefault();
 
+                alert('Please enter the complete household address.');
+
+                return;
+
+            }
+
+            // Every student (head included) needs an education level.
+            const studentWithoutLevel = members.find(
+                function (member) {
+
+                    const classification = normalizeClassification(member);
+
+                    return (
+                        classification.is_student &&
+                        !classification.student_education_level
+                    );
+
+                }
+            );
+
+            if (studentWithoutLevel) {
+
+                event.preventDefault();
+
                 alert(
-                    'Please enter the complete household address.'
+                    'Please select the education level for ' +
+                    fullName(studentWithoutLevel) +
+                    ' (Elementary, High School, or College).'
                 );
 
                 return;
 
             }
 
-
             buildHiddenFields();
 
-
             const submitButton =
-                document.getElementById(
-                    'submitHouseholdButton'
-                );
-
+                document.getElementById('submitHouseholdButton');
 
             submitButton.disabled = true;
-
 
             submitButton.innerHTML =
                 '<span class="spinner-border spinner-border-sm me-2"></span>' +
@@ -4384,11 +3691,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (oldHead.resident_id) {
 
-            const restoredHead =
-                findResident(
-                    oldHead.resident_id
-                );
-
+            const restoredHead = findResident(oldHead.resident_id);
 
             if (restoredHead) {
 
@@ -4398,26 +3701,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     ...oldHead,
 
-                    id:
-                        restoredHead.id,
+                    id: restoredHead.id,
 
-                    resident_id:
-                        restoredHead.id,
+                    resident_id: restoredHead.id,
 
                     residency_type:
                         normalizeResidencyType(
                             oldHead.residency_type ||
                             restoredHead.residency_type
-                        ),
-
-                    is_pwd:
-                        toBool(oldHead.is_pwd),
-
-                    is_solo_parent:
-                        toBool(oldHead.is_solo_parent),
-
-                    is_high_school:
-                        toBool(oldHead.is_high_school)
+                        )
 
                 });
 
@@ -4433,34 +3725,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 ...oldHead,
 
                 residency_type:
-                    normalizeResidencyType(
-                        oldHead.residency_type
-                    ),
+                    normalizeResidencyType(oldHead.residency_type),
 
-                mode:
-                    'new',
+                mode: 'new',
 
-                isHead:
-                    true,
+                isHead: true,
 
-                relationship:
-                    'Head',
+                relationship: 'Head',
 
-                is_pwd:
-                    toBool(oldHead.is_pwd),
-
-                is_solo_parent:
-                    toBool(oldHead.is_solo_parent),
-
-                is_high_school:
-                    toBool(oldHead.is_high_school)
+                ...normalizeClassification(oldHead)
 
             };
 
-
-            members.unshift(
-                householdHead
-            );
+            members.unshift(householdHead);
 
         }
 
@@ -4480,12 +3757,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     ...member,
 
                     residency_type:
-                        normalizeResidencyType(
-                            member.residency_type
-                        ),
+                        normalizeResidencyType(member.residency_type),
 
-                    isHead:
-                        false,
+                    isHead: false,
 
                     mode:
                         member.mode ||
@@ -4495,17 +3769,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                 : 'new'
                         ),
 
-                    is_pwd:
-                        toBool(member.is_pwd),
-
-                    is_solo_parent:
-                        toBool(member.is_solo_parent),
-
-                    is_high_school:
-                        toBool(member.is_high_school)
+                    ...normalizeClassification(member)
 
                 };
-
 
                 if (
                     !members.some(
@@ -4520,9 +3786,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     )
                 ) {
 
-                    members.push(
-                        restored
-                    );
+                    members.push(restored);
 
                 }
 
@@ -4537,13 +3801,10 @@ document.addEventListener('DOMContentLoaded', function () {
     ========================================================== */
 
     updateModalHouseholdAddress();
-
     updateOccupationOtherVisibility();
-
+    updateStudentEducationVisibility();
     renderHead();
-
     renderMembers();
-
     updateWorkflow();
 
 });

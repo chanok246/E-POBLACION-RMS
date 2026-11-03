@@ -7,50 +7,75 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Add individual household-member classifications.
+     *
+     * These classifications belong to each household member.
+     * A member may have multiple classifications.
+     *
+     * This migration only ADDS missing columns. It never drops, renames
+     * or recreates an existing column, so it is safe on a database that
+     * already contains data.
+     *
+     * Columns handled here:
+     *   is_pwd                  PWD
+     *   is_solo_parent          Solo Parent
+     *   is_high_school_student  legacy High School Student flag
+     *
+     * Overlap note: is_pwd and is_solo_parent are also added (with the
+     * same hasColumn guard) by
+     * 2026_09_24_160338_add_classification_fields_to_household_members_table.
+     * Whichever runs first creates them; the other skips them.
      */
     public function up(): void
     {
-        Schema::table('household_members', function (Blueprint $table) {
+        if (! Schema::hasTable('household_members')) {
+            return;
+        }
 
-            /*
-            |--------------------------------------------------------------------------
-            | MEMBER CLASSIFICATIONS
-            |--------------------------------------------------------------------------
-            |
-            | These classifications belong to the individual household member,
-            | not to the entire household.
-            |
-            | A member may have more than one classification.
-            |
-            */
+        $columns = [
+            'is_pwd',
+            'is_solo_parent',
+            'is_high_school_student',
+        ];
 
-            $table->boolean('is_pwd')
-                ->default(false)
-                ->after('relationship');
+        Schema::table('household_members', function (Blueprint $table) use ($columns) {
+            // Only position columns after "relationship" when that column actually exists.
+            $previous = Schema::hasColumn('household_members', 'relationship')
+                ? 'relationship'
+                : null;
 
-            $table->boolean('is_solo_parent')
-                ->default(false)
-                ->after('is_pwd');
+            foreach ($columns as $column) {
+                if (! Schema::hasColumn('household_members', $column)) {
+                    $definition = $table->boolean($column)->default(false);
 
-            $table->boolean('is_high_school_student')
-                ->default(false)
-                ->after('is_solo_parent');
+                    if ($previous !== null) {
+                        $definition->after($previous);
+                    }
+                }
+
+                $previous = $column;
+            }
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migration.
+     *
+     * Only the column that is unique to this migration is removed.
+     * is_pwd and is_solo_parent are shared with the other classification
+     * migration (and are used by the application), so they are NOT
+     * dropped here. This prevents a rollback of this file from deleting
+     * data that the other migration still owns.
      */
     public function down(): void
     {
-        Schema::table('household_members', function (Blueprint $table) {
-
-            $table->dropColumn([
-                'is_pwd',
-                'is_solo_parent',
-                'is_high_school_student',
-            ]);
-        });
+        if (
+            Schema::hasTable('household_members')
+            && Schema::hasColumn('household_members', 'is_high_school_student')
+        ) {
+            Schema::table('household_members', function (Blueprint $table) {
+                $table->dropColumn('is_high_school_student');
+            });
+        }
     }
 };

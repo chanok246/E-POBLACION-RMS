@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use ZipArchive;
 use DOMDocument;
@@ -13,6 +15,11 @@ use DOMXPath;
 class DocumentConversionService
 {
     /**
+     * Maximum number of extra fitting attempts after the first conversion.
+     */
+    protected const MAX_FIT_ATTEMPTS = 3;
+
+    /**
      * Convert a generated DOCX file into PDF using the
      * local Gotenberg API.
      *
@@ -21,29 +28,45 @@ class DocumentConversionService
      * The official DOCX template is never modified.
      * Only the generated copy is processed.
      *
-     * The conversion process intentionally preserves the
-     * original horizontal page layout of the official template.
+     * Conversion strategy:
      *
-     * We DO NOT change the left/right page margins because
-     * those margins can affect:
+     * 1. Convert the generated DOCX once.
+     * 2. If it already fits on one page, return immediately.
+     * 3. Otherwise, up to MAX_FIT_ATTEMPTS times, restore the pristine
+     *    generated DOCX, apply a slightly stronger compaction and convert
+     *    again, stopping as soon as the PDF has one page.
+     * 4. The actual PDF page count and page size are verified at the end.
      *
-     * - logos
+     * The paper size and orientation of the DOCX are preserved; the PDF
+     * is produced at that same size. Text is never deleted, and fonts are
+     * never reduced below the readable minimum.
+     *
+     * NOTE: this service only controls the generated PDF. The physical
+     * printout is also affected by the printer driver, the paper size set
+     * in the printer, and options such as "Fit to page". For a faithful
+     * printout, print the PDF at "Actual size" / 100% on the same paper size.
+     *
+     * The original horizontal page layout is preserved.
+     *
+     * We DO NOT change:
+     *
+     * - left margins
+     * - right margins
+     * - logo positioning
      * - header positioning
-     * - centered content
      * - tables
-     * - text boxes
      * - floating objects
-     * - official document layout
-     *
-     * If the generated document exceeds one page, only
-     * vertical spacing and font size are progressively reduced.
+     * - document width
      *
      * @param string $docxPath Absolute path to generated DOCX.
      * @return string Absolute path to generated PDF.
      */
     public function convertDocxToPdf(
-        string $docxPath
+        string $docxPath,
+        ?string $fitKey = null
     ): string {
+        $startedAt = microtime(true);
+        $conversions = 0;
         if (! is_file($docxPath)) {
             throw new RuntimeException(
                 'The DOCX file to be converted could not be found.'
@@ -93,114 +116,233 @@ class DocumentConversionService
 
         /*
         |--------------------------------------------------------------------------
-        | FIRST CONVERSION
+        | Page size / orientation of the generated DOCX
         |--------------------------------------------------------------------------
         |
-        | Always convert the generated DOCX exactly as it currently
-        | exists before applying any fitting.
-        |
-        | This is extremely important because the official template's
-        | original layout should be preserved whenever possible.
+        | The DOCX page size and orientation are never changed. They are read
+        | only so the finished PDF can be verified against them.
         |
         */
 
-        $response = $this->sendToGotenberg(
+        $expectedPageSize = $this->readDocxPageSize(
             $docxPath
         );
 
-        $this->savePdf(
-            $response,
-            $pdfPath
-        );
-
         /*
         |--------------------------------------------------------------------------
-        | Check page count
-        |--------------------------------------------------------------------------
-        */
-
-        $pageCount = $this->countPdfPages(
-            $response
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Already one page
+        | Pristine copy of the generated DOCX
         |--------------------------------------------------------------------------
         |
-        | If the original generated DOCX already fits on one page,
-        | STOP HERE.
-        |
-        | No margins.
-        | No font changes.
-        | No layout changes.
+        | Every fitting attempt starts again from this copy instead of
+        | stacking reductions on top of the previous attempt, so the result
+        | uses the LEAST compaction that is enough to fit one page.
         |
         */
 
-        if ($pageCount <= 1) {
-            return $pdfPath;
+        $originalDocx = file_get_contents(
+            $docxPath
+        );
+
+        if ($originalDocx === false) {
+            throw new RuntimeException(
+                'The generated DOCX file could not be read for conversion.'
+            );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | One-page fitting
+        | FIRST CONVERSION
         |--------------------------------------------------------------------------
         |
-        | The document is larger than one page.
+        | Always convert the generated DOCX exactly as it currently exists.
         |
-        | We now make small vertical/typographic adjustments.
-        |
-        | IMPORTANT:
-        |
-        | We intentionally DO NOT change left/right page margins.
+        | If it already fits on one page, we immediately return.
         |
         */
 
-        $maxAttempts = 6;
+        /*
+        |--------------------------------------------------------------------------
+        | PERFORMANCE: remember the fitting level per document type
+        |--------------------------------------------------------------------------
+        |
+        | Each Gotenberg/LibreOffice conversion costs seconds. If this document
+        | type needed compaction level N last time, start at level N instead of
+        | wasting 1..N conversions rediscovering it on every request.
+        |
+        */
 
-        for (
-            $attempt = 1;
-            $attempt <= $maxAttempts;
-            $attempt++
+        $fitCacheKey = $fitKey
+            ? 'docfit:' . md5($fitKey)
+            : null;
+
+        $attempt = $fitCacheKey
+            ? min((int) Cache::get($fitCacheKey, 0), self::MAX_FIT_ATTEMPTS)
+            : 0;
+
+        if ($attempt > 0) {
+            $this->compactGeneratedDocx($docxPath, $attempt);
+        }
+
+        $response = $this->sendToGotenberg($docxPath);
+        $conversions++;
+
+        $this->savePdf($response, $pdfPath);
+
+        $pageCount = $this->countPdfPages($response);
+
+        /*
+        |--------------------------------------------------------------------------
+        | AUTOMATIC ONE-PAGE FITTING (escalates only when still > 1 page)
+        |--------------------------------------------------------------------------
+        */
+
+        while (
+            $pageCount > 1 &&
+            $attempt < self::MAX_FIT_ATTEMPTS
         ) {
-            $this->compactGeneratedDocx(
-                $docxPath,
-                $attempt
-            );
+            $attempt++;
 
-            $response = $this->sendToGotenberg(
-                $docxPath
-            );
-
-            $this->savePdf(
-                $response,
-                $pdfPath
-            );
-
-            $pageCount = $this->countPdfPages(
-                $response
-            );
-
-            if ($pageCount <= 1) {
-                return $pdfPath;
+            if (file_put_contents($docxPath, $originalDocx) === false) {
+                throw new RuntimeException(
+                    'The generated DOCX could not be restored for one-page fitting.'
+                );
             }
+
+            $this->compactGeneratedDocx($docxPath, $attempt);
+
+            $response = $this->sendToGotenberg($docxPath);
+            $conversions++;
+
+            $this->savePdf($response, $pdfPath);
+
+            $pageCount = $this->countPdfPages($response);
         }
+
+        if ($fitCacheKey && $pageCount === 1) {
+            Cache::forever($fitCacheKey, $attempt);
+        }
+
+        Log::info('DOCX to PDF conversion finished.', [
+            'pdf' => basename($pdfPath),
+            'conversions' => $conversions,
+            'fit_level' => $attempt,
+            'pages' => $pageCount,
+            'seconds' => round(microtime(true) - $startedAt, 2),
+        ]);
 
         /*
         |--------------------------------------------------------------------------
-        | Final fallback
+        | Final verification of the actual PDF
         |--------------------------------------------------------------------------
         |
-        | Return the last generated PDF even if it still contains
-        | more than one page.
+        | The valid PDF is always returned, even when the content truly
+        | cannot fit on one page at a readable size. The text is never
+        | deleted and never made smaller than the readable minimum.
         |
         */
+
+        if ($pageCount > 1) {
+            Log::warning(
+                'Generated PDF could not be fitted on one readable page.',
+                [
+                    'pdf' => basename($pdfPath),
+                    'pages' => $pageCount,
+                ]
+            );
+        }
+
+        $actualPageSize = $this->readPdfPageSize(
+            $response->body()
+        );
+
+        if (
+            $expectedPageSize !== null &&
+            $actualPageSize !== null &&
+            (
+                abs($expectedPageSize['width'] - $actualPageSize['width']) > 3 ||
+                abs($expectedPageSize['height'] - $actualPageSize['height']) > 3
+            )
+        ) {
+            Log::warning(
+                'Generated PDF page size differs from the DOCX page size.',
+                [
+                    'pdf' => basename($pdfPath),
+                    'docx_points' => $expectedPageSize,
+                    'pdf_points' => $actualPageSize,
+                ]
+            );
+        }
 
         return $pdfPath;
     }
 
     /**
+     * Read the first page size from the DOCX, in points.
+     *
+     * Width and height are returned exactly as stored, so landscape
+     * documents report width > height.
+     */
+    protected function readDocxPageSize(
+        string $docxPath
+    ): ?array {
+        $zip = new ZipArchive();
+
+        if ($zip->open($docxPath) !== true) {
+            return null;
+        }
+
+        $xml = $zip->getFromName(
+            'word/document.xml'
+        );
+
+        $zip->close();
+
+        if (
+            $xml === false ||
+            ! preg_match(
+                '/<w:pgSz\b[^>]*>/',
+                $xml,
+                $tag
+            ) ||
+            ! preg_match('/\bw:w="(\d+)"/', $tag[0], $width) ||
+            ! preg_match('/\bw:h="(\d+)"/', $tag[0], $height)
+        ) {
+            return null;
+        }
+
+        return [
+            'width' => (int) $width[1] / 20,
+            'height' => (int) $height[1] / 20,
+        ];
+    }
+
+    /**
+     * Read the first page size from the PDF, in points.
+     */
+    protected function readPdfPageSize(
+        string $pdf
+    ): ?array {
+        if (
+            ! preg_match(
+                '/\/MediaBox\s*\[\s*(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\]/',
+                $pdf,
+                $box
+            )
+        ) {
+            return null;
+        }
+
+        return [
+            'width' => abs((float) $box[3] - (float) $box[1]),
+            'height' => abs((float) $box[4] - (float) $box[2]),
+        ];
+    }
+
+    /**
      * Send generated DOCX to Gotenberg.
+     *
+     * The timeout is intentionally limited so a broken or unavailable
+     * Gotenberg service cannot make Preview / Print hang for many minutes.
      */
     protected function sendToGotenberg(
         string $docxPath
@@ -231,7 +373,24 @@ class DocumentConversionService
         }
 
         try {
-            $response = Http::timeout(120)
+            /*
+            |--------------------------------------------------------------------------
+            | Gotenberg HTTP timeout
+            |--------------------------------------------------------------------------
+            |
+            | Connection timeout:
+            | 5 seconds
+            |
+            | Conversion/request timeout:
+            | 45 seconds
+            |
+            | This prevents a broken Gotenberg service from causing
+            | a 10+ minute Preview / Print wait.
+            |
+            */
+
+            $response = Http::connectTimeout(5)
+                ->timeout(45)
                 ->attach(
                     'files',
                     $handle,
@@ -241,6 +400,16 @@ class DocumentConversionService
                     $gotenbergUrl .
                     '/forms/libreoffice/convert'
                 );
+        } catch (\Throwable $exception) {
+            throw new RuntimeException(
+                'Unable to connect to the local Gotenberg PDF conversion service. ' .
+                'Please make sure Gotenberg is running on ' .
+                $gotenbergUrl .
+                '. Error: ' .
+                $exception->getMessage(),
+                0,
+                $exception
+            );
         } finally {
             fclose($handle);
         }
@@ -251,6 +420,26 @@ class DocumentConversionService
                 'HTTP status: ' .
                 $response->status() .
                 '.'
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate response body
+        |--------------------------------------------------------------------------
+        */
+
+        $body = $response->body();
+
+        if (
+            $body === '' ||
+            ! str_starts_with(
+                $body,
+                '%PDF-'
+            )
+        ) {
+            throw new RuntimeException(
+                'Gotenberg returned an invalid PDF response.'
             );
         }
 
@@ -308,8 +497,35 @@ class DocumentConversionService
             $matches
         );
 
-        return count(
+        $pageObjects = count(
             $matches[0] ?? []
+        );
+
+        /*
+         * Fallback for PDFs whose page objects are not plainly readable:
+         * use the /Count value of the page tree root.
+         */
+        preg_match_all(
+            '/\/Type\s*\/Pages\b[^>]*?\/Count\s+(\d+)|\/Count\s+(\d+)[^>]*?\/Type\s*\/Pages\b/s',
+            $pdf,
+            $countMatches
+        );
+
+        $treeCount = 0;
+
+        foreach (array_merge(
+            $countMatches[1] ?? [],
+            $countMatches[2] ?? []
+        ) as $value) {
+            $treeCount = max(
+                $treeCount,
+                (int) $value
+            );
+        }
+
+        return max(
+            $pageObjects,
+            $treeCount
         );
     }
 
@@ -436,12 +652,12 @@ class DocumentConversionService
 
         /*
         |--------------------------------------------------------------------------
-        | Progressive fitting settings
+        | One safe compaction profile
         |--------------------------------------------------------------------------
         |
-        | Notice that there is NO left/right margin setting.
+        | Only vertical spacing and font size are reduced.
         |
-        | This is intentional.
+        | Horizontal layout remains untouched.
         |
         */
 
@@ -451,64 +667,25 @@ class DocumentConversionService
                 'minimumFont' => 10,
                 'paragraphSpacing' => 0,
                 'lineSpacing' => 240,
+                'verticalMargin' => null,
             ],
 
             $attempt === 2 => [
                 'fontReduction' => 2,
-                'minimumFont' => 10,
-                'paragraphSpacing' => 0,
-                'lineSpacing' => 230,
-            ],
-
-            $attempt === 3 => [
-                'fontReduction' => 2,
                 'minimumFont' => 9,
                 'paragraphSpacing' => 0,
-                'lineSpacing' => 220,
-            ],
-
-            $attempt === 4 => [
-                'fontReduction' => 3,
-                'minimumFont' => 9,
-                'paragraphSpacing' => 0,
-                'lineSpacing' => 210,
-            ],
-
-            $attempt === 5 => [
-                'fontReduction' => 3,
-                'minimumFont' => 8,
-                'paragraphSpacing' => 0,
-                'lineSpacing' => 200,
+                'lineSpacing' => 240,
+                'verticalMargin' => null,
             ],
 
             default => [
-                'fontReduction' => 4,
-                'minimumFont' => 8,
+                'fontReduction' => 3,
+                'minimumFont' => 9,
                 'paragraphSpacing' => 0,
-                'lineSpacing' => 190,
+                'lineSpacing' => 230,
+                'verticalMargin' => 720,
             ],
         };
-
-        /*
-        |--------------------------------------------------------------------------
-        | DO NOT MODIFY SECTION MARGINS
-        |--------------------------------------------------------------------------
-        |
-        | This is the main fix.
-        |
-        | The official templates already contain the correct:
-        |
-        | - left margin
-        | - right margin
-        | - logo positioning
-        | - header positioning
-        | - table positioning
-        | - document width
-        |
-        | Changing these values was causing the logos and other
-        | horizontal elements to move.
-        |
-        */
 
         /*
         |--------------------------------------------------------------------------
@@ -559,6 +736,46 @@ class DocumentConversionService
                     $settings['fontReduction'],
                     $settings['minimumFont']
                 );
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Smaller top / bottom page margins (last attempt only)
+        |--------------------------------------------------------------------------
+        |
+        | Margins are only ever reduced, never enlarged. Left and right
+        | margins, header/footer distance, paper size and orientation
+        | are not touched.
+        |
+        */
+
+        if ($settings['verticalMargin'] !== null) {
+            $pageMargins = $xpath->query(
+                '//w:sectPr/w:pgMar'
+            );
+
+            if ($pageMargins) {
+                foreach ($pageMargins as $pageMargin) {
+                    if (
+                        ! $pageMargin instanceof DOMElement
+                    ) {
+                        continue;
+                    }
+
+                    foreach (['w:top', 'w:bottom'] as $side) {
+                        $current = (int) $pageMargin->getAttribute(
+                            $side
+                        );
+
+                        if ($current > $settings['verticalMargin']) {
+                            $pageMargin->setAttribute(
+                                $side,
+                                (string) $settings['verticalMargin']
+                            );
+                        }
+                    }
+                }
             }
         }
 

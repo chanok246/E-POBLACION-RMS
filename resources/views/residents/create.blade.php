@@ -341,10 +341,15 @@
         [
             'title' => 'Contact',
             'icon' => 'bi-telephone',
-            'hint'  => 'How the barangay can reach this resident.',
+            'hint'  => 'Optional. How the barangay can reach this resident.',
             'fields' => [
-                ['name' => 'contact_number', 'label' => 'Mobile number', 'col' => 6, 'req' => true,  'type' => 'tel', 'max' => 13, 'ph' => '09171234567', 'help' => 'Example: 09171234567'],
-                ['name' => 'email',          'label' => 'Email address',  'col' => 6, 'req' => false, 'type' => 'email', 'max' => 255, 'ph' => 'name@email.com'],
+                /*
+                | Mobile number and email are OPTIONAL. Both are type="text" with no
+                | required/pattern so the browser never blocks blank, N/A, or None.
+                | The server converts blank/N/A/None to NULL and still validates real values.
+                */
+                ['name' => 'contact_number', 'label' => 'Mobile number', 'col' => 6, 'req' => false, 'type' => 'text', 'max' => 20, 'ph' => 'Optional — 09171234567 or N/A', 'help' => 'Optional. Example: 09171234567. You may leave it blank or enter N/A or None.'],
+                ['name' => 'email',          'label' => 'Email address',  'col' => 6, 'req' => false, 'type' => 'text', 'max' => 255, 'ph' => 'Optional — name@email.com or N/A', 'help' => 'Optional. You may leave it blank or enter N/A or None.'],
             ],
         ],
         [
@@ -494,6 +499,16 @@
 
                                             @if(isset($f['max']))
                                                 maxlength="{{ $f['max'] }}"
+                                            @endif
+
+                                            @if($n === 'contact_number')
+                                                inputmode="tel"
+                                                autocomplete="tel"
+                                            @endif
+
+                                            @if($n === 'email')
+                                                inputmode="email"
+                                                autocomplete="email"
                                             @endif
 
                                             @if($type === 'number' && $n === 'residency_start_year')

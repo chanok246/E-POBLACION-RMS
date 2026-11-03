@@ -272,112 +272,6 @@
         margin-top: .4rem;
     }
 
-    /* ---------- Workflow guide ---------- */
-
-    .flow-strip {
-        background: var(--paper);
-        border: 1px solid var(--line-soft);
-        border-radius: var(--radius);
-        padding: 1rem 1.3rem;
-        margin-bottom: 1.25rem;
-        box-shadow: var(--shadow);
-    }
-
-    .flow-strip-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: .75rem;
-        cursor: pointer;
-        user-select: none;
-    }
-
-    .flow-strip-title {
-        display: flex;
-        align-items: center;
-        gap: .5rem;
-        font-weight: 700;
-        font-size: .88rem;
-        color: var(--ink);
-    }
-
-    .flow-strip-title i { color: var(--brand); }
-
-    .flow-toggle {
-        display: inline-flex;
-        align-items: center;
-        gap: .3rem;
-        font-size: .8rem;
-        font-weight: 600;
-        color: var(--muted);
-        background: none;
-        border: none;
-        padding: .2rem .3rem;
-    }
-
-    .flow-toggle i {
-        transition: transform .2s ease;
-    }
-
-    .flow-strip.is-open .flow-toggle i {
-        transform: rotate(180deg);
-    }
-
-    .flow-track {
-        display: none;
-        align-items: center;
-        gap: 0;
-        margin-top: 1.1rem;
-        overflow-x: auto;
-        padding-bottom: .2rem;
-    }
-
-    .flow-strip.is-open .flow-track {
-        display: flex;
-    }
-
-    .flow-node {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: .45rem;
-        min-width: 84px;
-        flex-shrink: 0;
-    }
-
-    .flow-node .dot {
-        width: .95rem;
-        height: .95rem;
-        border-radius: 50%;
-        background: var(--fc);
-        box-shadow: 0 0 0 4px var(--fcbg);
-    }
-
-    .flow-node .lbl {
-        font-size: .74rem;
-        font-weight: 600;
-        color: var(--muted);
-        text-align: center;
-    }
-
-    .flow-line {
-        flex: 1 1 auto;
-        height: 2px;
-        background: var(--line);
-        min-width: 22px;
-        margin: 0 -2px;
-        transform: translateY(-1.05rem);
-    }
-
-    .flow-note {
-        font-size: .78rem;
-        color: var(--faint);
-        margin-top: .75rem;
-        display: flex;
-        align-items: center;
-        gap: .4rem;
-    }
-
     /* ---------- Toolbar ---------- */
 
     .toolbar {
@@ -837,70 +731,6 @@
     .s-closed { --sc: var(--s-closed); --sb: var(--s-closed-bg); }
     .s-disapproved { --sc: var(--s-disapproved); --sb: var(--s-disapproved-bg); }
 
-    /* ---------- Mini progress stepper (understand the flow at a glance) ---------- */
-
-    .rec-progress {
-        grid-column: 1 / -1;
-        display: flex;
-        align-items: center;
-        gap: 0;
-        padding-top: .75rem;
-        margin-top: .1rem;
-        border-top: 1px dashed var(--line);
-    }
-
-    .rec-progress .step {
-        width: .5rem;
-        height: .5rem;
-        border-radius: 50%;
-        background: var(--line);
-        flex-shrink: 0;
-        transition: background .15s ease;
-    }
-
-    .rec-progress .step.done {
-        background: var(--c);
-    }
-
-    .rec-progress .step.current {
-        width: .65rem;
-        height: .65rem;
-        box-shadow: 0 0 0 3px var(--cbg);
-    }
-
-    .rec-progress .seg-line {
-        flex: 1 1 auto;
-        height: 2px;
-        background: var(--line);
-        margin: 0 .3rem;
-    }
-
-    .rec-progress .seg-line.done {
-        background: var(--c);
-    }
-
-    .rec-progress .step-label {
-        font-size: .72rem;
-        font-weight: 700;
-        color: var(--c);
-        margin-left: .6rem;
-        white-space: nowrap;
-    }
-
-    .rec-progress.is-disapproved {
-        border-top-style: solid;
-        border-color: var(--s-disapproved-bg);
-    }
-
-    .rec-progress .disapproved-note {
-        display: inline-flex;
-        align-items: center;
-        gap: .4rem;
-        font-size: .78rem;
-        font-weight: 700;
-        color: var(--s-disapproved);
-    }
-
     /* ---------- Actions ---------- */
 
     .rec-actions {
@@ -1170,7 +1000,7 @@ $typeLabels = [
 |--------------------------------------------------------------------------
 |
 | Only Resolved can proceed to Closed. Disapproved is a terminal
-| off-ramp and is not part of the main pipeline below.
+| off-ramp.
 |
 */
 
@@ -1182,27 +1012,6 @@ $activeStatuses = [
     'Hearing Scheduled',
     'For Further Information',
     'Under Resolution',
-];
-
-/*
-|--------------------------------------------------------------------------
-| Pipeline position (drives the mini progress stepper on each card
-| and the workflow guide strip)
-|--------------------------------------------------------------------------
-*/
-
-$pipelineLabels = ['Filed', 'Review', 'Captain', 'Hearing', 'Resolution', 'Resolved', 'Closed'];
-
-$pipelineIndex = [
-    'Filed' => 0,
-    'Under Review' => 1,
-    'Awaiting Captain Approval' => 2,
-    'Awaiting Captain Availability' => 2,
-    'Hearing Scheduled' => 3,
-    'For Further Information' => 3,
-    'Under Resolution' => 4,
-    'Resolved' => 5,
-    'Closed' => 6,
 ];
 
 @endphp
@@ -1313,55 +1122,6 @@ $pipelineIndex = [
             Resolved
         </div>
 
-    </div>
-
-</div>
-
-
-{{-- =========================================================
-     WORKFLOW GUIDE — collapsible, explains the pipeline once
-     ========================================================== --}}
-
-<div class="flow-strip" id="flowStrip">
-
-    <div class="flow-strip-head" id="flowStripHead">
-
-        <span class="flow-strip-title">
-            <i class="bi bi-signpost-split"></i>
-            How a case moves through the workflow
-        </span>
-
-        <button type="button" class="flow-toggle" id="flowToggleBtn">
-            <span id="flowToggleLabel">Show</span>
-            <i class="bi bi-chevron-down"></i>
-        </button>
-
-    </div>
-
-    <div class="flow-track">
-
-        @php
-            $pipelineStageClasses = ['s-filed', 's-review', 's-captain', 's-hearing', 's-resolution', 's-resolved', 's-closed'];
-        @endphp
-
-        @foreach ($pipelineLabels as $i => $label)
-
-            <div class="flow-node" style="--fc: var(--{{ $pipelineStageClasses[$i] }}); --fcbg: var(--{{ $pipelineStageClasses[$i] }}-bg);">
-                <div class="dot"></div>
-                <div class="lbl">{{ $label }}</div>
-            </div>
-
-            @if (! $loop->last)
-                <div class="flow-line"></div>
-            @endif
-
-        @endforeach
-
-    </div>
-
-    <div class="flow-note">
-        <i class="bi bi-info-circle"></i>
-        Disapproved cases exit the workflow early and are marked separately on each card.
     </div>
 
 </div>
@@ -1690,11 +1450,6 @@ $pipelineIndex = [
                 $isClosed =
                     $report->status === 'Closed';
 
-                $isDisapproved =
-                    $report->status === 'Disapproved';
-
-                $step = $pipelineIndex[$report->status] ?? null;
-
             @endphp
 
 
@@ -1819,43 +1574,6 @@ $pipelineIndex = [
                     </div>
 
                 </div>
-
-
-                {{-- =================================================
-                     MINI PROGRESS — where this case sits in the flow
-                     ================================================== --}}
-
-                @if ($isDisapproved)
-
-                    <div class="rec-progress is-disapproved">
-                        <span class="disapproved-note">
-                            <i class="bi bi-x-octagon-fill"></i>
-                            Disapproved — did not proceed through the standard workflow
-                        </span>
-                    </div>
-
-                @elseif ($step !== null)
-
-                    <div class="rec-progress">
-
-                        @for ($i = 0; $i < count($pipelineLabels); $i++)
-
-                            <div class="step {{ $i <= $step ? 'done' : '' }} {{ $i === $step ? 'current' : '' }}"
-                                 title="{{ $pipelineLabels[$i] }}"></div>
-
-                            @if ($i < count($pipelineLabels) - 1)
-                                <div class="seg-line {{ $i < $step ? 'done' : '' }}"></div>
-                            @endif
-
-                        @endfor
-
-                        <span class="step-label">
-                            {{ $pipelineLabels[$step] }}
-                        </span>
-
-                    </div>
-
-                @endif
 
 
                 {{-- =================================================
@@ -2236,43 +1954,6 @@ $pipelineIndex = [
             );
 
         });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Workflow guide — collapsible, remembers state per browser
-    |--------------------------------------------------------------------------
-    */
-
-    const flowStrip = document.getElementById('flowStrip');
-    const flowHead = document.getElementById('flowStripHead');
-    const flowLabel = document.getElementById('flowToggleLabel');
-
-    if (flowStrip && flowHead) {
-
-        let open = false;
-
-        try {
-            open = sessionStorage.getItem('rc_flow_open') === '1';
-        } catch (e) {}
-
-        function setOpen(state) {
-
-            open = state;
-            flowStrip.classList.toggle('is-open', open);
-            flowLabel.textContent = open ? 'Hide' : 'Show';
-
-            try {
-                sessionStorage.setItem('rc_flow_open', open ? '1' : '0');
-            } catch (e) {}
-        }
-
-        flowHead.addEventListener('click', function () {
-            setOpen(!open);
-        });
-
-        setOpen(open);
-    }
 
 })();
 </script>

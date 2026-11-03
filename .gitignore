@@ -29,3 +29,11 @@ Thumbs.db
 bis-smart-code.zip
 
 *.backup
+
+# Local database backups and temporary review files
+/backups/
+ /*.sql
+*.bak
+*.backup-*
+*-review.txt
+/*.sql

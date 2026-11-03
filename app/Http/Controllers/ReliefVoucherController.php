@@ -4,16 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\DisasterEvent;
 use App\Models\Household;
+use App\Models\HouseholdMember;
 use App\Models\ReliefAssistanceOperation;
 use App\Models\ReliefOperationBeneficiary;
 use App\Models\ReliefVoucher;
 use App\Models\Resident;
+use App\Services\AuditLogService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -311,7 +315,8 @@ class ReliefVoucherController extends Controller
     */
 
     public function storeOperation(
-        Request $request
+        Request $request,
+        AuditLogService $auditLogService
     ): RedirectResponse {
         $validated =
             $request->validate([
@@ -352,17 +357,13 @@ class ReliefVoucherController extends Controller
                     },
                 ],
 
-                'description' => [
-                    'nullable',
-                    'string',
-                    'max:2000',
-                ],
-
-                'assistance_description' => [
-                    'nullable',
-                    'string',
-                    'max:2000',
-                ],
+                /*
+                 * "description" and "assistance_description" are no longer
+                 * collected by the create form. The database columns are
+                 * kept (the edit page, details page and reports may still
+                 * read them), so they are stored as null on creation and
+                 * remain editable from the edit page.
+                 */
 
                 /*
                  * IMPORTANT:
@@ -372,7 +373,19 @@ class ReliefVoucherController extends Controller
                 'target_group' => [
                     'required',
                     'string',
-                    'in:all,household_heads,students,senior_citizens',
+                    'in:all,household_heads,students,senior_citizens,pwd,solo_parent,four_ps,indigent',
+                ],
+
+                'student_levels' => [
+                    'required_if:target_group,students',
+                    'array',
+                    'min:1',
+                ],
+
+                'student_levels.*' => [
+                    'string',
+                    'distinct',
+                    'in:elementary,high_school_shs,college',
                 ],
 
                 'source_name' => [
@@ -450,15 +463,13 @@ class ReliefVoucherController extends Controller
                     $validated['operation_name'],
 
                 'description' =>
-                    $validated['description']
-                    ?? null,
+                    null,
 
                 'assistance_type' =>
                     $validated['assistance_type'],
 
                 'assistance_description' =>
-                    $validated['assistance_description']
-                    ?? null,
+                    null,
 
                 'disaster_event_id' =>
                     $validated['disaster_event_id']
@@ -513,7 +524,10 @@ class ReliefVoucherController extends Controller
                  * target_group
                  */
                 'beneficiary_filter' =>
-                    $validated['target_group'],
+                    $this->encodeBeneficiaryFilter(
+                        $validated['target_group'],
+                        $validated['student_levels'] ?? []
+                    ),
 
                 'purok_filter' =>
                     null,
@@ -527,6 +541,58 @@ class ReliefVoucherController extends Controller
                 'updated_by' =>
                     Auth::id(),
             ]);
+
+        /*
+         * Audit Trail: record the successful creation of the
+         * Relief Assistance Operation. Only non-sensitive
+         * operation details are stored.
+         */
+        $auditLogService->logAction(
+            'Created',
+            'Relief Assistance',
+            (int) $operation->getKey(),
+            (string) $operation->operation_code,
+            null,
+            [
+                'operation_code' =>
+                    $operation->operation_code,
+
+                'operation_name' =>
+                    $operation->operation_name,
+
+                'assistance_type' =>
+                    $operation->assistance_type,
+
+                'disaster_event_id' =>
+                    $operation->disaster_event_id,
+
+                'source_name' =>
+                    $operation->source_name,
+
+                'source_reference' =>
+                    $operation->source_reference,
+
+                'quantity_received' =>
+                    $operation->quantity_received,
+
+                'quantity_unit' =>
+                    $operation->quantity_unit,
+
+                'distribution_date' =>
+                    $operation->distribution_date,
+
+                'distribution_location' =>
+                    $operation->distribution_location,
+
+                'beneficiary_filter' =>
+                    $operation->beneficiary_filter,
+
+                'status' =>
+                    $operation->status,
+            ],
+            'Relief assistance operation created.',
+            $request
+        );
 
         return redirect()
             ->route(
@@ -836,7 +902,19 @@ class ReliefVoucherController extends Controller
                 'target_group' => [
                     'nullable',
                     'string',
-                    'in:all,household_heads,students,senior_citizens',
+                    'in:all,household_heads,students,senior_citizens,pwd,solo_parent,four_ps,indigent',
+                ],
+
+                'student_levels' => [
+                    'nullable',
+                    'array',
+                    'min:1',
+                ],
+
+                'student_levels.*' => [
+                    'string',
+                    'distinct',
+                    'in:elementary,high_school_shs,college',
                 ],
 
                 /*
@@ -846,7 +924,12 @@ class ReliefVoucherController extends Controller
                 'beneficiary_filter' => [
                     'nullable',
                     'string',
-                    'in:all,household_heads,students,senior_citizens',
+                    'max:255',
+                    function (string $attribute, mixed $value, \Closure $fail) {
+                        if ($value !== null && $value !== '' && !$this->isValidStoredBeneficiaryFilter((string) $value)) {
+                            $fail('Please select a valid masterlist target group.');
+                        }
+                    },
                 ],
 
                 'source_name' => [
@@ -970,13 +1053,16 @@ class ReliefVoucherController extends Controller
          * Existing saved filter is the final fallback.
          */
         $beneficiaryFilter =
-            $validated['target_group']
-            ??
-            $validated['beneficiary_filter']
-            ??
-            $operation->beneficiary_filter
-            ??
-            'all';
+            isset($validated['target_group'])
+                ? $this->encodeBeneficiaryFilter(
+                    $validated['target_group'],
+                    $validated['student_levels'] ?? []
+                )
+                : (
+                    $validated['beneficiary_filter']
+                    ?? $operation->beneficiary_filter
+                    ?? 'all'
+                );
 
         $operation->update([
             'operation_name' =>
@@ -1096,196 +1182,335 @@ class ReliefVoucherController extends Controller
     private function beneficiaryFilterOptions(): array
     {
         return [
-            'all' =>
-                'All',
-
-            'household_heads' =>
-                'Household Heads',
-
-            'students' =>
-                'Students',
-
-            'senior_citizens' =>
-                'Senior Citizens',
+            'all' => 'All Residents',
+            'household_heads' => 'Household Heads',
+            'students' => 'Students',
+            'senior_citizens' => 'Senior Citizens',
+            'pwd' => 'Persons with Disabilities (PWD)',
+            'solo_parent' => 'Solo Parents',
+            'four_ps' => '4Ps Beneficiary Households',
+            'indigent' => 'Indigent / Low-Income Households',
         ];
     }
 
+    /** Supported school-level values submitted by the create form. */
+    private function studentLevelOptions(): array
+    {
+        return [
+            'elementary' => 'Elementary',
+            'high_school_shs' => 'High School / SHS',
+            'college' => 'College',
+        ];
+    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | BUILD LEGACY HOUSEHOLD QUERY
-    |--------------------------------------------------------------------------
-    */
+    /**
+     * Store student levels inside the existing beneficiary_filter column,
+     * avoiding a database migration and preserving the selection on reload.
+     * Format: students:elementary,high_school_shs
+     */
+    private function encodeBeneficiaryFilter(string $group, array $studentLevels = []): string
+    {
+        if ($group !== 'students') {
+            return $group;
+        }
 
-    private function buildBeneficiaryQuery(
-        Request $request
-    ): Builder {
-        $search =
-            trim(
-                (string) (
-                    $request->input(
-                        'search'
-                    )
-                    ?? ''
-                )
-            );
+        $allowed = array_keys($this->studentLevelOptions());
+        $levels = collect($studentLevels)
+            ->map(fn ($level) => (string) $level)
+            ->filter(fn ($level) => in_array($level, $allowed, true))
+            ->unique()
+            ->values()
+            ->all();
 
-        $purok =
-            trim(
-                (string) (
-                    $request->input(
-                        'purok'
-                    )
-                    ?? ''
-                )
-            );
+        return $levels === []
+            ? 'students'
+            : 'students:' . implode(',', $levels);
+    }
 
-        $filter =
-            $request->input(
-                'filter',
-                'all'
-            );
+    /** Decode a saved group value into its base filter and school levels. */
+    private function decodeBeneficiaryFilter(?string $value): array
+    {
+        $value = trim((string) ($value ?? 'all'));
+        $levels = [];
+        $filter = $value;
 
-        $query =
-            Household::query()
-                ->where(
-                    'status',
-                    'Active'
-                )
-                ->with([
-                    'householdHead',
-                    'members.resident',
-                ]);
+        if (str_starts_with($value, 'students:')) {
+            $filter = 'students';
+            $rawLevels = substr($value, strlen('students:'));
+            $allowed = array_keys($this->studentLevelOptions());
+            $levels = collect(explode(',', $rawLevels))
+                ->map(fn ($level) => trim($level))
+                ->filter(fn ($level) => in_array($level, $allowed, true))
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        if (!array_key_exists($filter, $this->beneficiaryFilterOptions())) {
+            $filter = 'all';
+            $levels = [];
+        }
+
+        return ['filter' => $filter, 'student_levels' => $levels];
+    }
+
+    private function isValidStoredBeneficiaryFilter(string $value): bool
+    {
+        $decoded = $this->decodeBeneficiaryFilter($value);
+        if ($decoded['filter'] === 'all' && $value !== 'all') {
+            return false;
+        }
+
+        if ($decoded['filter'] !== 'students' && $decoded['filter'] !== $value) {
+            return false;
+        }
+
+        if (str_starts_with($value, 'students:')) {
+            return $decoded['student_levels'] !== [];
+        }
+
+        return array_key_exists($value, $this->beneficiaryFilterOptions());
+    }
+
+    private function studentLevelsFromRequest(Request $request, ?string $savedFilter = null): array
+    {
+        $requested = $request->input('student_levels');
+        if (is_array($requested) && $requested !== []) {
+            $allowed = array_keys($this->studentLevelOptions());
+            return collect($requested)
+                ->map(fn ($level) => (string) $level)
+                ->filter(fn ($level) => in_array($level, $allowed, true))
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        return $this->decodeBeneficiaryFilter($savedFilter)['student_levels'];
+    }
+
+    private function truthyAttribute(?Model $model, string $attribute): bool
+    {
+        if (!$model || !array_key_exists($attribute, $model->getAttributes())) {
+            return false;
+        }
+
+        return filter_var($model->getAttribute($attribute), FILTER_VALIDATE_BOOLEAN)
+            || (string) $model->getAttribute($attribute) === '1';
+    }
+
+    /**
+     * Check whether a resident/member record matches a target group.
+     * Classification flags are stored on household_members; 4Ps and
+     * indigent flags are household-level when those columns exist.
+     */
+    private function residentMatchesBeneficiaryFilter(
+        ?Resident $resident,
+        ?HouseholdMember $membership,
+        ?Household $household,
+        string $filter,
+        array $studentLevels = []
+    ): bool {
+        if (!$resident || $resident->status !== 'Active') {
+            return false;
+        }
+
+        switch ($filter) {
+            case 'household_heads':
+                return (int) $resident->id === (int) ($household->household_head_id ?? 0);
+
+            case 'students':
+                $isStudent = $this->truthyAttribute($membership, 'is_student')
+                    || strcasecmp(trim((string) ($resident->occupation ?? '')), 'student') === 0;
+
+                if (!$isStudent) {
+                    return false;
+                }
+
+                if ($studentLevels === []) {
+                    return true;
+                }
+
+                foreach ($studentLevels as $level) {
+                    if ($level === 'high_school_shs') {
+                        if (
+                            $this->truthyAttribute($membership, 'is_high_school')
+                            || $this->truthyAttribute($membership, 'is_high_school_student')
+                        ) {
+                            return true;
+                        }
+                        continue;
+                    }
+
+                    // Elementary and college require an explicit school-level value.
+                    foreach (['education_level', 'school_level', 'student_level'] as $attribute) {
+                        $value = strtolower(trim((string) (
+                            ($membership && array_key_exists($attribute, $membership->getAttributes())
+                                ? $membership->getAttribute($attribute)
+                                : null)
+                            ?? ($resident && array_key_exists($attribute, $resident->getAttributes())
+                                ? $resident->getAttribute($attribute)
+                                : '')
+                        )));
+
+                        if ($value !== '') {
+                            if ($level === 'elementary' && str_contains($value, 'elementary')) {
+                                return true;
+                            }
+                            if ($level === 'college' && (str_contains($value, 'college') || str_contains($value, 'university') || str_contains($value, 'tertiary'))) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                return false;
+
+            case 'senior_citizens':
+                if ($this->truthyAttribute($membership, 'is_senior_citizen')) {
+                    return true;
+                }
+                return !empty($resident->birth_date)
+                    && Carbon::parse($resident->birth_date)->lte(now()->subYears(60));
+
+            case 'pwd':
+                return $this->truthyAttribute($membership, 'is_pwd');
+
+            case 'solo_parent':
+                return $this->truthyAttribute($membership, 'is_solo_parent');
+
+            case 'four_ps':
+                return $this->truthyAttribute($household, 'is_4ps_beneficiary');
+
+            case 'indigent':
+                return $this->truthyAttribute($household, 'is_low_income')
+                    || $this->truthyAttribute($household, 'is_indigent');
+
+            case 'all':
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Build a household query that includes households with at least one
+     * matching resident, while keeping the resident-level masterlist accurate.
+     */
+    private function buildBeneficiaryQuery(Request $request): Builder
+    {
+        $search = trim((string) ($request->input('search') ?? ''));
+        $purok = trim((string) ($request->input('purok') ?? ''));
+        $filter = (string) $request->input('filter', 'all');
+        $studentLevels = $this->studentLevelsFromRequest($request);
+
+        $query = Household::query()
+            ->where('status', 'Active')
+            ->with(['householdHead', 'members.resident']);
 
         if ($search !== '') {
-            $query->where(
-                function (
-                    Builder $builder
-                ) use (
-                    $search
-                ) {
-                    $builder
-                        ->where(
-                            'household_number',
-                            'like',
-                            '%' . $search . '%'
-                        )
-                        ->orWhere(
-                            'address',
-                            'like',
-                            '%' . $search . '%'
-                        )
-                        ->orWhere(
-                            'purok',
-                            'like',
-                            '%' . $search . '%'
-                        )
-                        ->orWhereHas(
-                            'householdHead',
-                            function (
-                                Builder $headQuery
-                            ) use (
-                                $search
-                            ) {
-                                $headQuery->where(
-                                    function (
-                                        Builder $nameQuery
-                                    ) use (
-                                        $search
-                                    ) {
-                                        $nameQuery
-                                            ->where(
-                                                'first_name',
-                                                'like',
-                                                '%' . $search . '%'
-                                            )
-                                            ->orWhere(
-                                                'middle_name',
-                                                'like',
-                                                '%' . $search . '%'
-                                            )
-                                            ->orWhere(
-                                                'last_name',
-                                                'like',
-                                                '%' . $search . '%'
-                                            );
-                                    }
-                                );
-                            }
-                        );
-                }
-            );
+            $query->where(function (Builder $builder) use ($search) {
+                $builder
+                    ->where('household_number', 'like', '%' . $search . '%')
+                    ->orWhere('address', 'like', '%' . $search . '%')
+                    ->orWhere('purok', 'like', '%' . $search . '%')
+                    ->orWhereHas('householdHead', function (Builder $headQuery) use ($search) {
+                        $headQuery->where(function (Builder $nameQuery) use ($search) {
+                            $nameQuery
+                                ->where('first_name', 'like', '%' . $search . '%')
+                                ->orWhere('middle_name', 'like', '%' . $search . '%')
+                                ->orWhere('last_name', 'like', '%' . $search . '%');
+                        });
+                    });
+            });
         }
 
         if ($purok !== '') {
-            $query->where(
-                'purok',
-                $purok
-            );
+            $query->where('purok', $purok);
         }
 
-        if (
-            $filter ===
-            'household_heads'
-        ) {
-            $query->whereNotNull(
-                'household_head_id'
-            );
-        }
+        if ($filter === 'household_heads') {
+            $query->whereNotNull('household_head_id');
+        } elseif (in_array($filter, ['students', 'senior_citizens', 'pwd', 'solo_parent'], true)) {
+            $query->whereHas('members', function (Builder $memberQuery) use ($filter, $studentLevels) {
+                if ($filter === 'students') {
+                    $memberQuery->where(function (Builder $q) {
+                        if (Schema::hasColumn('household_members', 'is_student')) {
+                            $q->where('is_student', true);
+                        }
+                        if (Schema::hasColumn('residents', 'occupation')) {
+                            $q->orWhereHas('resident', function (Builder $residentQuery) {
+                                $residentQuery->where('occupation', 'Student');
+                            });
+                        }
+                    });
 
-        if (
-            $filter ===
-            'students'
-        ) {
-            $query->whereHas(
-                'members.resident',
-                function (
-                    Builder $residentQuery
-                ) {
-                    $residentQuery
-                        ->where(
-                            'status',
-                            'Active'
-                        )
-                        ->where(
-                            'occupation',
-                            'Student'
-                        );
+                    if ($studentLevels !== []) {
+                        $memberQuery->where(function (Builder $levelQuery) use ($studentLevels) {
+                            foreach ($studentLevels as $level) {
+                                if ($level === 'high_school_shs') {
+                                    $levelQuery->orWhere(function (Builder $q) {
+                                        $hasCondition = false;
+                                        if (Schema::hasColumn('household_members', 'is_high_school')) {
+                                            $q->where('is_high_school', true);
+                                            $hasCondition = true;
+                                        }
+                                        if (Schema::hasColumn('household_members', 'is_high_school_student')) {
+                                            $method = $hasCondition ? 'orWhere' : 'where';
+                                            $q->{$method}('is_high_school_student', true);
+                                        }
+                                    });
+                                } else {
+                                    $expected = $level === 'elementary' ? 'elementary' : 'college';
+                                    foreach (['education_level', 'school_level', 'student_level'] as $column) {
+                                        if (Schema::hasColumn('household_members', $column)) {
+                                            $levelQuery->orWhereRaw('LOWER(`' . $column . '`) LIKE ?', ['%' . $expected . '%']);
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } elseif ($filter === 'pwd' && Schema::hasColumn('household_members', 'is_pwd')) {
+                    $memberQuery->where('is_pwd', true);
+                } elseif ($filter === 'solo_parent' && Schema::hasColumn('household_members', 'is_solo_parent')) {
+                    $memberQuery->where('is_solo_parent', true);
+                } elseif ($filter === 'senior_citizens') {
+                    $memberQuery->where(function (Builder $q) {
+                        if (Schema::hasColumn('household_members', 'is_senior_citizen')) {
+                            $q->where('is_senior_citizen', true);
+                        }
+                        if (Schema::hasColumn('residents', 'birth_date')) {
+                            $cutoff = now()->subYears(60)->toDateString();
+                            $method = Schema::hasColumn('household_members', 'is_senior_citizen') ? 'orWhereHas' : 'whereHas';
+                            $q->{$method}('resident', function (Builder $residentQuery) use ($cutoff) {
+                                $residentQuery->whereDate('birth_date', '<=', $cutoff);
+                            });
+                        }
+                    });
                 }
-            );
-        }
-
-        if (
-            $filter ===
-            'senior_citizens'
-        ) {
-            $cutoff =
-                now()->subYears(60);
-
-            $query->whereHas(
-                'members.resident',
-                function (
-                    Builder $residentQuery
-                ) use (
-                    $cutoff
-                ) {
-                    $residentQuery
-                        ->where(
-                            'status',
-                            'Active'
-                        )
-                        ->whereDate(
-                            'birth_date',
-                            '<=',
-                            $cutoff
-                        );
+            });
+        } elseif ($filter === 'four_ps') {
+            if (Schema::hasColumn('households', 'is_4ps_beneficiary')) {
+                $query->where('is_4ps_beneficiary', true);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        } elseif ($filter === 'indigent') {
+            $query->where(function (Builder $q) {
+                $hasColumn = false;
+                foreach (['is_low_income', 'is_indigent'] as $column) {
+                    if (Schema::hasColumn('households', $column)) {
+                        $method = $hasColumn ? 'orWhere' : 'where';
+                        $q->{$method}($column, true);
+                        $hasColumn = true;
+                    }
                 }
-            );
+                if (!$hasColumn) {
+                    $q->whereRaw('1 = 0');
+                }
+            });
         }
 
-        return $query
-            ->orderBy('purok')
-            ->orderBy('household_number');
+        return $query->orderBy('purok')->orderBy('household_number');
     }
 
 
@@ -1323,6 +1548,8 @@ class ReliefVoucherController extends Controller
                 'filter',
                 'all'
             );
+
+        $studentLevels = $this->studentLevelsFromRequest($request);
 
         $filterOptions =
             $this->beneficiaryFilterOptions();
@@ -1388,21 +1615,48 @@ class ReliefVoucherController extends Controller
                 }
 
                 $residents->push([
-                    'resident' =>
-                        $member->resident,
-
-                    'relationship' =>
-                        $member->relationship
-                        ?? null,
+                    'resident' => $member->resident,
+                    'relationship' => $member->relationship ?? null,
+                    'membership' => $member,
                 ]);
             }
 
             /*
-             * Make sure the household head is included even if the
-             * household_members table does not contain a separate
-             * membership record for the head.
+             * Household-level target groups must produce one row per
+             * qualifying household, not one row per resident/member.
+             * Indigent and 4Ps are household classifications, so the
+             * household head represents the household on this masterlist.
+             */
+            if (in_array((string) $filter, ['indigent', 'four_ps'], true)) {
+                if (
+                    !$household->householdHead
+                    || $household->householdHead->status !== 'Active'
+                ) {
+                    continue;
+                }
+
+                $headMembership = $household->members->firstWhere(
+                    'resident_id',
+                    $household->household_head_id
+                );
+
+                $residents = collect([
+                    [
+                        'resident' => $household->householdHead,
+                        'relationship' => 'Household Head',
+                        'membership' => $headMembership,
+                    ],
+                ]);
+            }
+
+            /*
+             * For resident-level groups, make sure the household head is
+             * included even if the household_members table does not contain
+             * a separate membership record for the head.
              */
             if (
+                !in_array((string) $filter, ['indigent', 'four_ps'], true)
+                &&
                 $household->householdHead
                 &&
                 $household->householdHead->status ===
@@ -1431,11 +1685,9 @@ class ReliefVoucherController extends Controller
                     !$headAlreadyIncluded
                 ) {
                     $residents->push([
-                        'resident' =>
-                            $household->householdHead,
-
-                        'relationship' =>
-                            'Household Head',
+                        'resident' => $household->householdHead,
+                        'relationship' => 'Household Head',
+                        'membership' => $household->members->firstWhere('resident_id', $household->household_head_id),
                     ]);
                 }
             }
@@ -1446,40 +1698,13 @@ class ReliefVoucherController extends Controller
                 $resident =
                     $residentRecord['resident'];
 
-                $matchesFilter =
-                    match ($filter) {
-                        'household_heads' =>
-                            (int) $resident->id
-                            ===
-                            (int) (
-                                $household
-                                    ->household_head_id
-                                ?? 0
-                            ),
-
-                        'students' =>
-                            strcasecmp(
-                                trim(
-                                    (string) (
-                                        $resident->occupation
-                                        ?? ''
-                                    )
-                                ),
-                                'Student'
-                            ) === 0,
-
-                        'senior_citizens' =>
-                            $resident->birth_date
-                            &&
-                            Carbon::parse(
-                                $resident->birth_date
-                            )->lte(
-                                now()->subYears(60)
-                            ),
-
-                        default =>
-                            true,
-                    };
+                $matchesFilter = $this->residentMatchesBeneficiaryFilter(
+                    $resident,
+                    $residentRecord['membership'] ?? null,
+                    $household,
+                    (string) $filter,
+                    $studentLevels
+                );
 
                 if (
                     !$matchesFilter
@@ -1714,18 +1939,17 @@ class ReliefVoucherController extends Controller
          * target_group is also accepted for compatibility with
          * the new create/edit workflow.
          */
-        $filter =
-            $request->has('filter')
-            ? $request->input('filter')
-            : (
-                $request->input(
-                    'target_group'
-                )
-                ??
-                $operation?->beneficiary_filter
-                ??
-                'all'
-            );
+        $savedFilter = $operation?->beneficiary_filter ?? 'all';
+        $decodedSavedFilter = $this->decodeBeneficiaryFilter($savedFilter);
+
+        $filter = $request->has('filter')
+            ? (string) $request->input('filter')
+            : (string) ($request->input('target_group') ?? $decodedSavedFilter['filter']);
+
+        $studentLevels = $this->studentLevelsFromRequest(
+            $request,
+            $savedFilter
+        );
 
         $purok =
             $request->has('purok')
@@ -1747,6 +1971,7 @@ class ReliefVoucherController extends Controller
 
                         'purok' =>
                             $purok,
+                        'student_levels' => $studentLevels,
                     ]
                 )
             );
@@ -1761,7 +1986,7 @@ class ReliefVoucherController extends Controller
         ) {
             $operation->update([
                 'beneficiary_filter' =>
-                    $filter,
+                    $this->encodeBeneficiaryFilter((string) $filter, $studentLevels),
 
                 'purok_filter' =>
                     $purok !== ''
@@ -1888,18 +2113,17 @@ class ReliefVoucherController extends Controller
                 ->find($operationId)
             : null;
 
-        $filter =
-            $request->has('filter')
-            ? $request->input('filter')
-            : (
-                $request->input(
-                    'target_group'
-                )
-                ??
-                $operation?->beneficiary_filter
-                ??
-                'all'
-            );
+        $savedFilter = $operation?->beneficiary_filter ?? 'all';
+        $decodedSavedFilter = $this->decodeBeneficiaryFilter($savedFilter);
+
+        $filter = $request->has('filter')
+            ? (string) $request->input('filter')
+            : (string) ($request->input('target_group') ?? $decodedSavedFilter['filter']);
+
+        $studentLevels = $this->studentLevelsFromRequest(
+            $request,
+            $savedFilter
+        );
 
         $purok =
             $request->has('purok')
@@ -1921,6 +2145,7 @@ class ReliefVoucherController extends Controller
 
                         'purok' =>
                             $purok,
+                        'student_levels' => $studentLevels,
                     ]
                 )
             );
@@ -1945,6 +2170,9 @@ class ReliefVoucherController extends Controller
 
                         'purok' =>
                             $purok,
+
+                        'student_levels' =>
+                            $studentLevels,
                     ]
                 )
                 ->with(
@@ -1958,7 +2186,7 @@ class ReliefVoucherController extends Controller
         ) {
             $operation->update([
                 'beneficiary_filter' =>
-                    $filter,
+                    $this->encodeBeneficiaryFilter((string) $filter, $studentLevels),
 
                 'purok_filter' =>
                     $purok !== ''
@@ -4260,5 +4488,227 @@ public function beneficiariesPrint(
                     $exception->getMessage(),
             ]);
     }
+}
+
+   /*
+|--------------------------------------------------------------------------
+| VOUCHER WORKFLOW ACTIONS
+|--------------------------------------------------------------------------
+*/
+
+public function issue(
+    Request $request,
+    ReliefVoucher $reliefVoucher,
+    AuditLogService $auditLogService
+): RedirectResponse {
+    $before = $reliefVoucher->status;
+
+    if ($reliefVoucher->status !== 'generated') {
+        return back()->withErrors([
+            'voucher' => 'Only a generated voucher can be issued.',
+        ]);
+    }
+
+    $reliefVoucher->status = 'issued';
+    $reliefVoucher->save();
+
+    $auditLogService->logAction(
+        'Updated',
+        'Relief Voucher',
+        (int) $reliefVoucher->getKey(),
+        (string) $reliefVoucher->voucher_code,
+        ['status' => $before],
+        ['status' => $reliefVoucher->status],
+        'Relief voucher issued.',
+        $request
+    );
+
+    return redirect()
+        ->route('relief-vouchers.show', $reliefVoucher)
+        ->with(
+            'success',
+            'Voucher marked as issued. The beneficiary must still complete QR verification to claim it.'
+        );
+}
+
+/**
+ * Return an eligible voucher to Generated for correction.
+ *
+ * Only vouchers eligible under the model's existing rules may be
+ * returned. QR-verified, released, claimed, and cancelled vouchers
+ * cannot be returned to Generated.
+ */
+public function returnToGenerated(
+    Request $request,
+    ReliefVoucher $reliefVoucher,
+    AuditLogService $auditLogService
+): RedirectResponse {
+    $result = DB::transaction(function () use ($reliefVoucher) {
+        $voucher = ReliefVoucher::query()
+            ->whereKey($reliefVoucher->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        // Do not reverse a completed claim or a cancelled voucher.
+        if (
+            in_array($voucher->status, ['claimed', 'cancelled'], true)
+            || $voucher->claimed_at !== null
+            || $voucher->qr_verified_at !== null
+            || $voucher->released_at !== null
+        ) {
+            return [
+                'success' => false,
+                'message' => 'A QR-verified, released, claimed, or cancelled voucher cannot be returned to Generated.',
+            ];
+        }
+
+        // Respect the model's existing return-eligibility rules.
+        if (
+            !method_exists($voucher, 'canBeReturnedToGenerated')
+            || !$voucher->canBeReturnedToGenerated()
+        ) {
+            return [
+                'success' => false,
+                'message' => 'This voucher cannot be returned to Generated from its current status.',
+            ];
+        }
+
+        $previousStatus = (string) $voucher->status;
+
+        $voucher->status = 'generated';
+        $voucher->save();
+
+        return [
+            'success' => true,
+            'voucher' => $voucher,
+            'previous_status' => $previousStatus,
+        ];
+    });
+
+    if (!$result['success']) {
+        return back()->withErrors([
+            'voucher' => $result['message'],
+        ]);
+    }
+
+    /** @var ReliefVoucher $voucher */
+    $voucher = $result['voucher'];
+
+    $auditLogService->logAction(
+        'Updated',
+        'Relief Voucher',
+        (int) $voucher->getKey(),
+        (string) $voucher->voucher_code,
+        ['status' => $result['previous_status']],
+        ['status' => $voucher->status],
+        'Relief voucher returned to Generated for correction.',
+        $request
+    );
+
+    return redirect()
+        ->route('relief-vouchers.show', $voucher)
+        ->with(
+            'success',
+            'Voucher returned to Generated. You can correct it and issue it again when ready.'
+        );
+}
+
+public function distribute(
+    Request $request,
+    ReliefVoucher $reliefVoucher,
+    AuditLogService $auditLogService
+): RedirectResponse {
+    $before = $reliefVoucher->status;
+
+    if ($reliefVoucher->status !== 'issued') {
+        return back()->withErrors([
+            'voucher' => 'Only an issued voucher can be marked as ready for distribution.',
+        ]);
+    }
+
+    $reliefVoucher->status = 'distributed';
+    $reliefVoucher->save();
+
+    $auditLogService->logAction(
+        'Updated',
+        'Relief Voucher',
+        (int) $reliefVoucher->getKey(),
+        (string) $reliefVoucher->voucher_code,
+        ['status' => $before],
+        ['status' => $reliefVoucher->status],
+        'Relief voucher marked as distributed; QR claim verification remains required.',
+        $request
+    );
+
+    return redirect()
+        ->route('relief-vouchers.show', $reliefVoucher)
+        ->with(
+            'success',
+            'Voucher marked as distributed. Scan its QR code to record the claim.'
+        );
+}
+
+public function cancel(
+    Request $request,
+    ReliefVoucher $reliefVoucher,
+    AuditLogService $auditLogService
+): RedirectResponse {
+    if (
+        in_array($reliefVoucher->status, ['claimed', 'cancelled'], true)
+        || $reliefVoucher->claimed_at !== null
+    ) {
+        return back()->withErrors([
+            'voucher' => 'A claimed or already-cancelled voucher cannot be cancelled.',
+        ]);
+    }
+
+    $before = $reliefVoucher->status;
+
+    $reliefVoucher->status = 'cancelled';
+    $reliefVoucher->save();
+
+    $auditLogService->logAction(
+        'Updated',
+        'Relief Voucher',
+        (int) $reliefVoucher->getKey(),
+        (string) $reliefVoucher->voucher_code,
+        ['status' => $before],
+        ['status' => $reliefVoucher->status],
+        'Relief voucher cancelled.',
+        $request
+    );
+
+    return redirect()
+        ->route('relief-vouchers.show', $reliefVoucher)
+        ->with(
+            'success',
+            'Voucher cancelled. It can no longer be claimed.'
+        );
+}
+
+/**
+ * Claiming is intentionally QR-only. The QR verification action records
+ * the scan and claim together; this endpoint must not bypass that check.
+ */
+public function claim(
+    ReliefVoucher $reliefVoucher
+): RedirectResponse {
+    if (
+        $reliefVoucher->status === 'claimed'
+        || $reliefVoucher->claimed_at !== null
+    ) {
+        return redirect()
+            ->route('relief-vouchers.show', $reliefVoucher)
+            ->with(
+                'success',
+                'This voucher has already been claimed.'
+            );
+    }
+
+    return redirect()
+        ->route('relief-vouchers.show', $reliefVoucher)
+        ->withErrors([
+            'voucher' => 'A voucher cannot be manually claimed. Scan and verify its QR code to record the claim.',
+        ]);
 }
 }

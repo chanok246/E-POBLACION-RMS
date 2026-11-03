@@ -94,10 +94,6 @@ class AuditLogController extends Controller
         |--------------------------------------------------------------------------
         | Search
         |--------------------------------------------------------------------------
-        |
-        | Search across the fields that are useful to barangay personnel
-        | when locating a specific processing activity.
-        |
         */
 
         if ($search !== '') {
@@ -114,9 +110,6 @@ class AuditLogController extends Controller
         |--------------------------------------------------------------------------
         | Paginated Results
         |--------------------------------------------------------------------------
-        |
-        | Keep the current filters when moving between pages.
-        |
         */
 
         $auditLogs = $query
@@ -127,11 +120,6 @@ class AuditLogController extends Controller
         |--------------------------------------------------------------------------
         | Filter Options
         |--------------------------------------------------------------------------
-        |
-        | These are generated from the existing audit log records rather
-        | than hard-coding module/action names that may not match the
-        | current system.
-        |
         */
 
         $modules = AuditLog::query()
@@ -148,14 +136,11 @@ class AuditLogController extends Controller
             ->orderBy('action')
             ->pluck('action');
 
+        /*
+         * Show all registered users in the dropdown,
+         * including users who have no audit log entries yet.
+         */
         $users = User::query()
-            ->whereIn(
-                'id',
-                AuditLog::query()
-                    ->whereNotNull('user_id')
-                    ->distinct()
-                    ->pluck('user_id')
-            )
             ->orderBy('name')
             ->get();
 

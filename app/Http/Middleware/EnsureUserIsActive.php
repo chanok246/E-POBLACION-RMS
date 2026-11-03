@@ -10,14 +10,11 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserIsActive
 {
     /**
-     * Handle an incoming request.
+     * Ensure the authenticated user has an active account
+     * and a valid system role.
      *
-     * This middleware ensures that an authenticated user:
-     * - still has an active account
-     * - still has a valid system role
-     *
-     * If the account was deactivated while the user was logged in,
-     * the current session is immediately terminated.
+     * Immediately terminate the session if the account is
+     * inactive or no longer authorized.
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -36,7 +33,7 @@ class EnsureUserIsActive
             return redirect()
                 ->route('login')
                 ->withErrors([
-                    'email' => 'Your account is inactive or is no longer authorized to access the system.',
+                    'username' => 'Your account is inactive or is no longer authorized to access the system.',
                 ]);
         }
 

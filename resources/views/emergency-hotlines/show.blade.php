@@ -479,8 +479,7 @@
                                 href="tel:{{ $emergencyHotline->phone_number }}"
                                 class="btn btn-success btn-sm"
                             >
-                                <i class="bi bi-telephone-outbound-fill me-1"></i>
-                                Call
+
                             </a>
 
                         @endif

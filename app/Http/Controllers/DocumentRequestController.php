@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\GenerateOfficialDocumentPdfJob;
 use App\Models\DocumentRequest;
+use App\Models\Household;
 use App\Models\Resident;
 use App\Services\AuditLogService;
 use App\Services\DocumentConversionService;
 use App\Services\OfficialDocumentTemplateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -37,20 +39,20 @@ class DocumentRequestController extends Controller
         ];
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Barangay Documents Index
-    |--------------------------------------------------------------------------
-    */
-
     public function index(Request $request): View
     {
+        /*
+         * The "released" filter powers the combined "Released / Completed"
+         * summary card, so it matches both database statuses. The database
+         * values themselves are NOT changed. "completed" is kept so old
+         * links / bookmarks still work.
+         */
         $statusMap = [
             'pending' => 'Pending',
             'processing' => 'Processing',
             'approved' => 'Approved',
             'completed' => 'Completed',
-            'released' => 'Released',
+            'released' => ['Released', 'Completed'],
             'disapproved' => 'Disapproved',
         ];
 
@@ -100,26 +102,38 @@ class DocumentRequestController extends Controller
                 $request->filled('status') &&
                 isset($statusMap[$request->status]),
                 function ($query) use ($request, $statusMap) {
-                    $query->where(
+                    $query->whereIn(
                         'status',
-                        $statusMap[$request->status]
+                        (array) $statusMap[$request->status]
                     );
                 }
             )
             ->latest('requested_at')
             ->get();
 
+        /*
+         * Summary card counts (not affected by search / status filter).
+         * "released" = Released + Completed.
+         */
+        $rawCounts = DocumentRequest::query()
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $statusCounts = [
+            'all' => (int) $rawCounts->sum(),
+            'pending' => (int) $rawCounts->get('Pending', 0),
+            'approved' => (int) $rawCounts->get('Approved', 0),
+            'released' => (int) $rawCounts->get('Released', 0)
+                + (int) $rawCounts->get('Completed', 0),
+            'disapproved' => (int) $rawCounts->get('Disapproved', 0),
+        ];
+
         return view(
             'documents.index',
-            compact('documents')
+            compact('documents', 'statusCounts')
         );
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Create
-    |--------------------------------------------------------------------------
-    */
 
     public function create(): View
     {
@@ -127,7 +141,7 @@ class DocumentRequestController extends Controller
             ->where('status', 'Active')
             ->with([
                 'householdMemberships.resident',
-                'headedHouseholds',
+                'headedHouseholds.members.resident',
             ])
             ->orderBy('last_name')
             ->orderBy('first_name')
@@ -187,10 +201,7 @@ class DocumentRequestController extends Controller
              * Headed households
              */
             foreach ($resident->headedHouseholds as $household) {
-                $householdMembers = $household
-                    ->members()
-                    ->with('resident')
-                    ->get();
+                $householdMembers = $household->members;
 
                 foreach ($householdMembers as $membership) {
                     $child = $membership->resident;
@@ -248,22 +259,10 @@ class DocumentRequestController extends Controller
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Store
-    |--------------------------------------------------------------------------
-    */
-
     public function store(
         Request $request,
         AuditLogService $auditLog
     ): RedirectResponse {
-        /*
-        |--------------------------------------------------------------------------
-        | Base Validation
-        |--------------------------------------------------------------------------
-        */
-
         $validated = $request->validate([
             'resident_id' => [
                 'required',
@@ -294,100 +293,22 @@ class DocumentRequestController extends Controller
                 'array',
             ],
 
-            /*
-            |--------------------------------------------------------------------------
-            | Solo Parent Fields
-            |--------------------------------------------------------------------------
-            */
-
-            'document_details.child_resident_ids' => [
+            'document_details.ctc_number' => [
                 'nullable',
-                'array',
-            ],
-
-            'document_details.child_resident_ids.*' => [
-                'required',
                 'string',
-                'max:100',
+                'max:50',
             ],
 
             /*
-            |--------------------------------------------------------------------------
-            | Cutting Trees Fields
-            |--------------------------------------------------------------------------
-            |
-            | These fields are explicitly validated so Laravel will preserve
-            | them inside document_details.
-            |
-            */
-
-            'document_details.permit_to_cut_no' => [
-                'required_if:document_type,Cutting Trees',
-                'nullable',
-                'string',
-                'max:100',
-            ],
-
-            'document_details.permit_to_cut_date' => [
-                'required_if:document_type,Cutting Trees',
-                'nullable',
-                'date',
-            ],
-
-            'document_details.permit_issued_by' => [
-                'required_if:document_type,Cutting Trees',
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'document_details.tree_count' => [
-                'required_if:document_type,Cutting Trees',
-                'nullable',
-                'integer',
-                'min:1',
-            ],
-
-            'document_details.tree_type' => [
-                'required_if:document_type,Cutting Trees',
-                'nullable',
-                'string',
-                'max:1000',
-            ],
-
-            'document_details.location' => [
-                'required_if:document_type,Cutting Trees',
-                'nullable',
-                'string',
-                'max:1000',
-            ],
-
-            'document_details.location_description' => [
-                'required_if:document_type,Cutting Trees',
-                'nullable',
-                'string',
-                'max:1000',
-            ],
-
-            'document_details.tree_owner' => [
-                'nullable',
-                'string',
-                'max:1000',
-            ],
-
-            'document_details.cutter_name' => [
-                'required_if:document_type,Cutting Trees',
-                'nullable',
-                'string',
-                'max:1000',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Late Register Fields
-            |--------------------------------------------------------------------------
-            */
-
+             * Certificate of Late Register fields.
+             *
+             * Laravel's validate() only returns keys that have a rule.
+             * Without these rules, birthplace / father_name / mother_name
+             * were stripped from $validated['document_details'], so the
+             * Late Register check below always saw empty values.
+             * "nullable" is used here so the existing, friendlier
+             * "required" messages further down are still the ones shown.
+             */
             'document_details.birthplace' => [
                 'nullable',
                 'string',
@@ -404,6 +325,78 @@ class DocumentRequestController extends Controller
                 'nullable',
                 'string',
                 'max:1000',
+            ],
+
+            /*
+             * Cutting Trees fields.
+             *
+             * Same reason as Late Register above: validate() only keeps
+             * keys that have a rule, so every Cutting Trees field was being
+             * stripped. "nullable" keeps the friendlier "required" messages
+             * in the Cutting Trees block below as the ones shown.
+             */
+            'document_details.permit_to_cut_no' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'document_details.permit_to_cut_date' => [
+                'nullable',
+                'date',
+            ],
+
+            'document_details.permit_issued_by' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'document_details.tree_count' => [
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+
+            'document_details.tree_type' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'document_details.location' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'document_details.location_description' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'document_details.tree_owner' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'document_details.cutter_name' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'document_details.child_resident_ids' => [
+                'nullable',
+                'array',
+            ],
+
+            'document_details.child_resident_ids.*' => [
+                'required',
+                'string',
+                'max:100',
             ],
         ]);
 
@@ -441,23 +434,11 @@ class DocumentRequestController extends Controller
             $validated['document_details'] ?? []
         )
             ->map(function ($value) {
-                /*
-                 * Trim normal string values.
-                 *
-                 * Arrays such as child_resident_ids are preserved.
-                 */
                 return is_string($value)
                     ? trim($value)
                     : $value;
             })
             ->filter(function ($value) {
-                /*
-                 * Remove empty scalar values but preserve arrays.
-                 */
-                if (is_array($value)) {
-                    return ! empty($value);
-                }
-
                 return $value !== null &&
                     $value !== '';
             })
@@ -465,208 +446,24 @@ class DocumentRequestController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Cutting Trees Validation and Normalization
+        | Barangay Clearance CTC Number
         |--------------------------------------------------------------------------
         |
-        | The Cutting Trees request is kept as its own structured document
-        | details set.
-        |
-        | This supports:
-        |
-        |   tree_count = 1
-        |   tree_count = 2
-        |   tree_count = 3
-        |   etc.
-        |
-        | Multiple tree types may also be entered, for example:
-        |
-        |   Acacia, Mahogany
-        |
-        | The actual wording and placement of these values in the official
-        | certificate will be handled by OfficialDocumentTemplateService.
-        |
+        | Keep only the CTC number actually entered by the staff.
+        | If it was left blank, nothing is saved and the line stays empty.
         */
 
         if (
             $validated['document_type'] ===
-            'Cutting Trees'
+            'Barangay Clearance'
         ) {
-            $permitToCutNo = trim(
-                (string) (
-                    $documentDetails['permit_to_cut_no'] ?? ''
-                )
-            );
+            $ctcNumber = trim((string) (
+                $documentDetails['ctc_number'] ?? ''
+            ));
 
-            $permitToCutDate = trim(
-                (string) (
-                    $documentDetails['permit_to_cut_date'] ?? ''
-                )
-            );
-
-            $permitIssuedBy = trim(
-                (string) (
-                    $documentDetails['permit_issued_by'] ?? ''
-                )
-            );
-
-            $treeCount = $documentDetails['tree_count'] ?? null;
-
-            $treeType = trim(
-                (string) (
-                    $documentDetails['tree_type'] ?? ''
-                )
-            );
-
-            $location = trim(
-                (string) (
-                    $documentDetails['location'] ?? ''
-                )
-            );
-
-            $locationDescription = trim(
-                (string) (
-                    $documentDetails['location_description'] ?? ''
-                )
-            );
-
-            $treeOwner = trim(
-                (string) (
-                    $documentDetails['tree_owner'] ?? ''
-                )
-            );
-
-            $cutterName = trim(
-                (string) (
-                    $documentDetails['cutter_name'] ?? ''
-                )
-            );
-
-            /*
-            |--------------------------------------------------------------------------
-            | Additional Safety Validation
-            |--------------------------------------------------------------------------
-            */
-
-            if ($permitToCutNo === '') {
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        'document_details.permit_to_cut_no' =>
-                            'The Permit to Cut number is required.',
-                    ]);
-            }
-
-            if ($permitToCutDate === '') {
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        'document_details.permit_to_cut_date' =>
-                            'The Permit to Cut date is required.',
-                    ]);
-            }
-
-            if ($permitIssuedBy === '') {
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        'document_details.permit_issued_by' =>
-                            'The office that issued the Permit to Cut is required.',
-                    ]);
-            }
-
-            if (
-                $treeCount === null ||
-                $treeCount === '' ||
-                ! is_numeric($treeCount) ||
-                (int) $treeCount < 1
-            ) {
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        'document_details.tree_count' =>
-                            'The number of trees must be at least 1.',
-                    ]);
-            }
-
-            if ($treeType === '') {
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        'document_details.tree_type' =>
-                            'The type of tree or trees is required.',
-                    ]);
-            }
-
-            if ($location === '') {
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        'document_details.location' =>
-                            'The tree location is required.',
-                    ]);
-            }
-
-            if ($locationDescription === '') {
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        'document_details.location_description' =>
-                            'The location description or landmark is required.',
-                    ]);
-            }
-
-            if ($cutterName === '') {
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        'document_details.cutter_name' =>
-                            'The name of the person who cut the tree is required.',
-                    ]);
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | Rebuild Cutting Trees Details
-            |--------------------------------------------------------------------------
-            |
-            | Only Cutting Trees fields are stored here.
-            |
-            | The selected resident remains the DocumentRequest resident_id.
-            | OfficialDocumentTemplateService will use that resident as the
-            | requester/registered resident when generating the certificate.
-            |
-            */
-
-            $documentDetails = [
-                'permit_to_cut_no' =>
-                    $permitToCutNo,
-
-                'permit_to_cut_date' =>
-                    $permitToCutDate,
-
-                'permit_issued_by' =>
-                    $permitIssuedBy,
-
-                'tree_count' =>
-                    (int) $treeCount,
-
-                'tree_type' =>
-                    $treeType,
-
-                'location' =>
-                    $location,
-
-                'location_description' =>
-                    $locationDescription,
-
-                'tree_owner' =>
-                    $treeOwner !== ''
-                        ? $treeOwner
-                        : null,
-
-                'cutter_name' =>
-                    $cutterName,
-            ];
+            $documentDetails = $ctcNumber !== ''
+                ? ['ctc_number' => $ctcNumber]
+                : [];
         }
 
         /*
@@ -712,11 +509,8 @@ class DocumentRequestController extends Controller
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | Collect Household Members
-            |--------------------------------------------------------------------------
-            */
-
+             * Household members.
+             */
             $validHouseholdMemberIds = collect();
 
             foreach ($resident->householdMemberships as $membership) {
@@ -732,11 +526,9 @@ class DocumentRequestController extends Controller
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | Collect Members from Headed Households
-            |--------------------------------------------------------------------------
-            */
-
+             * Members from households where resident
+             * is household head.
+             */
             foreach ($resident->headedHouseholds as $household) {
                 $householdMembers = $household
                     ->members()
@@ -762,11 +554,8 @@ class DocumentRequestController extends Controller
                     ->values();
 
             /*
-            |--------------------------------------------------------------------------
-            | Verify Selected Family Members
-            |--------------------------------------------------------------------------
-            */
-
+             * Verify selected family members.
+             */
             $invalidResidentIds = collect(
                 $childResidentIds
             )
@@ -789,11 +578,8 @@ class DocumentRequestController extends Controller
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | Verify Active Family Members
-            |--------------------------------------------------------------------------
-            */
-
+             * Verify active residents.
+             */
             $activeChildrenCount = Resident::query()
                 ->whereIn(
                     'id',
@@ -817,12 +603,6 @@ class DocumentRequestController extends Controller
                     ]);
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Save Only Validated Child IDs
-            |--------------------------------------------------------------------------
-            */
-
             $documentDetails = [
                 'child_resident_ids' =>
                     array_values(
@@ -835,29 +615,27 @@ class DocumentRequestController extends Controller
         |--------------------------------------------------------------------------
         | Certificate of Late Register Validation
         |--------------------------------------------------------------------------
+        |
+        | Keep the three values entered in the Late Register form.
+        | These values are later consumed by the official template
+        | service when replacing the sample birthplace and parent names.
         */
 
         if (
             $validated['document_type'] ===
             'Certificate of Late Register'
         ) {
-            $birthplace = trim(
-                (string) (
-                    $documentDetails['birthplace'] ?? ''
-                )
-            );
+            $birthplace = trim((string) (
+                $documentDetails['birthplace'] ?? ''
+            ));
 
-            $fatherName = trim(
-                (string) (
-                    $documentDetails['father_name'] ?? ''
-                )
-            );
+            $fatherName = trim((string) (
+                $documentDetails['father_name'] ?? ''
+            ));
 
-            $motherName = trim(
-                (string) (
-                    $documentDetails['mother_name'] ?? ''
-                )
-            );
+            $motherName = trim((string) (
+                $documentDetails['mother_name'] ?? ''
+            ));
 
             if ($birthplace === '') {
                 return back()
@@ -887,20 +665,171 @@ class DocumentRequestController extends Controller
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | Save Only Late Register Fields
-            |--------------------------------------------------------------------------
-            */
+             * Save only the fields used by the Late Register template.
+             * Do not allow unrelated document_details values to affect
+             * the official document.
+             */
+            $documentDetails = [
+                'birthplace' => $birthplace,
+                'father_name' => $fatherName,
+                'mother_name' => $motherName,
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Cutting Trees Validation
+        |--------------------------------------------------------------------------
+        |
+        | These values come from the actual permit/supporting record.
+        | Location context is intentionally free-text so the Captain or
+        | Secretary can enter the wording that matches the actual permit.
+        */
+
+        if (
+            $validated['document_type'] ===
+            'Cutting Trees'
+        ) {
+            $permitNumber = trim((string) (
+                $documentDetails['permit_to_cut_no'] ?? ''
+            ));
+
+            $permitDate = trim((string) (
+                $documentDetails['permit_to_cut_date'] ?? ''
+            ));
+
+            $permitIssuedBy = trim((string) (
+                $documentDetails['permit_issued_by'] ?? ''
+            ));
+
+            $treeCount = $documentDetails['tree_count'] ?? null;
+
+            $treeType = trim((string) (
+                $documentDetails['tree_type'] ?? ''
+            ));
+
+            $location = trim((string) (
+                $documentDetails['location'] ?? ''
+            ));
+
+            /*
+             * The form field is "location_description" (landmark / exact
+             * location). It was previously checked as "inside_of", which the
+             * form never sends.
+             */
+            $locationDescription = trim((string) (
+                $documentDetails['location_description'] ?? ''
+            ));
+
+            $treeOwner = trim((string) (
+                $documentDetails['tree_owner'] ?? ''
+            ));
+
+            $aroundOf = trim((string) (
+                $documentDetails['around_of'] ?? ''
+            ));
+
+            $nearbyThe = trim((string) (
+                $documentDetails['nearby_the'] ?? ''
+            ));
+
+            $cutterName = trim((string) (
+                $documentDetails['cutter_name'] ?? ''
+            ));
+
+            if ($permitNumber === '') {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'document_details.permit_to_cut_no' =>
+                            'The Permit to Cut number is required.',
+                    ]);
+            }
+
+            if ($permitDate === '') {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'document_details.permit_to_cut_date' =>
+                            'The Permit to Cut date is required.',
+                    ]);
+            }
+
+            if (! strtotime($permitDate)) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'document_details.permit_to_cut_date' =>
+                            'Please enter a valid Permit to Cut date.',
+                    ]);
+            }
+
+            if ($permitIssuedBy === '') {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'document_details.permit_issued_by' =>
+                            'The permit issuing office is required.',
+                    ]);
+            }
+
+            if (! is_numeric($treeCount) || (int) $treeCount < 1) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'document_details.tree_count' =>
+                            'The number of trees must be at least 1.',
+                    ]);
+            }
+
+            if ($treeType === '') {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'document_details.tree_type' =>
+                            'The type of tree or trees is required.',
+                    ]);
+            }
+
+            if ($location === '') {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'document_details.location' =>
+                            'The tree location is required.',
+                    ]);
+            }
+
+            if ($locationDescription === '') {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'document_details.location_description' =>
+                            'The location description / landmark is required.',
+                    ]);
+            }
+
+            if ($cutterName === '') {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'document_details.cutter_name' =>
+                            'The cutter name is required.',
+                    ]);
+            }
 
             $documentDetails = [
-                'birthplace' =>
-                    $birthplace,
-
-                'father_name' =>
-                    $fatherName,
-
-                'mother_name' =>
-                    $motherName,
+                'permit_to_cut_no' => $permitNumber,
+                'permit_to_cut_date' => date('Y-m-d', strtotime($permitDate)),
+                'permit_issued_by' => $permitIssuedBy,
+                'tree_count' => (int) $treeCount,
+                'tree_type' => $treeType,
+                'location' => $location,
+                'location_description' => $locationDescription,
+                'tree_owner' => $treeOwner,
+                'around_of' => $aroundOf,
+                'nearby_the' => $nearbyThe,
+                'cutter_name' => $cutterName,
             ];
         }
 
@@ -991,12 +920,6 @@ class DocumentRequestController extends Controller
             );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Show
-    |--------------------------------------------------------------------------
-    */
-
     public function show(
         DocumentRequest $document
     ): View {
@@ -1022,7 +945,10 @@ class DocumentRequestController extends Controller
     | Preview Official Document
     |--------------------------------------------------------------------------
     |
-    | Preview does NOT change the workflow.
+    | Preview DOES NOT mark the document as printed.
+    |
+    | If a personalized PDF has already been generated, it is reused.
+    | Otherwise, the official DOCX template is generated and converted once.
     |
     */
 
@@ -1043,6 +969,12 @@ class DocumentRequestController extends Controller
                 'You are not authorized to preview document requests.'
             );
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Preview Allowed Stages
+        |--------------------------------------------------------------------------
+        */
 
         $allowedStages = [
             DocumentRequest::STAGE_APPROVED,
@@ -1069,24 +1001,36 @@ class DocumentRequestController extends Controller
                 ]);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Use Existing Generated PDF
+        |--------------------------------------------------------------------------
+        |
+        | This is the main performance improvement.
+        |
+        | If the PDF already exists, DO NOT call PHPWord or Gotenberg again.
+        |
+        */
+
         try {
-            $generatedPdfPath =
-                $this->getOrGeneratePdf(
-                    $document,
-                    $templateService,
-                    $conversionService
-                );
+            $generatedPdfPath = $this->getOrGeneratePdf(
+                $document,
+                $templateService,
+                $conversionService
+            );
         } catch (RuntimeException $exception) {
             return redirect()
-                ->route(
-                    'documents.show',
-                    $document
-                )
+                ->route('documents.show', $document)
                 ->withErrors([
-                    'workflow' =>
-                        $exception->getMessage(),
+                    'workflow' => $exception->getMessage(),
                 ]);
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Final PDF Validation
+        |--------------------------------------------------------------------------
+        */
 
         if (
             ! $generatedPdfPath ||
@@ -1099,25 +1043,22 @@ class DocumentRequestController extends Controller
                 )
                 ->withErrors([
                     'workflow' =>
-                        'The official PDF document could not be generated successfully.',
+                        'The generated PDF could not be found.',
                 ]);
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Display PDF Inline
+        |--------------------------------------------------------------------------
+        */
 
         return view(
             'documents.print',
             [
-                'document' =>
-                    $document,
-
-                'pdfData' =>
-                    base64_encode(
-                        (string) file_get_contents(
-                            $generatedPdfPath
-                        )
-                    ),
-
-                'mode' =>
-                    'preview',
+                'document' => $document,
+                'pdfData' => base64_encode(file_get_contents($generatedPdfPath)),
+                'mode' => 'preview',
             ]
         );
     }
@@ -1125,17 +1066,6 @@ class DocumentRequestController extends Controller
     /*
     |--------------------------------------------------------------------------
     | Advance Document Workflow
-    |--------------------------------------------------------------------------
-    |
-    | SIMPLIFIED USER JOURNEY
-    |
-    | 1. Process Request
-    | 2. Print Document
-    | 3. Confirm Signature & Seal
-    | 4. Release Document
-    |
-    | Internal records for inspection, ID verification,
-    | eligibility and approval are still saved.
     |--------------------------------------------------------------------------
     */
 
@@ -1145,7 +1075,7 @@ class DocumentRequestController extends Controller
         AuditLogService $auditLog,
         OfficialDocumentTemplateService $templateService,
         DocumentConversionService $conversionService
-    ): RedirectResponse {
+    ): RedirectResponse|View {
         $user = $request->user();
 
         if (
@@ -1158,19 +1088,12 @@ class DocumentRequestController extends Controller
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | IMPORTANT
-        |--------------------------------------------------------------------------
-        | Only the simplified actions are exposed to the UI.
-        |--------------------------------------------------------------------------
-        */
-
         $validated = $request->validate([
             'action' => [
                 'required',
                 Rule::in([
                     'process_request',
+                    'approve_release',
                     'print_document',
                     'confirm_signed_sealed',
                     'release_document',
@@ -1187,7 +1110,7 @@ class DocumentRequestController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Third-Party Decline
+        | Third Party
         |--------------------------------------------------------------------------
         */
 
@@ -1205,190 +1128,213 @@ class DocumentRequestController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | ACTION 1 - Process Request
+        | Workflow Transitions
         |--------------------------------------------------------------------------
         */
 
-        if (
-            $validated['action'] ===
-            'process_request'
-        ) {
-            if (
-                $document->workflow_stage !==
-                DocumentRequest::STAGE_REQUESTED
-            ) {
-                return back()
-                    ->withErrors([
-                        'workflow' =>
-                            'This request has already been processed or is no longer at the initial stage.',
-                    ]);
-            }
+        $transitions = [
 
-            $now = now();
+            /*
+            |----------------------------------------------------------------------
+            | Visible Journey 1 → 2
+            |----------------------------------------------------------------------
+            |
+            | Request Created → Verified
+            |
+            | The detailed inspection and ID verification are still recorded in
+            | their own audit fields, but they are NOT separate visible journey
+            | slots. One button produces exactly one visible journey movement.
+            |
+            */
+            'process_request' => [
+                'from' =>
+                    DocumentRequest::STAGE_REQUESTED,
 
-            $oldValues = [
+                'to' =>
+                    DocumentRequest::STAGE_ID_VERIFIED,
+
                 'status' =>
-                    $document->status,
+                    'Processing',
 
-                'workflow_stage' =>
-                    $document->workflow_stage,
+                'by' =>
+                    'id_verified_by',
 
-                'inspection_by' =>
-                    $document->inspection_by,
+                'at' =>
+                    'id_verified_at',
 
-                'inspection_at' =>
-                    $document->inspection_at,
+                'message' =>
+                    'Request verified. Inspection and ID verification were recorded.',
 
-                'id_verified_by' =>
-                    $document->id_verified_by,
+                'audit_action' =>
+                    'Verified',
 
-                'id_verified_at' =>
-                    $document->id_verified_at,
+                'audit_description' =>
+                    'Document request was inspected and the resident identity and presented ID were verified. The request advanced one visible journey step to Verified.',
+            ],
 
-                'eligible_by' =>
-                    $document->eligible_by,
+            /*
+            |----------------------------------------------------------------------
+            | Visible Journey 2 → 3
+            |----------------------------------------------------------------------
+            |
+            | Verified → Approved
+            |
+            | Eligibility remains a detailed internal check. It is recorded at
+            | the same time as the approval decision, so it does not create an
+            | extra visible journey slot or an extra button click.
+            |
+            */
+            'approve_release' => [
+                'from' =>
+                    DocumentRequest::STAGE_ID_VERIFIED,
 
-                'eligible_at' =>
-                    $document->eligible_at,
-
-                'approved_by' =>
-                    $document->approved_by,
-
-                'approved_at' =>
-                    $document->approved_at,
-            ];
-
-            $document->update([
-                /*
-                |--------------------------------------------------------------------------
-                | Internal Processing Records
-                |--------------------------------------------------------------------------
-                */
-
-                'inspection_by' =>
-                    $user->id,
-
-                'inspection_at' =>
-                    $now,
-
-                'id_verified_by' =>
-                    $user->id,
-
-                'id_verified_at' =>
-                    $now,
-
-                'eligible_by' =>
-                    $user->id,
-
-                'eligible_at' =>
-                    $now,
-
-                'approved_by' =>
-                    $user->id,
-
-                'approved_at' =>
-                    $now,
-
-                /*
-                |--------------------------------------------------------------------------
-                | Visible Workflow
-                |--------------------------------------------------------------------------
-                */
-
-                'workflow_stage' =>
+                'to' =>
                     DocumentRequest::STAGE_APPROVED,
 
                 'status' =>
                     'Approved',
 
-                'processed_at' =>
-                    $now,
-            ]);
+                'by' =>
+                    'approved_by',
 
-            $newValues = [
-                'status' =>
-                    $document->status,
+                'at' =>
+                    'approved_at',
 
-                'workflow_stage' =>
-                    $document->workflow_stage,
+                'message' =>
+                    'Request verified, marked eligible, and approved for release.',
 
-                'inspection_by' =>
-                    $document->inspection_by,
+                'audit_action' =>
+                    'Approved',
 
-                'inspection_at' =>
-                    $document->inspection_at,
-
-                'id_verified_by' =>
-                    $document->id_verified_by,
-
-                'id_verified_at' =>
-                    $document->id_verified_at,
-
-                'eligible_by' =>
-                    $document->eligible_by,
-
-                'eligible_at' =>
-                    $document->eligible_at,
-
-                'approved_by' =>
-                    $document->approved_by,
-
-                'approved_at' =>
-                    $document->approved_at,
-            ];
-
-            $auditLog->log(
-                action: 'Processed & Approved',
-                module: 'Barangay Documents',
-                record: $document,
-                oldValues: $oldValues,
-                newValues: $newValues,
-                description:
-                    'Document request was processed in one workflow action. Inspection, resident ID verification, eligibility, and approval were recorded.'
-            );
+                'audit_description' =>
+                    'The verified resident was confirmed eligible and the document request was approved for release. Eligibility remains recorded as a detailed internal check while the visible journey advanced one step to Approved.',
+            ],
 
             /*
-            |--------------------------------------------------------------------------
-            | Warm Up Official PDF
-            |--------------------------------------------------------------------------
+            |----------------------------------------------------------------------
+            | Visible Journey 3 → 4
+            |----------------------------------------------------------------------
             */
+            'print_document' => [
+                'from' =>
+                    DocumentRequest::STAGE_APPROVED,
 
-            GenerateOfficialDocumentPdfJob::dispatch(
-                $document->id
-            )->afterResponse();
+                'to' =>
+                    DocumentRequest::STAGE_PRINTED,
 
-            return redirect()
-                ->route(
-                    'documents.show',
-                    $document
-                )
-                ->with(
-                    'success',
-                    'Document processed and approved successfully. The official document is now ready for printing.'
-                );
+                'status' =>
+                    'Completed',
+
+                'by' =>
+                    'printed_by',
+
+                'at' =>
+                    'printed_at',
+
+                'message' =>
+                    'Official document generated and printing recorded.',
+
+                'audit_action' =>
+                    'Printed',
+
+                'audit_description' =>
+                    'Official document was generated from the registered barangay template and printing was recorded.',
+            ],
+
+            /*
+            |----------------------------------------------------------------------
+            | Visible Journey 4 → 5
+            |----------------------------------------------------------------------
+            */
+            'confirm_signed_sealed' => [
+                'from' =>
+                    DocumentRequest::STAGE_PRINTED,
+
+                'to' =>
+                    DocumentRequest::STAGE_SIGNED_SEALED,
+
+                'status' =>
+                    'Completed',
+
+                'by' =>
+                    'signed_sealed_by',
+
+                'at' =>
+                    'signed_sealed_at',
+
+                'message' =>
+                    'Physical signature and barangay seal confirmed.',
+
+                'audit_action' =>
+                    'Signed and Sealed',
+
+                'audit_description' =>
+                    'Physical signature and barangay seal were confirmed.',
+            ],
+
+            /*
+            |----------------------------------------------------------------------
+            | Visible Journey 5 → 6
+            |----------------------------------------------------------------------
+            */
+            'release_document' => [
+                'from' =>
+                    DocumentRequest::STAGE_SIGNED_SEALED,
+
+                'to' =>
+                    DocumentRequest::STAGE_RELEASED,
+
+                'status' =>
+                    'Released',
+
+                'by' =>
+                    'released_by',
+
+                'at' =>
+                    'released_at',
+
+                'message' =>
+                    'Document successfully released to the resident.',
+
+                'audit_action' =>
+                    'Released',
+
+                'audit_description' =>
+                    'Document was released to the resident.',
+            ],
+        ];
+
+        $transition =
+            $transitions[$validated['action']];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Current Stage Check
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $document->workflow_stage !==
+            $transition['from']
+        ) {
+            return back()->withErrors([
+                'workflow' =>
+                    'This action is not available at the current processing stage.',
+            ]);
         }
 
         /*
         |--------------------------------------------------------------------------
-        | ACTION 2 - Print Document
+        | Generate / Reuse Document During Print Workflow
         |--------------------------------------------------------------------------
         */
+
+        $generatedPdfPath = null;
 
         if (
             $validated['action'] ===
             'print_document'
         ) {
-            if (
-                $document->workflow_stage !==
-                DocumentRequest::STAGE_APPROVED
-            ) {
-                return back()
-                    ->withErrors([
-                        'workflow' =>
-                            'The document must be approved before it can be printed.',
-                    ]);
-            }
-
             try {
                 $generatedPdfPath =
                     $this->getOrGeneratePdf(
@@ -1397,30 +1343,377 @@ class DocumentRequestController extends Controller
                         $conversionService
                     );
             } catch (RuntimeException $exception) {
-                return back()
-                    ->withErrors([
-                        'workflow' =>
-                            $exception->getMessage(),
-                    ]);
+                return back()->withErrors([
+                    'workflow' => $exception->getMessage(),
+                ]);
             }
 
             if (
                 ! $generatedPdfPath ||
                 ! is_file($generatedPdfPath)
             ) {
-                return back()
-                    ->withErrors([
-                        'workflow' =>
-                            'The official PDF document was not generated successfully. The document was not marked as printed.',
-                    ]);
+                return back()->withErrors([
+                    'workflow' =>
+                        'The official PDF document was not generated successfully. The document was not marked as printed.',
+                ]);
             }
+        }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Old Values
+        |--------------------------------------------------------------------------
+        */
+
+        $oldValues = [
+            'status' =>
+                $document->status,
+
+            'workflow_stage' =>
+                $document->workflow_stage,
+
+            'print_count' =>
+                $document->print_count,
+        ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Prepare Update
+        |--------------------------------------------------------------------------
+        */
+
+        $updates = [
+            'workflow_stage' =>
+                $transition['to'],
+
+            'status' =>
+                $transition['status'],
+
+            $transition['by'] =>
+                $user->id,
+
+            $transition['at'] =>
+                now(),
+        ];
+
+        /*
+        |----------------------------------------------------------------------
+        | Detailed Verification Records
+        |----------------------------------------------------------------------
+        |
+        | These fields preserve the detailed internal checks without turning
+        | each check into another visible Processing Journey slot.
+        |
+        | process_request:
+        |   Request Created → Verified
+        |   Records inspection + ID verification.
+        |
+        | approve_release:
+        |   Verified → Approved
+        |   Records eligibility + approval.
+        |
+        */
+        if (
+            $validated['action'] ===
+            'process_request'
+        ) {
+            $updates['inspection_by'] =
+                $user->id;
+
+            $updates['inspection_at'] =
+                now();
+
+            /*
+             * ID verification is the visible "Verified" milestone.
+             * The same processing action records both the inspection
+             * and the ID verification details.
+             */
+            $updates['id_verified_by'] =
+                $user->id;
+
+            $updates['id_verified_at'] =
+                now();
+        }
+
+        if (
+            $validated['action'] ===
+            'approve_release'
+        ) {
+            /*
+             * Eligibility is intentionally an internal verification
+             * record, not a separate visible journey slot.
+             */
+            $updates['eligible_by'] =
+                $user->id;
+
+            $updates['eligible_at'] =
+                now();
+        }
+
+        if (
+            $validated['action'] ===
+            'approve_release'
+        ) {
+            $updates['processed_at'] =
+                now();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Print Count
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $validated['action'] ===
+            'print_document'
+        ) {
+            $updates['print_count'] =
+                ((int) $document->print_count) + 1;
+        }
+
+        $document->update(
+            $updates
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | New Values
+        |--------------------------------------------------------------------------
+        */
+
+        $newValues = [
+            'status' =>
+                $document->status,
+
+            'workflow_stage' =>
+                $document->workflow_stage,
+
+            'print_count' =>
+                $document->print_count,
+        ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Audit
+        |--------------------------------------------------------------------------
+        */
+
+        $auditLog->log(
+            action: $transition['audit_action'],
+            module: 'Barangay Documents',
+            record: $document,
+            oldValues: $oldValues,
+            newValues: $newValues,
+            description:
+                $transition['audit_description']
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | PERFORMANCE: pre-generate the PDF right after approval
+        |--------------------------------------------------------------------------
+        |
+        | Runs AFTER the response is sent, so the staff is not kept waiting and
+        | the later Preview / Print click finds a ready PDF instead of paying
+        | for the Gotenberg conversion. Failures are only logged; Preview /
+        | Print will simply generate on demand as before.
+        |
+        */
+
+        if ($validated['action'] === 'approve_release') {
+            $documentId = $document->id;
+
+            dispatch(function () use ($documentId) {
+                try {
+                    $fresh = DocumentRequest::find($documentId);
+
+                    if ($fresh) {
+                        $this->getOrGeneratePdf(
+                            $fresh,
+                            app(OfficialDocumentTemplateService::class),
+                            app(DocumentConversionService::class)
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('PDF pre-generation failed.', [
+                        'document_id' => $documentId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            })->afterResponse();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Open Modern Print / Preview Page
+        |--------------------------------------------------------------------------
+        |
+        | The PDF is passed to documents.print as base64 so the modern
+        | print viewer can display it without returning a raw PDF response.
+        |
+        */
+
+        if (
+            $validated['action'] ===
+            'print_document'
+        ) {
+            return view(
+                'documents.print',
+                [
+                    'document' => $document,
+                    'pdfData' => base64_encode(file_get_contents($generatedPdfPath)),
+                    'mode' => 'print',
+                ]
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Return to Document Process Journey
+        |--------------------------------------------------------------------------
+        */
+
+        return redirect()
+            ->route(
+                'documents.show',
+                $document
+            )
+            ->with(
+                'success',
+                $transition['message']
+            );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Print Official Document
+    |--------------------------------------------------------------------------
+    |
+    | This endpoint performs:
+    |
+    | APPROVED → PRINTED
+    |
+    | The PDF is generated only once.
+    |
+    | If a generated PDF already exists, it is reused.
+    |
+    */
+
+    public function print(
+        Request $request,
+        DocumentRequest $document,
+        AuditLogService $auditLog,
+        OfficialDocumentTemplateService $templateService,
+        DocumentConversionService $conversionService
+    ): View|RedirectResponse {
+        $user = $request->user();
+
+        if (
+            ! $user ||
+            ! $user->canProcessDocuments()
+        ) {
+            abort(
+                403,
+                'You are not authorized to print document requests.'
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Printing is allowed from Approved onward
+        |--------------------------------------------------------------------------
+        */
+
+        $allowedStages = [
+            DocumentRequest::STAGE_APPROVED,
+            DocumentRequest::STAGE_PRINTED,
+            DocumentRequest::STAGE_SIGNED_SEALED,
+            DocumentRequest::STAGE_RELEASED,
+        ];
+
+        if (
+            ! in_array(
+                $document->workflow_stage,
+                $allowedStages,
+                true
+            )
+        ) {
+            return redirect()
+                ->route(
+                    'documents.show',
+                    $document
+                )
+                ->withErrors([
+                    'workflow' =>
+                        'This document must be approved before it can be printed.',
+                ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Get Existing PDF or Generate It
+        |--------------------------------------------------------------------------
+        |
+        | This is the second major performance improvement.
+        |
+        | Once the PDF exists, printing again does NOT invoke Gotenberg.
+        |
+        */
+
+        $generatedPdfPath =
+            $this->getOrGeneratePdf(
+                $document,
+                $templateService,
+                $conversionService
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate PDF BEFORE Recording Print
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            ! $generatedPdfPath ||
+            ! is_file($generatedPdfPath)
+        ) {
+            return redirect()
+                ->route(
+                    'documents.show',
+                    $document
+                )
+                ->withErrors([
+                    'workflow' =>
+                        'The official PDF document could not be generated successfully. The document was not marked as printed.',
+                ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Approved → Printed
+        |--------------------------------------------------------------------------
+        |
+        | Only the first actual print action changes the workflow stage.
+        |
+        */
+
+        if (
+            $document->workflow_stage ===
+            DocumentRequest::STAGE_APPROVED
+        ) {
             $oldValues = [
                 'status' =>
                     $document->status,
 
                 'workflow_stage' =>
                     $document->workflow_stage,
+
+                'printed_by' =>
+                    $document->printed_by,
+
+                'printed_at' =>
+                    $document->printed_at,
 
                 'print_count' =>
                     $document->print_count,
@@ -1443,12 +1736,20 @@ class DocumentRequestController extends Controller
                     ((int) $document->print_count) + 1,
             ]);
 
+            $document->refresh();
+
             $newValues = [
                 'status' =>
                     $document->status,
 
                 'workflow_stage' =>
                     $document->workflow_stage,
+
+                'printed_by' =>
+                    $document->printed_by,
+
+                'printed_at' =>
+                    $document->printed_at,
 
                 'print_count' =>
                     $document->print_count,
@@ -1461,280 +1762,22 @@ class DocumentRequestController extends Controller
                 oldValues: $oldValues,
                 newValues: $newValues,
                 description:
-                    'Official document was generated from the registered barangay template and printing was recorded.'
+                    'Official document was generated from the registered barangay template and the print action was recorded. The document is now marked as Printed.'
             );
-
-            return redirect()
-                ->route(
-                    'documents.print',
-                    $document
-                )
-                ->with(
-                    'success',
-                    'Official document generated successfully. The request is now marked as printed.'
-                );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | ACTION 3 - Confirm Signature & Seal
+        | Return Cached / Generated PDF Inline
         |--------------------------------------------------------------------------
         */
-
-        if (
-            $validated['action'] ===
-            'confirm_signed_sealed'
-        ) {
-            if (
-                $document->workflow_stage !==
-                DocumentRequest::STAGE_PRINTED
-            ) {
-                return back()
-                    ->withErrors([
-                        'workflow' =>
-                            'The document must be printed before the signature and barangay seal can be confirmed.',
-                    ]);
-            }
-
-            $oldValues = [
-                'status' =>
-                    $document->status,
-
-                'workflow_stage' =>
-                    $document->workflow_stage,
-            ];
-
-            $document->update([
-                'workflow_stage' =>
-                    DocumentRequest::STAGE_SIGNED_SEALED,
-
-                'status' =>
-                    'Completed',
-
-                'signed_sealed_by' =>
-                    $user->id,
-
-                'signed_sealed_at' =>
-                    now(),
-            ]);
-
-            $newValues = [
-                'status' =>
-                    $document->status,
-
-                'workflow_stage' =>
-                    $document->workflow_stage,
-            ];
-
-            $auditLog->log(
-                action: 'Signed and Sealed',
-                module: 'Barangay Documents',
-                record: $document,
-                oldValues: $oldValues,
-                newValues: $newValues,
-                description:
-                    'Physical signature and barangay seal were confirmed.'
-            );
-
-            return redirect()
-                ->route(
-                    'documents.show',
-                    $document
-                )
-                ->with(
-                    'success',
-                    'Signature and barangay seal confirmed successfully. The document is ready for release.'
-                );
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | ACTION 4 - Release Document
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            $validated['action'] ===
-            'release_document'
-        ) {
-            if (
-                $document->workflow_stage !==
-                DocumentRequest::STAGE_SIGNED_SEALED
-            ) {
-                return back()
-                    ->withErrors([
-                        'workflow' =>
-                            'The document must have its signature and barangay seal confirmed before release.',
-                    ]);
-            }
-
-            $oldValues = [
-                'status' =>
-                    $document->status,
-
-                'workflow_stage' =>
-                    $document->workflow_stage,
-            ];
-
-            $document->update([
-                'workflow_stage' =>
-                    DocumentRequest::STAGE_RELEASED,
-
-                'status' =>
-                    'Released',
-
-                'released_by' =>
-                    $user->id,
-
-                'released_at' =>
-                    now(),
-            ]);
-
-            $newValues = [
-                'status' =>
-                    $document->status,
-
-                'workflow_stage' =>
-                    $document->workflow_stage,
-            ];
-
-            $auditLog->log(
-                action: 'Released',
-                module: 'Barangay Documents',
-                record: $document,
-                oldValues: $oldValues,
-                newValues: $newValues,
-                description:
-                    'Document was released to the resident.'
-            );
-
-            return redirect()
-                ->route(
-                    'documents.show',
-                    $document
-                )
-                ->with(
-                    'success',
-                    'Document successfully released to the resident.'
-                );
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Safety Fallback
-        |--------------------------------------------------------------------------
-        */
-
-        return back()
-            ->withErrors([
-                'workflow' =>
-                    'The requested workflow action could not be completed.',
-            ]);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Print Official Document
-    |--------------------------------------------------------------------------
-    |
-    | This method only displays the already-generated PDF.
-    |
-    | The workflow is marked PRINTED inside advance()
-    | before this page is opened.
-    |--------------------------------------------------------------------------
-    */
-
-    public function print(
-        Request $request,
-        DocumentRequest $document,
-        OfficialDocumentTemplateService $templateService,
-        DocumentConversionService $conversionService
-    ): View|RedirectResponse {
-        $user = $request->user();
-
-        if (
-            ! $user ||
-            ! $user->canProcessDocuments()
-        ) {
-            abort(
-                403,
-                'You are not authorized to print document requests.'
-            );
-        }
-
-        $allowedStages = [
-            DocumentRequest::STAGE_PRINTED,
-            DocumentRequest::STAGE_SIGNED_SEALED,
-            DocumentRequest::STAGE_RELEASED,
-        ];
-
-        if (
-            ! in_array(
-                $document->workflow_stage,
-                $allowedStages,
-                true
-            )
-        ) {
-            return redirect()
-                ->route(
-                    'documents.show',
-                    $document
-                )
-                ->withErrors([
-                    'workflow' =>
-                        'This document must be approved and processed before it can be printed.',
-                ]);
-        }
-
-        try {
-            $generatedPdfPath =
-                $this->getOrGeneratePdf(
-                    $document,
-                    $templateService,
-                    $conversionService
-                );
-        } catch (RuntimeException $exception) {
-            return redirect()
-                ->route(
-                    'documents.show',
-                    $document
-                )
-                ->withErrors([
-                    'workflow' =>
-                        $exception->getMessage(),
-                ]);
-        }
-
-        if (
-            ! $generatedPdfPath ||
-            ! is_file($generatedPdfPath)
-        ) {
-            return redirect()
-                ->route(
-                    'documents.show',
-                    $document
-                )
-                ->withErrors([
-                    'workflow' =>
-                        'The official PDF document could not be generated successfully.',
-                ]);
-        }
 
         return view(
             'documents.print',
             [
-                'document' =>
-                    $document,
-
-                'pdfData' =>
-                    base64_encode(
-                        (string) file_get_contents(
-                            $generatedPdfPath
-                        )
-                    ),
-
-                'mode' =>
-                    'print',
+                'document' => $document,
+                'pdfData' => base64_encode(file_get_contents($generatedPdfPath)),
+                'mode' => 'print',
             ]
         );
     }
@@ -1743,6 +1786,21 @@ class DocumentRequestController extends Controller
     |--------------------------------------------------------------------------
     | Generated PDF Helper
     |--------------------------------------------------------------------------
+    |
+    | Returns an existing PDF when available.
+    |
+    | Otherwise:
+    |
+    | DOCX template
+    |      ↓
+    | Personalized DOCX
+    |      ↓
+    | Gotenberg
+    |      ↓
+    | PDF
+    |      ↓
+    | Save path in document_requests
+    |
     */
 
     private function getOrGeneratePdf(
@@ -1750,76 +1808,129 @@ class DocumentRequestController extends Controller
         OfficialDocumentTemplateService $templateService,
         DocumentConversionService $conversionService
     ): ?string {
-        /*
-        |--------------------------------------------------------------------------
-        | Existing PDF
-        |--------------------------------------------------------------------------
-        */
-
         if (
-            $document->generatedPdfExists()
+            $document->generatedPdfExists() &&
+            ! $this->clearancePdfNeedsRegeneration($document)
         ) {
             return $document->getGeneratedPdfAbsolutePath();
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Generate Personalized DOCX
-        |--------------------------------------------------------------------------
-        */
+        $requestedAt = time();
 
-        $generatedDocumentPath =
-            $templateService->generate(
-                $document
+        /*
+         * A lock stops a double-click (or the background pre-generation
+         * racing with a manual Preview) from running the slow conversion
+         * twice for the same document. The second caller waits, then
+         * simply reuses the PDF the first one produced.
+         */
+        $generate = function () use (
+            $document,
+            $templateService,
+            $conversionService,
+            $requestedAt
+        ): ?string {
+            $document->refresh();
+
+            // Another request finished generating while we waited for the lock.
+            if (
+                $document->generatedPdfExists() &&
+                @filemtime($document->getGeneratedPdfAbsolutePath()) >= $requestedAt
+            ) {
+                return $document->getGeneratedPdfAbsolutePath();
+            }
+
+            $generatedDocumentPath = $templateService->generate($document);
+
+            $generatedPdfPath = $conversionService->convertDocxToPdf(
+                $generatedDocumentPath,
+                $document->document_type
             );
 
-        /*
-        |--------------------------------------------------------------------------
-        | Convert DOCX -> PDF
-        |--------------------------------------------------------------------------
-        */
+            if (! is_file($generatedPdfPath)) {
+                return null;
+            }
 
-        $generatedPdfPath =
-            $conversionService->convertDocxToPdf(
-                $generatedDocumentPath
+            $document->update([
+                'generated_pdf_path' =>
+                    $this->relativePrivateStoragePath($generatedPdfPath),
+            ]);
+
+            $document->refresh();
+
+            return $document->getGeneratedPdfAbsolutePath();
+        };
+
+        try {
+            return Cache::lock('document-pdf:' . $document->id, 120)
+                ->block(60, $generate);
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            throw new RuntimeException(
+                'The document is still being generated. Please try again in a few seconds.'
             );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Validate Generated PDF
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            ! is_file(
-                $generatedPdfPath
-            )
-        ) {
-            return null;
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Save Relative Private Storage Path
-        |--------------------------------------------------------------------------
-        */
-
-        $document->update([
-            'generated_pdf_path' =>
-                $this->relativePrivateStoragePath(
-                    $generatedPdfPath
-                ),
-        ]);
-
-        $document->refresh();
-
-        return $document->getGeneratedPdfAbsolutePath();
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Relative Private Storage Path
+    | Old Multi-Page Barangay Clearance PDF
     |--------------------------------------------------------------------------
+    |
+    | A Barangay Clearance PDF generated before the one-page fix may still
+    | be stored with two pages. Only that case is regenerated; every other
+    | existing PDF is reused exactly as before.
+    |
+    */
+
+    private function clearancePdfNeedsRegeneration(
+        DocumentRequest $document
+    ): bool {
+        if ($document->document_type !== 'Barangay Clearance') {
+            return false;
+        }
+
+        $path = $document->getGeneratedPdfAbsolutePath();
+
+        if (! $path || ! is_file($path)) {
+            return false;
+        }
+
+        $pdf = (string) file_get_contents($path);
+
+        $isMultiPage = preg_match_all(
+            '/\/Type\s*\/Page\b/',
+            $pdf
+        ) > 1;
+
+        if (! $isMultiPage) {
+            return false;
+        }
+
+        /*
+         * Regenerate at most ONCE per document. Without this guard a
+         * clearance that still cannot fit one page would be rebuilt
+         * (up to 4 slow conversions) on every single Preview / Print.
+         */
+        return Cache::add(
+            'clearance-regenerated:' . $document->id,
+            true,
+            now()->addYears(5)
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Convert Absolute Private Storage Path to Relative Path
+    |--------------------------------------------------------------------------
+    |
+    | Example:
+    |
+    | Absolute:
+    | C:\Users\Administrator\BIS - SMART\storage\app\private\
+    | generated-documents\BR-2026-ABC123.pdf
+    |
+    | Stored in database:
+    | generated-documents/BR-2026-ABC123.pdf
+    |
     */
 
     private function relativePrivateStoragePath(
@@ -1858,6 +1969,16 @@ class DocumentRequestController extends Controller
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Fallback
+        |--------------------------------------------------------------------------
+        |
+        | This protects the application if the conversion service returns
+        | a path that is already relative.
+        |
+        */
+
         return ltrim(
             $normalizedAbsolutePath,
             '/'
@@ -1890,24 +2011,22 @@ class DocumentRequestController extends Controller
                 true
             )
         ) {
-            return back()
-                ->withErrors([
-                    'workflow' =>
-                        'This request can no longer be declined as a third-party request.',
-                ]);
+            return back()->withErrors([
+                'workflow' =>
+                    'This request can no longer be declined as a third-party request.',
+            ]);
         }
 
-        $reason = trim(
-            (string) $request->input(
-                'decline_reason',
-                ''
-            )
+        $reason = $request->input(
+            'decline_reason',
+            'Resident must personally appear and present a valid ID. Third-party release is not allowed.'
         );
 
-        if ($reason === '') {
-            $reason =
-                'Resident must personally appear and present a valid ID. Third-party release is not allowed.';
-        }
+        /*
+        |--------------------------------------------------------------------------
+        | Old Values
+        |--------------------------------------------------------------------------
+        */
 
         $oldValues = [
             'status' =>
@@ -1919,6 +2038,12 @@ class DocumentRequestController extends Controller
             'decline_reason' =>
                 $document->decline_reason,
         ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Update
+        |--------------------------------------------------------------------------
+        */
 
         $document->update([
             'workflow_stage' =>
@@ -1943,6 +2068,12 @@ class DocumentRequestController extends Controller
                 now(),
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | New Values
+        |--------------------------------------------------------------------------
+        */
+
         $newValues = [
             'status' =>
                 $document->status,
@@ -1953,6 +2084,12 @@ class DocumentRequestController extends Controller
             'decline_reason' =>
                 $document->decline_reason,
         ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Audit
+        |--------------------------------------------------------------------------
+        */
 
         $auditLog->log(
             action: 'Third-Party Request Declined',
@@ -1974,12 +2111,6 @@ class DocumentRequestController extends Controller
                 'Request marked as not released because the resident was not personally present.'
             );
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Generate Request Code
-    |--------------------------------------------------------------------------
-    */
 
     private function generateRequestCode(): string
     {

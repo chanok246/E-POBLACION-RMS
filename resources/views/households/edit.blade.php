@@ -21,6 +21,44 @@ $isSecretary = $currentUser && $currentUser->role === 'secretary';
 
 $canManageHouseholds = $isCaptain || $isSecretary;
 
+/*
+|--------------------------------------------------------------------------
+| Household Classification Column Check
+|--------------------------------------------------------------------------
+|
+| The classification checkboxes are only rendered (and submitted) when the
+| matching column really exists in the households table. This prevents the
+| form from sending fields the database cannot store.
+|
+*/
+
+$hasLowIncomeColumn = false;
+$hasFourPsColumn = false;
+
+try {
+    $hasLowIncomeColumn = \Illuminate\Support\Facades\Schema::hasColumn('households', 'is_low_income');
+    $hasFourPsColumn = \Illuminate\Support\Facades\Schema::hasColumn('households', 'is_4ps_beneficiary');
+} catch (\Throwable $exception) {
+    $hasLowIncomeColumn = false;
+    $hasFourPsColumn = false;
+}
+
+$hasHouseholdClassificationColumns = $hasLowIncomeColumn || $hasFourPsColumn;
+
+/*
+ * old() returns strings such as "0" and "1". "0" must NOT be treated as
+ * true, therefore the value is converted with FILTER_VALIDATE_BOOLEAN.
+ */
+$isLowIncomeChecked = filter_var(
+    old('is_low_income', $household->is_low_income ?? false),
+    FILTER_VALIDATE_BOOLEAN
+);
+
+$isFourPsChecked = filter_var(
+    old('is_4ps_beneficiary', $household->is_4ps_beneficiary ?? false),
+    FILTER_VALIDATE_BOOLEAN
+);
+
 @endphp
 
 <style>
@@ -162,6 +200,43 @@ $canManageHouseholds = $isCaptain || $isSecretary;
     }
 
     /* ============================================================
+       HOUSEHOLD CLASSIFICATION
+    ============================================================ */
+
+    .household-edit-page .classification-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        height: 100%;
+        padding: 1rem;
+        border: 1px solid var(--he-border);
+        border-radius: 10px;
+        background-color: var(--he-surface-soft);
+        cursor: pointer;
+    }
+
+    .household-edit-page .classification-option .form-check-input {
+        flex-shrink: 0;
+        width: 1.2rem;
+        height: 1.2rem;
+        margin-top: 0.15rem;
+        cursor: pointer;
+    }
+
+    .household-edit-page .classification-option-title {
+        color: var(--he-heading);
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .household-edit-page .classification-option-note {
+        display: block;
+        margin-top: 0.15rem;
+        font-size: 0.82rem;
+        color: var(--he-muted);
+    }
+
+    /* ============================================================
        ALERTS
     ============================================================ */
 
@@ -289,7 +364,7 @@ $canManageHouseholds = $isCaptain || $isSecretary;
         </h2>
 
         <p class="text-muted mb-0">
-            Update the household information and household head.
+            Update the household information, household head, and household classifications.
         </p>
 
     </div>
@@ -745,6 +820,188 @@ $canManageHouseholds = $isCaptain || $isSecretary;
 
 
         {{-- ========================================================
+            HOUSEHOLD CLASSIFICATION
+        ========================================================= --}}
+
+        <div class="card border-0 shadow-sm mb-4">
+
+            <div class="card-header py-3">
+
+                <h5 class="mb-0 fw-bold">
+
+                    <i class="bi bi-tags me-2"></i>
+
+                    Household Classification
+
+                </h5>
+
+            </div>
+
+
+            <div class="card-body">
+
+                @if($hasHouseholdClassificationColumns)
+
+                    <p class="text-muted mb-3">
+
+                        These classifications apply to the whole household.
+                        They are used only to filter potential relief
+                        beneficiaries. Staff still verify eligibility
+                        manually before assistance is finalized.
+
+                    </p>
+
+
+                    <div class="row g-3">
+
+                        {{-- LOW-INCOME / INDIGENT --}}
+
+                        @if($hasLowIncomeColumn)
+
+                            <div class="col-md-6">
+
+                                {{-- Hidden 0 makes sure an unchecked box is saved as false. --}}
+                                <input
+                                    type="hidden"
+                                    name="is_low_income"
+                                    value="0"
+                                >
+
+                                <label
+                                    for="is_low_income"
+                                    class="classification-option"
+                                >
+
+                                    <input
+                                        type="checkbox"
+                                        name="is_low_income"
+                                        id="is_low_income"
+                                        value="1"
+                                        class="form-check-input"
+                                        {{ $isLowIncomeChecked ? 'checked' : '' }}
+                                    >
+
+                                    <span>
+
+                                        <span class="classification-option-title">
+                                            Low-Income / Indigent
+                                        </span>
+
+                                        <span class="classification-option-note">
+                                            The household is considered low-income or indigent.
+                                        </span>
+
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        @endif
+
+
+                        {{-- 4Ps BENEFICIARY --}}
+
+                        @if($hasFourPsColumn)
+
+                            <div class="col-md-6">
+
+                                <input
+                                    type="hidden"
+                                    name="is_4ps_beneficiary"
+                                    value="0"
+                                >
+
+                                <label
+                                    for="is_4ps_beneficiary"
+                                    class="classification-option"
+                                >
+
+                                    <input
+                                        type="checkbox"
+                                        name="is_4ps_beneficiary"
+                                        id="is_4ps_beneficiary"
+                                        value="1"
+                                        class="form-check-input"
+                                        {{ $isFourPsChecked ? 'checked' : '' }}
+                                    >
+
+                                    <span>
+
+                                        <span class="classification-option-title">
+                                            4Ps Beneficiary
+                                        </span>
+
+                                        <span class="classification-option-note">
+                                            The household is a Pantawid Pamilyang Pilipino Program beneficiary.
+                                        </span>
+
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        @endif
+
+                    </div>
+
+
+                    @if(!($hasLowIncomeColumn && $hasFourPsColumn))
+
+                        <div class="alert alert-warning mt-3 mb-0">
+
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+
+                            Not all household classification columns exist in
+                            the database yet, so only the available option is
+                            shown.
+
+                        </div>
+
+                    @endif
+
+                @else
+
+                    <div class="alert alert-warning mb-0">
+
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+
+                        <strong>Household classification is not available yet.</strong>
+
+                        <div class="mt-1">
+
+                            The database does not have the household
+                            classification columns (is_low_income and
+                            is_4ps_beneficiary). Ask the system administrator
+                            to apply the required schema update first.
+
+                        </div>
+
+                    </div>
+
+                @endif
+
+
+                <div class="mt-3">
+
+                    <small class="text-muted">
+
+                        Individual classifications (PWD, Senior Citizen,
+                        Solo Parent, Student) belong to each household member
+                        and are not edited on this page. The household head
+                        is identified by the Household Head selection below.
+
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        {{-- ========================================================
             HOUSEHOLD HEAD
         ========================================================= --}}
 
@@ -866,8 +1123,7 @@ $canManageHouseholds = $isCaptain || $isSecretary;
 
                 <i class="bi bi-check2-circle me-1"></i>
 
-                Save Changes
-
+            Edit Details
             </button>
 
         </div>

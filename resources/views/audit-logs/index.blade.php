@@ -6,18 +6,92 @@
 
 <style>
     /* =========================================================
-       AUDIT TRAIL — screen styles
-       Design notes:
-       - Filters auto-apply (debounced search, instant on
-         select/date change). The "Apply" button is kept only
-         as a no-JS fallback and is visually de-emphasized.
-       - Action badges are color-coded by verb so a reviewer can
-         scan the "shape" of activity without reading every row.
-       - Table collapses into a stacked card list under 700px.
+       AUDIT TRAIL — balanced light & dark mode
+       All colors live in tokens on .audit-page, so text,
+       backgrounds, borders, badges and inputs keep strong
+       contrast in BOTH themes (html[data-theme="dark"]).
        ========================================================= */
 
     .audit-page {
-        color: var(--bs-body-color);
+        /* surfaces */
+        --au-card: #ffffff;
+        --au-soft: #f1f5f9;
+        --au-soft-2: #e2e8f0;
+        --au-hover: #eef3fb;
+        --au-line: #d5dce5;
+        --au-line-strong: #98a6b5;
+
+        /* text */
+        --au-text: #14202c;
+        --au-text-2: #2d3b49;
+        --au-muted: #4b5a69;
+
+        /* accent */
+        --au-accent: #1d4ed8;
+        --au-accent-fg: #ffffff;
+        --au-accent-hover: #1639a8;
+        --au-accent-soft: #e3ebfd;
+        --au-focus: #b45309;
+
+        /* action badges */
+        --au-create-bg: #dcf3e6;  --au-create-ink: #0f5f3a;
+        --au-update-bg: #dfe9fd;  --au-update-ink: #1b45b5;
+        --au-delete-bg: #fde3e6;  --au-delete-ink: #a1202f;
+        --au-view-bg: #e6eaef;    --au-view-ink: #3b4856;
+        --au-auth-bg: #fdefc7;    --au-auth-ink: #6b4700;
+        --au-module-bg: #e6eaef;  --au-module-ink: #2d3b49;
+
+        --au-mark-bg: #fde68a;
+        --au-mark-ink: #14202c;
+
+        --au-shadow: 0 1px 2px rgba(15, 30, 50, .06), 0 8px 22px rgba(15, 30, 50, .07);
+        --au-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2314202c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
+        color: var(--au-text);
+        color-scheme: light;
+    }
+
+    html[data-theme="dark"] .audit-page {
+        --au-card: #1b2430;
+        --au-soft: #141c26;
+        --au-soft-2: #263344;
+        --au-hover: #243142;
+        --au-line: #33425a;
+        --au-line-strong: #5a7087;
+
+        --au-text: #f1f5f9;
+        --au-text-2: #d6dfe8;
+        --au-muted: #b4c2d0;
+
+        --au-accent: #8db4ff;
+        --au-accent-fg: #0a1a3d;
+        --au-accent-hover: #b3ceff;
+        --au-accent-soft: #22345c;
+        --au-focus: #f2c14e;
+
+        --au-create-bg: #173a2b;  --au-create-ink: #86efb8;
+        --au-update-bg: #1e3262;  --au-update-ink: #a9c6ff;
+        --au-delete-bg: #452029;  --au-delete-ink: #ffb4bd;
+        --au-view-bg: #2a3646;    --au-view-ink: #d3dce6;
+        --au-auth-bg: #3d3213;    --au-auth-ink: #fde68a;
+        --au-module-bg: #2a3646;  --au-module-ink: #d3dce6;
+
+        --au-mark-bg: #6b5410;
+        --au-mark-ink: #ffffff;
+
+        --au-shadow: none;
+        --au-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f1f5f9' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
+        color-scheme: dark;
+    }
+
+    .audit-page .text-secondary {
+        color: var(--au-muted) !important;
+    }
+
+    .audit-page :focus-visible {
+        outline: 3px solid var(--au-focus);
+        outline-offset: 2px;
     }
 
     /* ---------- Header ---------- */
@@ -35,19 +109,20 @@
         display: inline-flex;
         align-items: center;
         gap: .4rem;
-        font-size: .78rem;
-        font-weight: 600;
-        color: var(--bs-secondary-color);
+        font-size: .8rem;
+        font-weight: 700;
+        color: var(--au-muted);
     }
 
     .audit-title {
         font-size: 1.7rem;
-        font-weight: 700;
+        font-weight: 800;
         margin: .25rem 0 .35rem;
+        color: var(--au-text);
     }
 
     .audit-subtitle {
-        color: var(--bs-secondary-color);
+        color: var(--au-text-2);
         margin-bottom: 0;
         max-width: 60ch;
     }
@@ -65,30 +140,27 @@
         gap: .4rem;
         padding: .45rem .75rem;
         border-radius: 999px;
-        background-color: var(--bs-tertiary-bg);
-        color: var(--bs-secondary-color);
-        font-size: .78rem;
-        font-weight: 600;
+        background-color: var(--au-soft-2);
+        border: 1px solid var(--au-line);
+        color: var(--au-text-2);
+        font-size: .8rem;
+        font-weight: 700;
         white-space: nowrap;
-    }
-
-    [data-theme="dark"] .audit-readonly {
-        background-color: #111827 !important;
-        color: #9ca3af !important;
     }
 
     .audit-back-link {
         display: inline-flex;
         align-items: center;
         gap: .35rem;
-        font-size: .85rem;
-        font-weight: 600;
-        color: var(--bs-secondary-color);
+        font-size: .88rem;
+        font-weight: 700;
+        color: var(--au-accent);
         text-decoration: none;
     }
 
     .audit-back-link:hover {
-        color: var(--bs-body-color);
+        color: var(--au-accent-hover);
+        text-decoration: underline;
     }
 
     /* ---------- Stat strip ---------- */
@@ -103,33 +175,26 @@
     .audit-stat {
         padding: .95rem 1.1rem;
         border-radius: 12px;
-        background-color: var(--bs-body-bg);
-        border: 1px solid var(--bs-border-color);
-    }
-
-    [data-theme="dark"] .audit-stat {
-        background-color: #1f2937 !important;
-        border-color: #374151 !important;
+        background-color: var(--au-card);
+        border: 1px solid var(--au-line);
+        box-shadow: var(--au-shadow);
     }
 
     .audit-stat-label {
-        font-size: .74rem;
-        font-weight: 600;
+        font-size: .75rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: .04em;
-        color: var(--bs-secondary-color);
-    }
-
-    [data-theme="dark"] .audit-stat-label {
-        color: #9ca3af !important;
+        color: var(--au-muted);
     }
 
     .audit-stat-value {
         margin-top: .3rem;
         font-size: 1.5rem;
-        font-weight: 700;
+        font-weight: 800;
         line-height: 1;
         font-variant-numeric: tabular-nums;
+        color: var(--au-text);
     }
 
     /* ---------- Filter bar (sticky, instant) ---------- */
@@ -139,60 +204,68 @@
         top: .5rem;
         z-index: 5;
         margin-bottom: 1.25rem;
-        padding: .9rem 1rem;
-        border-radius: 14px;
-        background-color: var(--bs-body-bg);
-        border: 1px solid var(--bs-border-color);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, .05);
+        padding: 1rem;
+        border-radius: 18px;
+        background-color: var(--au-card);
+        border: 1px solid var(--au-line);
+        box-shadow: var(--au-shadow);
     }
 
-    [data-theme="dark"] .audit-filter-bar {
-        background-color: #1f2937 !important;
-        border-color: #374151 !important;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, .25);
-    }
+    /* ---------- Search + filters layout (grid) ---------- */
 
     .audit-search-row {
-        display: flex;
-        gap: .6rem;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: minmax(280px, 1.2fr) 2fr;
+        gap: .75rem;
+        align-items: start;
     }
 
     .audit-search-field {
         position: relative;
-        flex: 1 1 260px;
-        min-width: 220px;
+        align-self: start;
     }
 
-    .audit-search-field i.bi-search {
+    /* Search icon sits INSIDE the input, vertically centered */
+    .audit-search-field > .bi-search {
         position: absolute;
-        left: .75rem;
-        top: 50%;
+        left: 1rem;
+        top: 23px;                       /* half of the 46px input height */
         transform: translateY(-50%);
-        color: var(--bs-secondary-color);
-        font-size: .9rem;
+        font-size: 1rem;
+        line-height: 1;
+        color: var(--au-accent);
         pointer-events: none;
+        z-index: 2;
+        transition: transform .2s ease, color .2s ease;
     }
 
-    .audit-search-field input {
-        width: 100%;
-        min-height: 42px;
-        padding-left: 2.1rem;
-        padding-right: 2.1rem;
-        border-radius: 9px;
+    .audit-search-field:focus-within > .bi-search {
+        transform: translateY(-50%) scale(1.12);
     }
 
     .audit-search-clear {
         position: absolute;
-        right: .5rem;
-        top: 50%;
+        right: .7rem;
+        top: 23px;
         transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        align-items: center;
+        justify-content: center;
         border: 0;
-        background: transparent;
-        color: var(--bs-secondary-color);
+        border-radius: 50%;
+        background: var(--au-soft-2);
+        color: var(--au-muted);
+        padding: 0;
         line-height: 1;
-        padding: .25rem;
         display: none;
+        z-index: 2;
+        transition: background-color .15s ease, color .15s ease;
+    }
+
+    .audit-search-clear:hover {
+        background: var(--au-accent);
+        color: var(--au-accent-fg);
     }
 
     .audit-search-field.has-value .audit-search-clear {
@@ -200,26 +273,99 @@
     }
 
     .audit-select-group {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: .6rem;
-        flex-wrap: wrap;
     }
 
-    .audit-select-group select,
-    .audit-select-group input[type="date"] {
-        min-height: 42px;
-        border-radius: 9px;
+    /* Form fields (explicit so they never inherit mismatched Bootstrap colors) */
+
+    .audit-filter-bar .form-control,
+    .audit-filter-bar .form-select {
+        min-height: 46px;
+        border-radius: 12px;
+        background-color: var(--au-soft);
+        color: var(--au-text);
+        border: 1.5px solid var(--au-line);
+        font-size: .92rem;
+        font-weight: 600;
+        box-shadow: none;
+        transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
     }
 
-    [data-theme="dark"] .audit-filter-bar .form-control,
-    [data-theme="dark"] .audit-filter-bar .form-select {
-        background-color: #111827 !important;
-        color: #f9fafb !important;
-        border-color: #4b5563 !important;
+    .audit-filter-bar .form-control::placeholder {
+        color: var(--au-muted);
+        opacity: .85;
+        font-weight: 500;
     }
 
-    [data-theme="dark"] .audit-filter-bar .form-control::placeholder {
-        color: #9ca3af !important;
+    .audit-filter-bar .form-select {
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: var(--au-select-arrow);
+        background-repeat: no-repeat;
+        background-position: right .85rem center;
+        background-size: 16px;
+        padding-right: 2.3rem;
+    }
+
+    .audit-filter-bar .form-select option {
+        background: var(--au-card);
+        color: var(--au-text);
+    }
+
+    .audit-filter-bar .form-control:hover,
+    .audit-filter-bar .form-select:hover {
+        border-color: var(--au-line-strong);
+    }
+
+    .audit-filter-bar .form-control:focus,
+    .audit-filter-bar .form-select:focus {
+        background-color: var(--au-card);
+        color: var(--au-text);
+        border-color: var(--au-accent);
+        box-shadow: 0 0 0 4px var(--au-accent-soft);
+    }
+
+    /* Search input = modern pill, icon inside */
+    .audit-filter-bar .audit-search-field input {
+        width: 100%;
+        padding-left: 2.8rem;
+        padding-right: 2.6rem;
+        border-radius: 999px;
+    }
+
+    /* Buttons */
+
+    .audit-page .btn {
+        font-weight: 700;
+        border-radius: .6rem;
+    }
+
+    .audit-page .btn-primary {
+        background: var(--au-accent);
+        border: 1.5px solid var(--au-accent);
+        color: var(--au-accent-fg);
+    }
+
+    .audit-page .btn-primary:hover,
+    .audit-page .btn-primary:focus-visible {
+        background: var(--au-accent-hover);
+        border-color: var(--au-accent-hover);
+        color: var(--au-accent-fg);
+    }
+
+    .audit-page .btn-outline-secondary {
+        background: var(--au-card);
+        border: 1.5px solid var(--au-line-strong);
+        color: var(--au-text);
+    }
+
+    .audit-page .btn-outline-secondary:hover,
+    .audit-page .btn-outline-secondary:focus-visible {
+        background: var(--au-soft-2);
+        border-color: var(--au-accent);
+        color: var(--au-text);
     }
 
     /* Fallback button — hidden once JS confirms auto-filtering works */
@@ -232,23 +378,19 @@
         display: inline-flex;
     }
 
-    /* Slim top-of-bar progress indicator while a filter reloads the page */
+    /* Slim progress indicator while a filter reloads the page */
 
     .audit-loading .audit-filter-bar::after {
         content: '';
         position: absolute;
-        left: 0;
-        right: 0;
+        left: 12px;
+        right: 12px;
         bottom: -2px;
         height: 2px;
         border-radius: 2px;
-        background: linear-gradient(90deg, transparent, #0d6efd, transparent);
+        background: linear-gradient(90deg, transparent, var(--au-accent), transparent);
         background-size: 200% 100%;
         animation: audit-scan 1s linear infinite;
-    }
-
-    .audit-filter-bar {
-        position: sticky;
     }
 
     @keyframes audit-scan {
@@ -262,7 +404,9 @@
         display: flex;
         flex-wrap: wrap;
         gap: .45rem;
-        margin-top: .75rem;
+        margin-top: .85rem;
+        padding-top: .85rem;
+        border-top: 1px dashed var(--au-line);
     }
 
     .audit-chip {
@@ -271,68 +415,63 @@
         gap: .35rem;
         padding: .3rem .6rem .3rem .75rem;
         border-radius: 999px;
-        background-color: rgba(13, 110, 253, .1);
-        color: #0d6efd;
-        font-size: .78rem;
-        font-weight: 600;
+        background-color: var(--au-accent-soft);
+        border: 1px solid var(--au-accent);
+        color: var(--au-text);
+        font-size: .8rem;
+        font-weight: 700;
         text-decoration: none;
         white-space: nowrap;
+        transition: background-color .15s ease;
     }
 
     .audit-chip i {
         font-size: .8rem;
+        color: var(--au-accent);
     }
 
-    [data-theme="dark"] .audit-chip {
-        background-color: rgba(96, 165, 250, .15) !important;
-        color: #93c5fd !important;
+    .audit-chip:hover {
+        background-color: var(--au-soft-2);
+        color: var(--au-text);
     }
 
     .audit-chip-clear {
-        color: var(--bs-secondary-color);
-        font-size: .78rem;
-        font-weight: 600;
+        color: var(--au-text-2);
+        font-size: .8rem;
+        font-weight: 700;
         text-decoration: underline;
+        align-self: center;
+    }
+
+    .audit-chip-clear:hover {
+        color: var(--au-accent);
     }
 
     /* ---------- Table card ---------- */
 
     .audit-card {
-        background-color: var(--bs-body-bg);
-        border: 1px solid var(--bs-border-color);
+        background-color: var(--au-card);
+        color: var(--au-text);
+        border: 1px solid var(--au-line);
         border-radius: 14px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, .05);
+        box-shadow: var(--au-shadow);
         overflow: hidden;
-    }
-
-    [data-theme="dark"] .audit-card {
-        background-color: #1f2937 !important;
-        border-color: #374151 !important;
-        color: #f3f4f6 !important;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, .25);
     }
 
     .audit-card-header {
         padding: 1rem 1.25rem;
-        border-bottom: 1px solid var(--bs-border-color);
-    }
-
-    [data-theme="dark"] .audit-card-header {
-        border-bottom-color: #374151 !important;
+        border-bottom: 1px solid var(--au-line);
     }
 
     .audit-card-title {
-        font-weight: 700;
+        font-weight: 800;
         margin: 0;
+        color: var(--au-text);
     }
 
     .audit-info {
-        color: var(--bs-secondary-color);
-        font-size: .83rem;
-    }
-
-    [data-theme="dark"] .audit-info {
-        color: #9ca3af !important;
+        color: var(--au-muted);
+        font-size: .85rem;
     }
 
     /* ---------- Table ---------- */
@@ -342,48 +481,41 @@
     }
 
     .audit-table {
+        --bs-table-bg: transparent;
+        --bs-table-color: var(--au-text);
+        --bs-table-border-color: var(--au-line);
+        --bs-table-striped-bg: transparent;
+        --bs-table-hover-bg: var(--au-hover);
+        --bs-table-hover-color: var(--au-text);
+
         width: 100%;
         min-width: 980px;
         margin-bottom: 0;
         vertical-align: middle;
+        color: var(--au-text);
     }
 
     .audit-table th {
         padding: .8rem .85rem;
-        font-size: .74rem;
-        font-weight: 700;
+        font-size: .75rem;
+        font-weight: 800;
         text-transform: uppercase;
         letter-spacing: .045em;
         white-space: nowrap;
-        background-color: var(--bs-tertiary-bg);
-        color: var(--bs-body-color);
-        border-bottom: 1px solid var(--bs-border-color);
+        background-color: var(--au-soft);
+        color: var(--au-text-2);
+        border-bottom: 1px solid var(--au-line);
     }
 
     .audit-table td {
         padding: .85rem .85rem;
-        border-color: var(--bs-border-color);
-        color: var(--bs-body-color);
+        background-color: transparent;
+        border-color: var(--au-line);
+        color: var(--au-text);
     }
 
     .audit-table tbody tr:hover td {
-        background-color: rgba(13, 110, 253, .035);
-    }
-
-    [data-theme="dark"] .audit-table th {
-        background-color: #111827 !important;
-        color: #f9fafb !important;
-        border-color: #374151 !important;
-    }
-
-    [data-theme="dark"] .audit-table td {
-        background-color: #1f2937 !important;
-        color: #e5e7eb !important;
-        border-color: #374151 !important;
-    }
-
-    [data-theme="dark"] .audit-table tbody tr:hover td {
-        background-color: #263244 !important;
+        background-color: var(--au-hover);
     }
 
     .audit-date {
@@ -392,17 +524,13 @@
     }
 
     .audit-date-main {
-        font-weight: 600;
+        font-weight: 700;
     }
 
     .audit-date-time {
         margin-top: .15rem;
-        font-size: .75rem;
-        color: var(--bs-secondary-color);
-    }
-
-    [data-theme="dark"] .audit-date-time {
-        color: #9ca3af !important;
+        font-size: .78rem;
+        color: var(--au-muted);
     }
 
     .audit-user {
@@ -410,19 +538,15 @@
     }
 
     .audit-user-name {
-        font-weight: 600;
+        font-weight: 700;
         white-space: nowrap;
     }
 
     .audit-user-role {
         margin-top: .15rem;
-        font-size: .75rem;
-        color: var(--bs-secondary-color);
+        font-size: .78rem;
+        color: var(--au-muted);
         text-transform: capitalize;
-    }
-
-    [data-theme="dark"] .audit-user-role {
-        color: #9ca3af !important;
     }
 
     /* ---------- Action badges (color-coded by verb) ---------- */
@@ -433,8 +557,8 @@
         gap: .3rem;
         border-radius: 999px;
         padding: .32rem .65rem;
-        font-size: .73rem;
-        font-weight: 700;
+        font-size: .75rem;
+        font-weight: 800;
         line-height: 1.2;
         white-space: nowrap;
     }
@@ -448,90 +572,38 @@
         flex: none;
     }
 
-    .audit-action-badge.is-create {
-        background-color: rgba(25, 135, 84, .12);
-        color: #198754;
-    }
-
-    .audit-action-badge.is-update {
-        background-color: rgba(13, 110, 253, .1);
-        color: #0d6efd;
-    }
-
-    .audit-action-badge.is-delete {
-        background-color: rgba(220, 53, 69, .12);
-        color: #dc3545;
-    }
-
-    .audit-action-badge.is-view {
-        background-color: rgba(108, 117, 125, .14);
-        color: #6c757d;
-    }
-
-    .audit-action-badge.is-auth {
-        background-color: rgba(255, 193, 7, .18);
-        color: #a1670a;
-    }
-
-    [data-theme="dark"] .audit-action-badge.is-create {
-        background-color: rgba(52, 211, 153, .15) !important;
-        color: #6ee7b7 !important;
-    }
-
-    [data-theme="dark"] .audit-action-badge.is-update {
-        background-color: rgba(96, 165, 250, .15) !important;
-        color: #93c5fd !important;
-    }
-
-    [data-theme="dark"] .audit-action-badge.is-delete {
-        background-color: rgba(248, 113, 113, .15) !important;
-        color: #fca5a5 !important;
-    }
-
-    [data-theme="dark"] .audit-action-badge.is-view {
-        background-color: rgba(156, 163, 175, .15) !important;
-        color: #d1d5db !important;
-    }
-
-    [data-theme="dark"] .audit-action-badge.is-auth {
-        background-color: rgba(250, 204, 21, .18) !important;
-        color: #fde68a !important;
-    }
+    .audit-action-badge.is-create { background-color: var(--au-create-bg); color: var(--au-create-ink); }
+    .audit-action-badge.is-update { background-color: var(--au-update-bg); color: var(--au-update-ink); }
+    .audit-action-badge.is-delete { background-color: var(--au-delete-bg); color: var(--au-delete-ink); }
+    .audit-action-badge.is-view   { background-color: var(--au-view-bg);   color: var(--au-view-ink); }
+    .audit-action-badge.is-auth   { background-color: var(--au-auth-bg);   color: var(--au-auth-ink); }
 
     .audit-module-badge {
         display: inline-flex;
         align-items: center;
         border-radius: 999px;
         padding: .32rem .65rem;
-        font-size: .73rem;
-        font-weight: 700;
+        font-size: .75rem;
+        font-weight: 800;
         line-height: 1.2;
         white-space: nowrap;
-        background-color: rgba(108, 117, 125, .12);
-        color: #495057;
-    }
-
-    [data-theme="dark"] .audit-module-badge {
-        background-color: rgba(156, 163, 175, .15) !important;
-        color: #d1d5db !important;
+        background-color: var(--au-module-bg);
+        color: var(--au-module-ink);
     }
 
     .audit-record {
         font-family: Consolas, Monaco, monospace;
-        font-size: .8rem;
-        font-weight: 600;
+        font-size: .82rem;
+        font-weight: 700;
         word-break: break-word;
+        color: var(--au-text);
     }
 
     .audit-record-id {
         display: block;
         margin-top: .2rem;
-        font-size: .72rem;
-        color: var(--bs-secondary-color);
-    }
-
-    [data-theme="dark"] .audit-record-id {
-        color: #9ca3af !important;
+        font-size: .75rem;
+        color: var(--au-muted);
     }
 
     .audit-description {
@@ -539,17 +611,14 @@
         max-width: 460px;
         line-height: 1.5;
         word-break: break-word;
+        color: var(--au-text);
     }
 
     .audit-description mark {
         padding: 0 .12em;
         border-radius: 3px;
-        background-color: rgba(255, 193, 7, .35);
-        color: inherit;
-    }
-
-    [data-theme="dark"] .audit-description mark {
-        background-color: rgba(250, 204, 21, .3);
+        background-color: var(--au-mark-bg);
+        color: var(--au-mark-ink);
     }
 
     /* ---------- Empty state ---------- */
@@ -557,53 +626,66 @@
     .audit-empty {
         padding: 3.5rem 1rem;
         text-align: center;
-        color: var(--bs-secondary-color);
+        color: var(--au-text-2);
     }
 
-    [data-theme="dark"] .audit-empty {
-        color: #9ca3af !important;
+    .audit-empty h5 {
+        color: var(--au-text);
     }
 
     .audit-empty-icon {
         font-size: 2.5rem;
         margin-bottom: .75rem;
-        opacity: .65;
+        color: var(--au-accent);
     }
 
     .audit-empty .btn {
-        margin-top: .5rem;
+        margin-top: .75rem;
     }
 
     /* ---------- Pagination ---------- */
 
     .audit-pagination {
         padding: 1rem 1.25rem;
-        border-top: 1px solid var(--bs-border-color);
-    }
-
-    [data-theme="dark"] .audit-pagination {
-        border-top-color: #374151 !important;
+        border-top: 1px solid var(--au-line);
     }
 
     .audit-pagination .pagination {
         margin-bottom: 0;
+        gap: 4px;
     }
 
-    [data-theme="dark"] .audit-pagination .page-link {
-        background-color: #111827 !important;
-        border-color: #374151 !important;
-        color: #d1d5db !important;
+    .audit-pagination .page-link {
+        background-color: var(--au-card);
+        border: 1.5px solid var(--au-line-strong);
+        color: var(--au-text);
+        font-weight: 700;
+        border-radius: 8px !important;
     }
 
-    [data-theme="dark"] .audit-pagination .page-item.active .page-link {
-        background-color: #2563eb !important;
-        border-color: #2563eb !important;
-        color: #fff !important;
+    .audit-pagination .page-link:hover {
+        background-color: var(--au-soft-2);
+        border-color: var(--au-accent);
+        color: var(--au-text);
     }
 
-    [data-theme="dark"] .audit-pagination .page-item.disabled .page-link {
-        background-color: #1f2937 !important;
-        color: #6b7280 !important;
+    .audit-pagination .page-item.active .page-link {
+        background-color: var(--au-accent);
+        border-color: var(--au-accent);
+        color: var(--au-accent-fg);
+    }
+
+    .audit-pagination .page-item.disabled .page-link {
+        background-color: var(--au-soft);
+        border-color: var(--au-line);
+        color: var(--au-muted);
+        opacity: .7;
+    }
+
+    .audit-pagination p,
+    .audit-pagination .small,
+    .audit-pagination .text-muted {
+        color: var(--au-muted) !important;
     }
 
     /* ---------- Print-only header ---------- */
@@ -612,9 +694,13 @@
         display: none;
     }
 
-    /* ---------- Responsive: stacked cards under 700px ---------- */
+    /* ---------- Responsive ---------- */
 
     @media (max-width: 992px) {
+
+        .audit-search-row {
+            grid-template-columns: 1fr;
+        }
 
         .audit-description {
             max-width: 360px;
@@ -635,6 +721,10 @@
         .audit-readonly {
             width: 100%;
             justify-content: center;
+        }
+
+        .audit-select-group {
+            grid-template-columns: 1fr 1fr;
         }
     }
 
@@ -667,12 +757,9 @@
         .audit-table tbody tr {
             margin: 0 0 .85rem;
             padding: .85rem .9rem;
-            border: 1px solid var(--bs-border-color);
+            border: 1px solid var(--au-line);
             border-radius: 12px;
-        }
-
-        [data-theme="dark"] .audit-table tbody tr {
-            border-color: #374151 !important;
+            background-color: var(--au-card);
         }
 
         .audit-table td {
@@ -689,11 +776,11 @@
             content: attr(data-label);
             flex: none;
             padding-top: .1rem;
-            font-size: .72rem;
-            font-weight: 700;
+            font-size: .74rem;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: .03em;
-            color: var(--bs-secondary-color);
+            color: var(--au-muted);
             text-align: left;
         }
 
@@ -704,8 +791,27 @@
         }
     }
 
+    @media (max-width: 480px) {
+
+        .audit-select-group {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .audit-loading .audit-filter-bar::after {
+            animation: none;
+        }
+
+        .audit-search-field > .bi-search,
+        .audit-filter-bar .form-control,
+        .audit-filter-bar .form-select {
+            transition: none;
+        }
+    }
+
     /* =========================================================
-       PRINT STYLES
+       PRINT STYLES — always light, even if the screen is dark
        ========================================================= */
 
     @media print {
@@ -736,6 +842,16 @@
         .btn,
         .audit-pagination {
             display: none !important;
+        }
+
+        .audit-page,
+        html[data-theme="dark"] .audit-page {
+            --au-card: #ffffff;
+            --au-soft: #e9ecef;
+            --au-line: #999999;
+            --au-text: #000000;
+            --au-text-2: #222222;
+            --au-muted: #444444;
         }
 
         .audit-page {
@@ -918,6 +1034,7 @@
             font-size: 7.2pt !important;
             font-weight: 700 !important;
             overflow-wrap: anywhere !important;
+            color: #000 !important;
         }
 
         .audit-record-id {
@@ -931,10 +1048,12 @@
             max-width: none !important;
             line-height: 1.35 !important;
             overflow-wrap: anywhere !important;
+            color: #000 !important;
         }
 
         .audit-description mark {
             background: transparent !important;
+            color: #000 !important;
             font-weight: 700 !important;
         }
 
@@ -946,14 +1065,6 @@
 
         .audit-empty-icon {
             display: none !important;
-        }
-
-        [data-theme="dark"] .audit-card,
-        [data-theme="dark"] .audit-table td,
-        [data-theme="dark"] .audit-table th {
-            background: #fff !important;
-            color: #000 !important;
-            border-color: #999 !important;
         }
 
         a {
@@ -1109,14 +1220,14 @@
                 >
 
                 <button type="button" class="audit-search-clear" id="auditSearchClear" aria-label="Clear search">
-                    <i class="bi bi-x-circle-fill"></i>
+                    <i class="bi bi-x"></i>
                 </button>
 
             </div>
 
             <div class="audit-select-group">
 
-                <select name="module" id="module" class="form-select" style="min-width: 150px">
+                <select name="module" id="module" class="form-select" aria-label="Filter by module">
                     <option value="">All modules</option>
                     @foreach($modules as $moduleOption)
                         <option value="{{ $moduleOption }}" @selected($module === $moduleOption)>
@@ -1125,7 +1236,7 @@
                     @endforeach
                 </select>
 
-                <select name="action" id="action" class="form-select" style="min-width: 140px">
+                <select name="action" id="action" class="form-select" aria-label="Filter by action">
                     <option value="">All actions</option>
                     @foreach($actions as $actionOption)
                         <option value="{{ $actionOption }}" @selected($action === $actionOption)>
@@ -1134,7 +1245,7 @@
                     @endforeach
                 </select>
 
-                <select name="user_id" id="user_id" class="form-select" style="min-width: 150px">
+                <select name="user_id" id="user_id" class="form-select" aria-label="Filter by user">
                     <option value="">All users</option>
                     @foreach($users as $userOption)
                         <option value="{{ $userOption->id }}" @selected((string) $userId === (string) $userOption->id)>
@@ -1143,8 +1254,8 @@
                     @endforeach
                 </select>
 
-                <input type="date" name="date_from" id="date_from" class="form-control" value="{{ $dateFrom }}" title="From date">
-                <input type="date" name="date_to" id="date_to" class="form-control" value="{{ $dateTo }}" title="To date">
+                <input type="date" name="date_from" id="date_from" class="form-control" value="{{ $dateFrom }}" title="From date" aria-label="From date">
+                <input type="date" name="date_to" id="date_to" class="form-control" value="{{ $dateTo }}" title="To date" aria-label="To date">
 
                 {{-- No-JS fallback only --}}
                 <button type="submit" class="btn btn-primary audit-apply-fallback">
@@ -1288,7 +1399,7 @@
                             // Highlight the matched search term for quick scanning.
                             if ($search && $log->description) {
                                 $description = preg_replace(
-                                    '/(' . preg_quote($search, '/') . ')/i',
+                                    '/(' . preg_quote(e($search), '/') . ')/i',
                                     '<mark>$1</mark>',
                                     e($log->description)
                                 );
@@ -1369,7 +1480,11 @@
                 </h5>
 
                 <p class="mb-0">
-                    No activity matches "{{ $search }}" or the selected filters.
+                    @if($search)
+                        No activity matches "{{ $search }}" or the selected filters.
+                    @else
+                        No activity matches the selected filters.
+                    @endif
                 </p>
 
                 <a href="{{ route('audit-logs.index') }}" class="btn btn-outline-secondary btn-sm">

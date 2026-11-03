@@ -2,31 +2,21 @@
 
 namespace App\Services;
 
+use App\Models\NotificationClear;
 use App\Models\ReliefAssistanceOperation;
 use App\Models\ReportComplaint;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class NotificationService
 {
-    /*
-    |--------------------------------------------------------------------------
-    | Get Notification Data
-    |--------------------------------------------------------------------------
-    |
-    | Collects operational reminders for:
-    |
-    | 1. Relief operations happening today
-    | 2. Relief operations happening tomorrow
-    | 3. Person complaint hearings happening today
-    | 4. Person complaint hearings happening tomorrow
-    |
-    | This first version is intentionally dynamic.
-    | It reads the existing records directly and does not require
-    | a notifications database table.
-    |
-    */
-
+    /**
+     * Get today's and tomorrow's notifications.
+     *
+     * Cleared notifications are hidden only from the current user's bell.
+     * The underlying relief and complaint records are never modified.
+     */
     public function getNotifications(): array
     {
         $today = Carbon::today();
@@ -54,19 +44,11 @@ class NotificationService
             ->get();
 
         foreach ($operations as $operation) {
-
             $distributionDate = Carbon::parse(
                 $operation->distribution_date
             );
 
-            /*
-            |--------------------------------------------------------------------------
-            | TODAY
-            |--------------------------------------------------------------------------
-            */
-
             if ($distributionDate->isSameDay($today)) {
-
                 $todayNotifications->push(
                     $this->makeReliefNotification(
                         $operation,
@@ -75,14 +57,7 @@ class NotificationService
                 );
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | TOMORROW
-            |--------------------------------------------------------------------------
-            */
-
             if ($distributionDate->isSameDay($tomorrow)) {
-
                 $tomorrowNotifications->push(
                     $this->makeReliefNotification(
                         $operation,
@@ -91,7 +66,6 @@ class NotificationService
                 );
             }
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -111,19 +85,11 @@ class NotificationService
             ->get();
 
         foreach ($complaints as $complaint) {
-
             $hearingDate = Carbon::parse(
                 $complaint->hearing_date
             );
 
-            /*
-            |--------------------------------------------------------------------------
-            | TODAY
-            |--------------------------------------------------------------------------
-            */
-
             if ($hearingDate->isSameDay($today)) {
-
                 $todayNotifications->push(
                     $this->makeComplaintNotification(
                         $complaint,
@@ -132,14 +98,7 @@ class NotificationService
                 );
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | TOMORROW
-            |--------------------------------------------------------------------------
-            */
-
             if ($hearingDate->isSameDay($tomorrow)) {
-
                 $tomorrowNotifications->push(
                     $this->makeComplaintNotification(
                         $complaint,
@@ -149,14 +108,10 @@ class NotificationService
             }
         }
 
-
         /*
         |--------------------------------------------------------------------------
         | SORT NOTIFICATIONS
         |--------------------------------------------------------------------------
-        |
-        | Keep today's reminders first, followed by tomorrow's reminders.
-        |
         */
 
         $todayNotifications = $todayNotifications
@@ -167,6 +122,42 @@ class NotificationService
             ->sortBy('sort_time')
             ->values();
 
+        /*
+        |--------------------------------------------------------------------------
+        | FILTER CLEARED NOTIFICATIONS FOR THE CURRENT USER
+        |--------------------------------------------------------------------------
+        */
+
+        $userId = Auth::id();
+
+        if ($userId !== null) {
+            $notificationKeys = $todayNotifications
+                ->concat($tomorrowNotifications)
+                ->pluck('key')
+                ->filter()
+                ->unique()
+                ->values();
+
+            $clearedKeys = NotificationClear::query()
+                ->where('user_id', $userId)
+                ->whereIn('notification_key', $notificationKeys)
+                ->pluck('notification_key')
+                ->flip();
+
+            $todayNotifications = $todayNotifications
+                ->reject(
+                    fn (array $notification): bool =>
+                        $clearedKeys->has($notification['key'])
+                )
+                ->values();
+
+            $tomorrowNotifications = $tomorrowNotifications
+                ->reject(
+                    fn (array $notification): bool =>
+                        $clearedKeys->has($notification['key'])
+                )
+                ->values();
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -174,9 +165,11 @@ class NotificationService
         |--------------------------------------------------------------------------
         */
 
+        $count = $todayNotifications->count()
+            + $tomorrowNotifications->count();
+
         return [
-            'count' => $todayNotifications->count()
-                + $tomorrowNotifications->count(),
+            'count' => $count,
 
             'today' => $todayNotifications,
 
@@ -186,12 +179,9 @@ class NotificationService
 
             'has_tomorrow' => $tomorrowNotifications->isNotEmpty(),
 
-            'has_notifications' =>
-                $todayNotifications->isNotEmpty()
-                || $tomorrowNotifications->isNotEmpty(),
+            'has_notifications' => $count > 0,
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -203,7 +193,6 @@ class NotificationService
         ReliefAssistanceOperation $operation,
         string $period
     ): array {
-
         $distributionDate = Carbon::parse(
             $operation->distribution_date
         );
@@ -225,24 +214,21 @@ class NotificationService
         }
 
         if ($period === 'today') {
-
             $title = 'Relief Operation Today';
-
             $icon = 'bi-exclamation-circle-fill';
-
             $priority = 'urgent';
-
         } else {
-
             $title = 'Relief Operation Tomorrow';
-
             $icon = 'bi-calendar-event';
-
             $priority = 'upcoming';
         }
 
-
         return [
+            'key' => 'bell:op:relief:'
+                . $operation->id
+                . ':'
+                . $distributionDate->format('Y-m-d'),
+
             'type' => 'relief_operation',
 
             'period' => $period,
@@ -251,12 +237,11 @@ class NotificationService
 
             'message' => $operationName,
 
-            'description' =>
-                $this->buildScheduleText(
-                    $distributionDate,
-                    $time,
-                    $location
-                ),
+            'description' => $this->buildScheduleText(
+                $distributionDate,
+                $time,
+                $location
+            ),
 
             'icon' => $icon,
 
@@ -264,28 +249,23 @@ class NotificationService
 
             'date' => $distributionDate->format('Y-m-d'),
 
-            'display_date' =>
-                $distributionDate->format('F j, Y'),
+            'display_date' => $distributionDate->format('F j, Y'),
 
             'time' => $time,
 
-            'location' =>
-                $location !== ''
-                    ? $location
-                    : 'Location not specified',
+            'location' => $location !== ''
+                ? $location
+                : 'Location not specified',
 
             'record_id' => $operation->id,
 
-            'operation_code' =>
-                $operation->operation_code,
+            'operation_code' => $operation->operation_code,
 
-            'sort_time' =>
-                $distributionDate->format('Y-m-d')
+            'sort_time' => $distributionDate->format('Y-m-d')
                 . ' '
                 . ($operation->distribution_time ?? '00:00:00'),
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -297,7 +277,6 @@ class NotificationService
         ReportComplaint $complaint,
         string $period
     ): array {
-
         $hearingDate = Carbon::parse(
             $complaint->hearing_date
         );
@@ -318,42 +297,35 @@ class NotificationService
             $recordCode = 'Person Complaint';
         }
 
-
         if ($period === 'today') {
-
             $title = 'Hearing Today';
-
             $icon = 'bi-exclamation-circle-fill';
-
             $priority = 'urgent';
-
         } else {
-
             $title = 'Person Complaint Hearing Tomorrow';
-
             $icon = 'bi-calendar-event';
-
             $priority = 'upcoming';
         }
 
-
         return [
+            'key' => 'bell:op:complaint:'
+                . $complaint->id
+                . ':'
+                . $hearingDate->format('Y-m-d'),
+
             'type' => 'person_complaint_hearing',
 
             'period' => $period,
 
             'title' => $title,
 
-            'message' =>
-                'Hearing for complaint '
-                . $recordCode,
+            'message' => 'Hearing for complaint ' . $recordCode,
 
-            'description' =>
-                $this->buildScheduleText(
-                    $hearingDate,
-                    $time,
-                    $location
-                ),
+            'description' => $this->buildScheduleText(
+                $hearingDate,
+                $time,
+                $location
+            ),
 
             'icon' => $icon,
 
@@ -361,27 +333,23 @@ class NotificationService
 
             'date' => $hearingDate->format('Y-m-d'),
 
-            'display_date' =>
-                $hearingDate->format('F j, Y'),
+            'display_date' => $hearingDate->format('F j, Y'),
 
             'time' => $time,
 
-            'location' =>
-                $location !== ''
-                    ? $location
-                    : 'Location not specified',
+            'location' => $location !== ''
+                ? $location
+                : 'Location not specified',
 
             'record_id' => $complaint->id,
 
             'record_code' => $recordCode,
 
-            'sort_time' =>
-                $hearingDate->format('Y-m-d')
+            'sort_time' => $hearingDate->format('Y-m-d')
                 . ' '
                 . ($complaint->hearing_time ?? '00:00:00'),
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -394,7 +362,6 @@ class NotificationService
         string $time,
         string $location
     ): string {
-
         $parts = [];
 
         $parts[] = $date->format('F j, Y');
@@ -409,7 +376,6 @@ class NotificationService
 
         return implode(' • ', $parts);
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -427,16 +393,11 @@ class NotificationService
         }
 
         try {
-
             return Carbon::parse(
                 (string) $time
             )->format('g:i A');
-
         } catch (\Throwable $e) {
-
-            return trim(
-                (string) $time
-            );
+            return trim((string) $time);
         }
     }
 }

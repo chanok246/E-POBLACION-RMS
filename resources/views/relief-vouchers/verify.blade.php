@@ -3,7 +3,79 @@
 @section('title', 'QR Verification | Relief Assistance')
 
 @section('content')
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 vq-page" data-rv-themed>
+
+    {{-- THEME ENGINE (shared with the Relief Assistance overview) --}}
+    <script>
+    (function () {
+        if (window.__rvTheme) { window.__rvTheme.apply(); return; }
+
+        var KEY = 'rv-theme';
+        var ICONS = '.bi-sun, .bi-sun-fill, .bi-moon, .bi-moon-fill, .bi-moon-stars, .bi-moon-stars-fill, .bi-brightness-high, .bi-brightness-high-fill, .bi-brightness-low';
+        var ICON_CLASSES = ['bi-sun', 'bi-sun-fill', 'bi-moon', 'bi-moon-fill', 'bi-moon-stars', 'bi-moon-stars-fill', 'bi-brightness-high', 'bi-brightness-high-fill', 'bi-brightness-low'];
+
+        function siteTheme() {
+            var d = document.documentElement, b = document.body, v = '';
+            [d, b].forEach(function (el) {
+                if (!el) return;
+                v += ' ' + (el.getAttribute('data-bs-theme') || '') + ' ' + (el.getAttribute('data-theme') || '') + ' ' + el.className;
+            });
+            if (/dark/i.test(v)) return 'dark';
+            if (/light/i.test(v)) return 'light';
+            return (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
+        function saved() {
+            try { var v = localStorage.getItem(KEY); return (v === 'dark' || v === 'light') ? v : null; } catch (e) { return null; }
+        }
+        function current() { return saved() || siteTheme(); }
+
+        function isToggle(el) {
+            return el.hasAttribute('data-rv-theme-toggle') ||
+                   (!!el.closest('[data-rv-themed]') && !!el.querySelector(ICONS));
+        }
+
+        function apply() {
+            var t = current();
+            document.querySelectorAll('[data-rv-themed]').forEach(function (el) { el.setAttribute('data-rv-theme', t); });
+
+            document.querySelectorAll('[data-rv-theme-toggle], [data-rv-themed] button, [data-rv-themed] a').forEach(function (el) {
+                if (!isToggle(el)) return;
+                var icon = el.querySelector(ICONS);
+                if (icon) {
+                    ICON_CLASSES.forEach(function (c) { icon.classList.remove(c); });
+                    icon.classList.add(t === 'dark' ? 'bi-moon-stars' : 'bi-sun');
+                }
+                var label = t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+                el.setAttribute('aria-label', label);
+                el.setAttribute('title', label);
+                el.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+            });
+        }
+
+        function set(t) {
+            try { localStorage.setItem(KEY, t); } catch (e) {}
+            apply();
+        }
+
+        document.addEventListener('click', function (e) {
+            var el = e.target.closest ? e.target.closest('button, a') : null;
+            if (!el || !isToggle(el)) return;
+            e.preventDefault();
+            set(current() === 'dark' ? 'light' : 'dark');
+        });
+
+        window.addEventListener('storage', function (e) { if (e.key === KEY) apply(); });
+        document.addEventListener('DOMContentLoaded', apply);
+
+        var mo = new MutationObserver(function () { if (!saved()) apply(); });
+        var opts = { attributes: true, attributeFilter: ['class', 'data-theme', 'data-bs-theme'] };
+        mo.observe(document.documentElement, opts);
+        if (document.body) mo.observe(document.body, opts);
+
+        window.__rvTheme = { apply: apply, set: set, current: current };
+        apply();
+    })();
+    </script>
 
     {{-- HEADER --}}
     <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
@@ -15,13 +87,16 @@
                     <li class="breadcrumb-item active" aria-current="page">QR Verification</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-1"><i class="bi bi-qr-code-scan me-2 text-primary"></i>Voucher Scanner</h1>
-            <div class="text-muted">Hold a voucher up to the camera. It is verified and claimed automatically.</div>
+            <h1 class="h3 fw-bold mb-1"><i class="bi bi-qr-code-scan me-2 vq-accent"></i>Voucher Scanner</h1>
+            <div class="vq-sub">Hold a voucher up to the camera. It is verified and claimed automatically.</div>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <div class="vq-stat"><b id="statClaimed" class="text-success">0</b><span>Claimed</span></div>
-            <div class="vq-stat"><b id="statRejected" class="text-danger">0</b><span>Rejected</span></div>
-            <a href="{{ route('relief-vouchers.index') }}" class="btn btn-outline-secondary ms-1">
+            <div class="vq-stat"><b id="statClaimed" class="vq-ok">0</b><span>Claimed</span></div>
+            <div class="vq-stat"><b id="statRejected" class="vq-err">0</b><span>Rejected</span></div>
+            <button type="button" class="btn btn-outline-secondary vq-theme-btn" data-rv-theme-toggle aria-label="Toggle light or dark mode">
+                <i class="bi bi-moon-stars"></i>
+            </button>
+            <a href="{{ route('relief-vouchers.index') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Relief Vouchers
             </a>
         </div>
@@ -49,7 +124,7 @@
                 <div class="vq-idle" id="idleCover">
                     <i class="bi bi-camera-video-off fs-1 mb-2"></i>
                     <div class="fw-semibold fs-5" id="idleTitle">Camera is off</div>
-                    <div class="small opacity-75 mb-3 px-4 text-center" id="idleText">Start the camera to begin scanning vouchers.</div>
+                    <div class="small mb-3 px-4 text-center vq-idle-text" id="idleText">Start the camera to begin scanning vouchers.</div>
                     <button type="button" class="btn btn-primary rounded-pill px-4" id="idleStart">
                         <i class="bi bi-camera-video me-1"></i>Start camera
                     </button>
@@ -59,7 +134,7 @@
                     <i id="vqIcon" class="bi bi-qr-code-scan"></i>
                     <div class="min-w-0">
                         <div class="fw-bold text-truncate" id="vqTitle">Title</div>
-                        <div class="small opacity-75" id="vqMsg"></div>
+                        <div class="small vq-result-msg" id="vqMsg"></div>
                     </div>
                 </div>
 
@@ -72,17 +147,17 @@
                     <button type="button" class="vq-btn main" id="cameraToggle"><i class="bi bi-camera-video me-1"></i>Start</button>
                 </div>
             </div>
-            <div id="scanStatus" class="small text-muted mt-2 px-1">Preparing camera…</div>
+            <div id="scanStatus" class="small mt-2 px-1 text-secondary">Preparing camera…</div>
         </div>
 
         {{-- SIDE PANEL --}}
         <div class="col-12 col-xl-5 d-flex flex-column gap-4">
 
             {{-- Manual entry --}}
-            <div class="card border-0 shadow-sm">
+            <div class="card vq-card">
                 <div class="card-body p-4">
-                    <h5 class="fw-bold mb-1"><i class="bi bi-keyboard me-2"></i>Type a code instead</h5>
-                    <div class="small text-muted mb-3">Use this when the QR is damaged or the camera is unavailable.</div>
+                    <h5 class="fw-bold mb-1"><i class="bi bi-keyboard me-2 vq-accent"></i>Type a code instead</h5>
+                    <div class="small vq-sub mb-3">Use this when the QR is damaged or the camera is unavailable.</div>
                     <form method="POST" action="{{ route('relief-vouchers.verify-qr') }}" id="qrVerificationForm" novalidate>
                         @csrf
                         <div class="input-group input-group-lg">
@@ -96,18 +171,18 @@
             </div>
 
             {{-- Activity --}}
-            <div class="card border-0 shadow-sm flex-grow-1">
+            <div class="card vq-card flex-grow-1">
                 <div class="card-body p-4 d-flex flex-column">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div>
-                            <h5 class="fw-bold mb-1"><i class="bi bi-people me-2"></i>This session</h5>
-                            <div class="small text-muted">Newest scan first.</div>
+                            <h5 class="fw-bold mb-1"><i class="bi bi-people me-2 vq-accent"></i>This session</h5>
+                            <div class="small vq-sub">Newest scan first.</div>
                         </div>
                         <span class="badge rounded-pill text-bg-primary" id="claimedCountBadge">0 claimed</span>
                     </div>
 
-                    <div id="noClaimsMessage" class="text-center text-muted py-5 my-auto">
-                        <i class="bi bi-qr-code fs-1 d-block mb-2 opacity-50"></i>
+                    <div id="noClaimsMessage" class="text-center py-5 my-auto vq-empty">
+                        <i class="bi bi-qr-code fs-1 d-block mb-2"></i>
                         <div class="fw-semibold">Nothing scanned yet</div>
                         <div class="small">Claimed vouchers will show up here.</div>
                     </div>
@@ -120,13 +195,80 @@
 </div>
 
 <style>
-.vq-stat{background:var(--bs-tertiary-bg);border:1px solid var(--bs-border-color);border-radius:14px;padding:.4rem 1rem;text-align:center;min-width:86px}
-.vq-stat b{display:block;font-size:1.3rem;line-height:1.2}
-.vq-stat span{font-size:.75rem;opacity:.65}
+/* ============================================================
+   THEME TOKENS (soft palette, readable in light and dark)
+   ============================================================ */
+.vq-page,
+.vq-page[data-rv-theme="light"]{
+    color-scheme:light;
+    --vq-card:#fffbfc; --vq-wash:#fcf0f3; --vq-item:#fdf3f5; --vq-input:#ffffff;
+    --vq-line:#efd6dc; --vq-ink:#1f2a44; --vq-ink2:#56627c; --vq-ink3:#7d879c;
+    --vq-accent:#c2255c; --vq-accent-hover:#a61e4d; --vq-on-accent:#ffffff;
+    --vq-ok:#2b8a3e; --vq-ok-soft:rgba(43,138,62,.14);
+    --vq-err:#c92a2a; --vq-err-soft:rgba(201,42,42,.12);
+    --vq-warn:#a35f00;
+    --vq-shadow:0 1px 2px rgba(20,38,75,.05),0 8px 22px rgba(194,37,92,.07);
+}
+.vq-page[data-rv-theme="dark"]{
+    color-scheme:dark;
+    --vq-card:#16221b; --vq-wash:#1d2c23; --vq-item:#1d2c23; --vq-input:#101b15;
+    --vq-line:#2c4034; --vq-ink:#e9f2ec; --vq-ink2:#aabdb0; --vq-ink3:#809986;
+    --vq-accent:#ff8fb0; --vq-accent-hover:#ffa6c0; --vq-on-accent:#2b0d19;
+    --vq-ok:#5fd07f; --vq-ok-soft:rgba(95,208,127,.16);
+    --vq-err:#ff8a80; --vq-err-soft:rgba(255,138,128,.16);
+    --vq-warn:#ffd166;
+    --vq-shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.28);
+}
 
-/* ---------- Stage ---------- */
+.vq-page{color:var(--vq-ink)}
+.vq-page h1,.vq-page h5{color:var(--vq-ink)}
+.vq-page .vq-sub{color:var(--vq-ink2)}
+.vq-page .vq-accent{color:var(--vq-accent)}
+.vq-page .vq-ok{color:var(--vq-ok)}
+.vq-page .vq-err{color:var(--vq-err)}
+.vq-page .text-muted,.vq-page .text-secondary{color:var(--vq-ink2)!important}
+.vq-page .text-success{color:var(--vq-ok)!important}
+.vq-page .text-danger{color:var(--vq-err)!important}
+.vq-page .text-warning{color:var(--vq-warn)!important}
+.vq-page .text-primary{color:var(--vq-accent)!important}
+
+/* Breadcrumb */
+.vq-page .breadcrumb{--bs-breadcrumb-divider-color:var(--vq-ink3);--bs-breadcrumb-item-active-color:var(--vq-ink2)}
+.vq-page .breadcrumb a{color:var(--vq-accent);text-decoration:none}
+.vq-page .breadcrumb a:hover{text-decoration:underline}
+.vq-page .breadcrumb-item.active{color:var(--vq-ink2)}
+.vq-page .breadcrumb-item+.breadcrumb-item::before{color:var(--vq-ink3)}
+
+/* Buttons */
+.vq-page .btn-primary{
+    --bs-btn-color:var(--vq-on-accent);--bs-btn-bg:var(--vq-accent);--bs-btn-border-color:var(--vq-accent);
+    --bs-btn-hover-color:var(--vq-on-accent);--bs-btn-hover-bg:var(--vq-accent-hover);--bs-btn-hover-border-color:var(--vq-accent-hover);
+    --bs-btn-active-color:var(--vq-on-accent);--bs-btn-active-bg:var(--vq-accent-hover);--bs-btn-active-border-color:var(--vq-accent-hover);
+    --bs-btn-disabled-color:var(--vq-on-accent);--bs-btn-disabled-bg:var(--vq-accent);--bs-btn-disabled-border-color:var(--vq-accent);
+    font-weight:600}
+.vq-page .btn-outline-secondary{
+    --bs-btn-color:var(--vq-ink);--bs-btn-border-color:var(--vq-line);--bs-btn-bg:var(--vq-card);
+    --bs-btn-hover-color:var(--vq-on-accent);--bs-btn-hover-bg:var(--vq-accent);--bs-btn-hover-border-color:var(--vq-accent);
+    --bs-btn-active-color:var(--vq-on-accent);--bs-btn-active-bg:var(--vq-accent);--bs-btn-active-border-color:var(--vq-accent)}
+.vq-page .badge.text-bg-primary{background-color:var(--vq-accent)!important;color:var(--vq-on-accent)!important}
+
+/* Stats */
+.vq-stat{background:var(--vq-card);border:1px solid var(--vq-line);border-radius:14px;padding:.4rem 1rem;text-align:center;min-width:86px;box-shadow:var(--vq-shadow)}
+.vq-stat b{display:block;font-size:1.3rem;line-height:1.2}
+.vq-stat span{display:block;font-size:.75rem;font-weight:600;color:var(--vq-ink2)}
+
+/* Cards + manual input */
+.vq-card{background:var(--vq-card);color:var(--vq-ink);border:1px solid var(--vq-line);border-top:3px solid var(--vq-ok);border-radius:18px;box-shadow:var(--vq-shadow)}
+.vq-page .form-control{background-color:var(--vq-input);color:var(--vq-ink);border-color:var(--vq-line)}
+.vq-page .form-control::placeholder{color:var(--vq-ink3);opacity:1}
+.vq-page .form-control:focus{background-color:var(--vq-input);color:var(--vq-ink);border-color:var(--vq-accent);box-shadow:0 0 0 .2rem color-mix(in srgb,var(--vq-accent) 25%,transparent)}
+.vq-page .form-text{color:var(--vq-ink2)}
+.vq-empty{color:var(--vq-ink2)}
+.vq-empty i{color:var(--vq-ink3)}
+
+/* ---------- Stage (always dark: it is a camera view) ---------- */
 .vq-stage{position:relative;container-type:size;height:min(74vh,620px);min-height:420px;border-radius:28px;overflow:hidden;background:#04060b;
-    box-shadow:0 24px 60px -28px rgba(13,110,253,.55),0 0 0 1px rgba(255,255,255,.07)}
+    box-shadow:0 24px 60px -28px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.07)}
 #qrReader,#qrReader__scan_region{width:100%!important;height:100%!important;border:0!important;position:absolute;inset:0}
 #qrReader video{width:100%!important;height:100%!important;object-fit:cover!important;display:block}
 #qrReader img,#qr-shaded-region{display:none!important}
@@ -157,8 +299,8 @@
 @keyframes vqRing{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.35)}}
 
 /* ---------- Glass HUD ---------- */
-.vq-pill,.vq-dock,.vq-result{background:rgba(12,18,32,.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-    border:1px solid rgba(255,255,255,.14);color:#fff}
+.vq-pill,.vq-dock,.vq-result{background:rgba(12,18,32,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.16);color:#fff}
 .vq-top{position:absolute;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;gap:8px;z-index:6}
 .vq-pill{display:inline-flex;align-items:center;gap:.45rem;border-radius:999px;padding:.35rem .85rem;font-size:.8rem}
 .vq-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
@@ -168,31 +310,41 @@
 
 .vq-idle{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;background:rgba(4,6,11,.94)}
 .vq-idle.d-none{display:none!important}
+.vq-idle-text{color:rgba(255,255,255,.78)}
 
 .vq-result{position:absolute;z-index:7;left:16px;right:16px;bottom:88px;max-width:440px;margin:0 auto;border-radius:18px;padding:.8rem 1rem;
     display:flex;align-items:center;gap:.8rem;border-left:5px solid #7cb4ff;opacity:0;transform:translateY(16px);pointer-events:none;transition:.3s}
 .vq-result.show{opacity:1;transform:none}
 .vq-result>i{font-size:1.8rem}
+.vq-result-msg{color:rgba(255,255,255,.8)}
 .vq-result.ok{border-left-color:#22c55e}.vq-result.ok>i{color:#22c55e}
 .vq-result.err{border-left-color:#ef4444}.vq-result.err>i{color:#ef4444}
 .vq-result.warn{border-left-color:#f59e0b}.vq-result.warn>i{color:#f59e0b}
 
 .vq-dock{position:absolute;z-index:8;bottom:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.5rem;
     border-radius:999px;padding:.4rem;max-width:calc(100% - 24px)}
-.vq-dock select{background-color:transparent;color:#fff;border:0;box-shadow:none;max-width:170px;min-width:0;font-size:.8rem}
-.vq-dock select option{color:#111}
-.vq-btn{width:42px;height:42px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;display:inline-flex;align-items:center;justify-content:center}
-.vq-btn:hover{background:rgba(255,255,255,.26)}
+.vq-dock select{background-color:transparent;color:#fff;border:0;box-shadow:none;max-width:170px;min-width:0;font-size:.8rem;
+    background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")}
+.vq-dock select option{color:#111;background:#fff}
+.vq-btn{width:42px;height:42px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.vq-btn:hover{background:rgba(255,255,255,.28)}
 .vq-btn.on{background:#f59e0b;color:#111}
 .vq-btn.main{width:auto;padding:0 1.1rem;border-radius:999px;font-weight:600;background:#0d6efd}
 .vq-btn.main.stop{background:#dc3545}
 
-/* ---------- Feed ---------- */
+/* ---------- Feed (session list) ---------- */
 .vq-feed{display:flex;flex-direction:column;gap:.5rem;max-height:420px;overflow:auto}
-.vq-item{display:flex;align-items:center;gap:.75rem;padding:.65rem .75rem;border-radius:14px;background:var(--bs-tertiary-bg);border-left:4px solid #198754;animation:vqIn .3s ease-out}
-.vq-item.err{border-left-color:#dc3545}
-.vq-av{width:38px;height:38px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.85rem;background:rgba(25,135,84,.15);color:#198754}
-.vq-item.err .vq-av{background:rgba(220,53,69,.15);color:#dc3545}
+.vq-item{display:flex;align-items:center;gap:.75rem;padding:.65rem .75rem;border-radius:14px;
+    background:var(--vq-item);color:var(--vq-ink);border:1px solid var(--vq-line);border-left:4px solid var(--vq-ok);animation:vqIn .3s ease-out}
+.vq-item.err{border-left-color:var(--vq-err)}
+.vq-av{width:38px;height:38px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.85rem;background:var(--vq-ok-soft);color:var(--vq-ok)}
+.vq-item.err .vq-av{background:var(--vq-err-soft);color:var(--vq-err)}
+.vq-item-title{font-weight:600;color:var(--vq-ink)}
+.vq-item.err .vq-item-title{color:var(--vq-err)}
+.vq-item-sub{font-size:.8rem;color:var(--vq-ink2)}
+.vq-item-time{font-size:.8rem;color:var(--vq-ink2)}
+.vq-item a{color:var(--vq-accent);text-decoration:none;font-weight:600}
+.vq-item a:hover{text-decoration:underline}
 .min-w-0{min-width:0}
 @keyframes vqIn{from{opacity:0;transform:translateY(-8px)}}
 
@@ -205,6 +357,13 @@
 document.addEventListener('DOMContentLoaded', function () {
     const $ = id => document.getElementById(id);
     const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    // Always call the server on the SAME origin as this page (avoids "Failed to fetch"
+    // when APP_URL is localhost but the page is opened on 127.0.0.1, or the reverse).
+    const sameOrigin = u => {
+        try { const x = new URL(u, window.location.href); return x.pathname + x.search + x.hash; }
+        catch (e) { return u; }
+    };
 
     const form = $('qrVerificationForm'), input = $('voucher_code'), verifyBtn = $('verifyButton'),
           sel = $('cameraSelect'), toggle = $('cameraToggle'), torchBtn = $('torchBtn'), soundBtn = $('soundBtn'),
@@ -364,12 +523,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const fd = new FormData();
             fd.append('voucher_code', code); fd.append('_token', token);
-            const res = await fetch(form.action, {
+            const res = await fetch(sameOrigin(form.getAttribute('action')), {
                 method: 'POST', body: fd, credentials: 'same-origin',
                 headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
             });
             const data = await res.json().catch(() => null);
-            if (!data) throw new Error('The server returned an invalid response.');
+            if (!data) throw new Error('The server returned an invalid response (status ' + res.status + ').');
             if (!res.ok || !data.success) throw new Error(data.message || 'Voucher verification failed.');
 
             ok = true;
@@ -408,12 +567,12 @@ document.addEventListener('DOMContentLoaded', function () {
         el.innerHTML = `
             <div class="vq-av">${esc(initials)}</div>
             <div class="flex-grow-1 min-w-0">
-                <div class="fw-semibold text-truncate">${esc(title)}</div>
-                <div class="small text-muted text-truncate"><span class="font-monospace">${esc(code)}</span>${sub ? ' · ' + esc(sub) : ''}</div>
+                <div class="vq-item-title text-truncate">${esc(title)}</div>
+                <div class="vq-item-sub text-truncate"><span class="font-monospace">${esc(code)}</span>${sub ? ' · ' + esc(sub) : ''}</div>
             </div>
-            <div class="text-end small text-muted flex-none">
-                <div>${esc(time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</div>
-                ${url ? `<a href="${esc(url)}" class="link-primary text-decoration-none">Details</a>` : ''}
+            <div class="text-end flex-none">
+                <div class="vq-item-time">${esc(time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</div>
+                ${url ? `<a href="${esc(sameOrigin(url))}" class="small">Details</a>` : ''}
             </div>`;
         feed.prepend(el);
     }

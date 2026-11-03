@@ -9,8 +9,7 @@ return [
     |
     | This file is for storing the credentials for third party services such
     | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
+    | location for a number of services to locate their credentials.
     |
     */
 
@@ -33,6 +32,24 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Google OAuth (account linking only)
+    |--------------------------------------------------------------------------
+    |
+    | Google Sign-In is NOT a login method. This credential set is used only
+    | by the account-linking flow started from Settings by an already
+    | authenticated user who has completed 2FA. Requires internet access;
+    | the local username/password + 2FA login works fully offline.
+    |
+    */
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
     /*

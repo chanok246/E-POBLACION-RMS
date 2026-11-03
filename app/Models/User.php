@@ -10,34 +10,23 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Roles
-    |--------------------------------------------------------------------------
-    */
-
     public const ROLE_CAPTAIN = 'captain';
 
     public const ROLE_SECRETARY = 'secretary';
-
-    /*
-    |--------------------------------------------------------------------------
-    | Account Status
-    |--------------------------------------------------------------------------
-    */
 
     public const STATUS_ACTIVE = 'active';
 
     public const STATUS_INACTIVE = 'inactive';
 
-    /*
-    |--------------------------------------------------------------------------
-    | Mass Assignable Fields
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Attributes that may be mass-assigned.
+     *
+     * Administrative password changes must still be protected
+     * by controller authorization and validation rules.
+     */
     protected $fillable = [
         'name',
+        'username',
         'nickname',
         'avatar',
         'theme',
@@ -48,139 +37,153 @@ class User extends Authenticatable
         'document_processor',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Hidden Fields
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Attributes excluded from array and JSON serialization.
+     */
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'google_id',
+        'captain_recovery_credential_hash',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Attribute Casting
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Attribute casts.
+     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'document_processor' => 'boolean',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted',
+            'two_factor_confirmed_at' => 'datetime',
+            'captain_recovery_credential_created_at' => 'datetime',
         ];
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Account Status
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Determine whether the account is active.
+     */
     public function isActive(): bool
     {
-        return $this->status === self::STATUS_ACTIVE;
+        return strtolower(trim((string) $this->status))
+            === self::STATUS_ACTIVE;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Role Checking
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Check whether the account has one of the specified roles.
+     *
+     * Role comparisons are case-insensitive and ignore surrounding spaces.
+     */
     public function hasRole(string|array $roles): bool
     {
-        return in_array(
-            strtolower(trim((string) $this->role)),
-            (array) $roles,
-            true
+        $currentRole = strtolower(trim((string) $this->role));
+
+        $allowedRoles = array_map(
+            static fn ($role): string => strtolower(trim((string) $role)),
+            (array) $roles
         );
+
+        return in_array($currentRole, $allowedRoles, true);
     }
 
+    /**
+     * Determine whether this account belongs to the Captain.
+     */
     public function isCaptain(): bool
     {
-        return $this->role === self::ROLE_CAPTAIN;
+        return $this->hasRole(self::ROLE_CAPTAIN);
     }
 
+    /**
+     * Determine whether this account belongs to the Secretary.
+     */
     public function isSecretary(): bool
     {
-        return $this->role === self::ROLE_SECRETARY;
+        return $this->hasRole(self::ROLE_SECRETARY);
     }
 
+    /**
+     * Determine whether this account has a recognized system role.
+     *
+     * Only Captain and Secretary are recognized system roles.
+     */
     public function hasValidSystemRole(): bool
     {
-        return in_array(
-            strtolower(trim((string) $this->role)),
-            [
-                self::ROLE_CAPTAIN,
-                self::ROLE_SECRETARY,
-            ],
-            true
-        );
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Document Processing Permission
-    |--------------------------------------------------------------------------
-    */
-
-    public function canProcessDocuments(): bool
-{
-    return $this->isActive()
-        && $this->hasRole([
+        return $this->hasRole([
             self::ROLE_CAPTAIN,
             self::ROLE_SECRETARY,
         ]);
-}
-    /*
-    |--------------------------------------------------------------------------
-    | Display Name
-    |--------------------------------------------------------------------------
-    |
-    | Uses the user's nickname when available.
-    | Otherwise, falls back to the registered full name.
-    |
-    */
+    }
 
+    /**
+     * Determine whether two-factor authentication is configured
+     * and confirmed for this account.
+     */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return ! empty($this->two_factor_secret)
+            && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * Determine whether this account may access the system.
+     *
+     * The account must be active and hold a recognized system role.
+     */
+    public function canAccessSystem(): bool
+    {
+        return $this->isActive()
+            && $this->hasValidSystemRole();
+    }
+
+    /**
+     * Determine whether this account may process documents.
+     */
+    public function canProcessDocuments(): bool
+    {
+        return $this->canAccessSystem();
+    }
+
+    /**
+     * Get the display name, preferring the nickname when provided.
+     */
     public function getDisplayNameAttribute(): string
     {
-        return trim((string) $this->nickname) !== ''
-            ? $this->nickname
-            : $this->name;
+        $nickname = trim((string) $this->nickname);
+
+        if ($nickname !== '') {
+            return $nickname;
+        }
+
+        return trim((string) $this->name);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Avatar
-    |--------------------------------------------------------------------------
-    |
-    | Returns the stored avatar path if one exists.
-    |
-    */
-
+    /**
+     * Determine whether the account has a profile photo.
+     */
     public function hasAvatar(): bool
     {
-        return ! empty($this->avatar);
+        return trim((string) $this->avatar) !== '';
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Theme
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Return a supported theme, falling back to system.
+     */
     public function getThemeAttribute(?string $value): string
-{
-    return in_array($value, [
-        'light',
-        'dark',
-        'system',
-    ], true)
-        ? $value
-        : 'system';
-}
+    {
+        $theme = strtolower(trim((string) $value));
+
+        return in_array(
+            $theme,
+            ['light', 'dark', 'system'],
+            true
+        )
+            ? $theme
+            : 'system';
+    }
 }

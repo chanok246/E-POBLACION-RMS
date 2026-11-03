@@ -456,30 +456,6 @@
         }
     }
 
-    .track {
-        display: flex;
-        gap: 4px;
-        margin: .9rem 0 .5rem;
-    }
-
-    .track i {
-        flex: 1;
-        height: 6px;
-        border-radius: 4px;
-        background: var(--line);
-    }
-
-    .track i.on {
-        background: var(--sc);
-    }
-
-    .stage-line {
-        display: flex;
-        justify-content: space-between;
-        font-size: .82rem;
-        color: var(--muted);
-    }
-
     .stack {
         display: grid;
         gap: .6rem;
@@ -597,33 +573,6 @@
 
     /*
     |--------------------------------------------------------------------------
-    | Case progress
-    |--------------------------------------------------------------------------
-    */
-    $stageIndex = match ($r->status) {
-        'Filed' => 0,
-        'Under Review' => 1,
-        'Awaiting Captain Approval',
-        'Awaiting Captain Availability' => 2,
-        'Hearing Scheduled',
-        'For Further Information' => 3,
-        'Under Resolution' => 4,
-        'Resolved',
-        'Closed' => 5,
-        default => 0,
-    };
-
-    $stageNames = [
-        'Filed',
-        'Review',
-        'Captain',
-        'Hearing',
-        'Resolution',
-        'Done',
-    ];
-
-    /*
-    |--------------------------------------------------------------------------
     | Report type
     |--------------------------------------------------------------------------
     | Only PERSON complaints may use subpoena functionality.
@@ -722,6 +671,59 @@
             mb_substr((string) $p->last_name, 0, 1)
         ) ?: '?';
     };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Manually entered (non-resident) participants
+    |--------------------------------------------------------------------------
+    | Non-residents are stored in the report's own columns
+    | (complainant_* / subject_*), not in the Residents table.
+    | Returns null when no manual name was saved.
+    |--------------------------------------------------------------------------
+    */
+    $manualParty = function (string $prefix) use ($r) {
+        $name = trim((string) $r->{$prefix . '_name'});
+
+        if ($name === '') {
+            return null;
+        }
+
+        $contact = trim((string) $r->{$prefix . '_contact_number'});
+
+        $address = collect([
+            $r->{$prefix . '_address'},
+            $r->{$prefix . '_barangay'},
+            $r->{$prefix . '_municipality'},
+            $r->{$prefix . '_province'},
+        ])->map(fn ($v) => trim((string) $v))->filter()->implode(', ');
+
+        return [
+            'name' => $name,
+            'contact' => $contact !== '' ? $contact : null,
+            'address' => $address !== '' ? $address : null,
+        ];
+    };
+
+    $initialsFromName = function (?string $name) {
+        $words = preg_split('/\s+/', trim((string) $name), -1, PREG_SPLIT_NO_EMPTY);
+
+        if (! $words) {
+            return '?';
+        }
+
+        $first = mb_substr($words[0], 0, 1);
+        $last = count($words) > 1 ? mb_substr(end($words), 0, 1) : '';
+
+        return strtoupper($first . $last) ?: '?';
+    };
+
+    $complainantManual = $manualParty('complainant');
+    $subjectManual = $manualParty('subject');
+
+    $complainantName = $fullName($r->complainant)
+        ?: ($complainantManual['name'] ?? null);
+
+    $relationship = trim((string) $r->relationship_to_complainant);
 
     /*
     |--------------------------------------------------------------------------
@@ -937,6 +939,9 @@
 
                                 <div class="role">
                                     Complainant / reporter
+                                    @if (! $r->complainant && $complainantManual)
+                                        &middot; Non-resident
+                                    @endif
                                 </div>
 
                                 <div class="who">
@@ -945,11 +950,11 @@
                                         class="avatar"
                                         aria-hidden="true"
                                     >
-                                        {{ $initials($r->complainant) }}
+                                        {{ $r->complainant ? $initials($r->complainant) : $initialsFromName($complainantName) }}
                                     </span>
 
                                     <b>
-                                        {{ $fullName($r->complainant) ?: 'N/A' }}
+                                        {{ $complainantName ?: 'N/A' }}
                                     </b>
 
                                 </div>
@@ -958,7 +963,7 @@
                                     <i class="bi bi-telephone"></i>
 
                                     <span>
-                                        {{ $r->complainant?->contact_number ?? 'N/A' }}
+                                        {{ $r->complainant?->contact_number ?? ($complainantManual['contact'] ?? 'N/A') }}
                                     </span>
                                 </div>
 
@@ -966,7 +971,7 @@
                                     <i class="bi bi-house"></i>
 
                                     <span>
-                                        {{ $r->complainant?->address ?? 'N/A' }}
+                                        {{ $r->complainant?->address ?? ($complainantManual['address'] ?? 'N/A') }}
                                     </span>
                                 </div>
 
@@ -979,6 +984,9 @@
 
                                     <div class="role">
                                         Subject of complaint
+                                        @if (! $r->subjectResident && $subjectManual)
+                                            &middot; Non-resident
+                                        @endif
                                     </div>
 
                                     @if ($r->subjectResident)
@@ -1014,10 +1022,56 @@
                                             </span>
                                         </div>
 
+                                    @elseif ($subjectManual)
+
+                                        <div class="who">
+
+                                            <span
+                                                class="avatar"
+                                                aria-hidden="true"
+                                            >
+                                                {{ $initialsFromName($subjectManual['name']) }}
+                                            </span>
+
+                                            <b>
+                                                {{ $subjectManual['name'] }}
+                                            </b>
+
+                                        </div>
+
+                                        <div class="kv">
+                                            <i class="bi bi-telephone"></i>
+
+                                            <span>
+                                                {{ $subjectManual['contact'] ?? 'N/A' }}
+                                            </span>
+                                        </div>
+
+                                        <div class="kv">
+                                            <i class="bi bi-house"></i>
+
+                                            <span>
+                                                {{ $subjectManual['address'] ?? 'N/A' }}
+                                            </span>
+                                        </div>
+
                                     @else
 
                                         <div class="muted">
-                                            No subject resident selected.
+                                            No respondent recorded.
+                                        </div>
+
+                                    @endif
+
+                                    @if ($relationship !== '')
+
+                                        <div class="kv">
+                                            <i class="bi bi-people"></i>
+
+                                            <span>
+                                                Relationship to complainant:
+                                                {{ $relationship }}
+                                            </span>
                                         </div>
 
                                     @endif
@@ -1219,7 +1273,7 @@
                                         class="act act-green"
                                     >
                                         <i class="bi bi-check-circle"></i>
-                                        Mark as resolved
+                                        Save Case
                                     </button>
 
                                 </form>
@@ -1247,67 +1301,6 @@
                             @endif
 
                         </div>
-
-                    </div>
-
-                </section>
-
-                {{-- CASE PROGRESS --}}
-                <section class="card2">
-
-                    <div class="card2-head">
-                        <h2 class="display">
-                            Case progress
-                        </h2>
-                    </div>
-
-                    <div class="card2-body {{ $statusClass }}">
-
-                        <span class="pill">
-                            {{ $r->status }}
-                        </span>
-
-                        @if ($r->status === 'Disapproved')
-
-                            <div
-                                class="muted"
-                                style="margin-top:.8rem; font-size:.9rem"
-                            >
-                                Processing stopped. This record was not
-                                approved.
-                            </div>
-
-                        @else
-
-                            <div
-                                class="track"
-                                aria-hidden="true"
-                            >
-
-                                @foreach ($stageNames as $i => $name)
-
-                                    <i class="{{ $i <= $stageIndex ? 'on' : '' }}"></i>
-
-                                @endforeach
-
-                            </div>
-
-                            <div class="stage-line">
-
-                                <span>
-                                    {{ $stageNames[$stageIndex] }}
-                                </span>
-
-                                <span>
-                                    Step
-                                    {{ $stageIndex + 1 }}
-                                    of
-                                    {{ count($stageNames) }}
-                                </span>
-
-                            </div>
-
-                        @endif
 
                     </div>
 

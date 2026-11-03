@@ -86,9 +86,24 @@
     .rvp-content { height: calc(296.5mm - 10mm - 13mm); overflow: hidden; }
     .rvp-fit { transform-origin: top left; width: 100%; }
 
-    .lh { display: grid; grid-template-columns: 22mm 1fr 22mm; align-items: center; column-gap: 4mm; }
-    .lh .seal { width: 22mm; height: 22mm; display: flex; align-items: center; justify-content: center; }
-    .lh .seal img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .lh { display: grid; grid-template-columns: 28mm 1fr 28mm; align-items: center; column-gap: 4mm; }
+    /* Perfect circle: fixed square box + 50% radius + clip, so any square
+       background/halo baked into the PNG is cropped away. */
+    .lh .seal {
+        width: 28mm; height: 28mm; aspect-ratio: 1 / 1; flex: none;
+        display: block; position: relative; overflow: hidden;
+        border-radius: 50%; background: transparent;
+        justify-self: center;
+    }
+    .lh .seal img {
+        position: absolute; inset: 0; display: block; width: 100%; height: 100%;
+        border-radius: 50%; object-fit: cover; object-position: center;
+        transform: scale(1.04);
+        /* keep the seals sharp: no filters/shadows, best-quality scaling */
+        filter: none; box-shadow: none; background: transparent;
+        image-rendering: -webkit-optimize-contrast; image-rendering: high-quality;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
     .lh .mid { text-align: center; line-height: 1.2; }
     .lh .a { font-size: 10px; } .lh .b { font-size: 11px; font-weight: 700; }
     .lh .c { font-size: 15px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }

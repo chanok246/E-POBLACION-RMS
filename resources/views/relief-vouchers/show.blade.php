@@ -172,9 +172,6 @@
 
         <div class="rvs-actions">
             <a href="{{ $backUrl }}" class="rv-btn rv-btn-ghost"><i class="bi bi-arrow-left"></i> {{ $backLabel }}</a>
-            @if ($canEdit)
-                <a href="{{ route('relief-vouchers.edit', $reliefVoucher) }}" class="rv-btn rv-btn-ghost"><i class="bi bi-pencil-square"></i> Edit voucher</a>
-            @endif
             @if ($canPrint)
                 <a href="{{ route('relief-vouchers.print', $reliefVoucher) }}" target="_blank" rel="noopener" class="rv-btn"><i class="bi bi-printer"></i> Print voucher</a>
             @endif
@@ -364,11 +361,7 @@
                             </a>
                         @endif
 
-                        @if ($canEdit)
-                            <a href="{{ route('relief-vouchers.edit', $reliefVoucher) }}" class="rv-btn rv-btn-ghost rv-btn-block">
-                                <i class="bi bi-pencil-square"></i> Edit / correct voucher
-                            </a>
-                        @endif
+
 
                         @if ($canIssue)
                             <form method="POST" action="{{ route('relief-vouchers.issue', $reliefVoucher) }}"

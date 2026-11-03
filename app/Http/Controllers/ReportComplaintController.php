@@ -15,8 +15,12 @@ class ReportComplaintController extends Controller
 {
     /*
     |--------------------------------------------------------------------------
-    | Community Categories
+    | Community Category Suggestions
     |--------------------------------------------------------------------------
+    |
+    | These are suggestions only. Category is free text and is NOT
+    | restricted to this list.
+    |
     */
 
     private function communityCategories(): array
@@ -38,8 +42,11 @@ class ReportComplaintController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | Person Complaint Categories
+    | Person Complaint Category Suggestions
     |--------------------------------------------------------------------------
+    |
+    | Suggestions only. Category is free text.
+    |
     */
 
     private function personCategories(): array
@@ -179,31 +186,6 @@ class ReportComplaintController extends Controller
         ]);
 
         return implode(', ', $parts);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Category Validation
-    |--------------------------------------------------------------------------
-    */
-
-    private function categoryIsValid(
-        string $reportType,
-        string $category
-    ): bool {
-        if ($reportType === 'person') {
-            return in_array(
-                $category,
-                $this->personCategories(),
-                true
-            );
-        }
-
-        return in_array(
-            $category,
-            $this->communityCategories(),
-            true
-        );
     }
 
     /*
@@ -565,6 +547,10 @@ class ReportComplaintController extends Controller
                 'in:community,person',
             ],
 
+            /*
+             * Category is free text. The suggestion lists are only
+             * hints in the form and are not enforced here.
+             */
             'category' => [
                 'required',
                 'string',
@@ -777,24 +763,6 @@ class ReportComplaintController extends Controller
                 'boolean',
             ],
         ]);
-
-        /*
-        |--------------------------------------------------------------------------
-        | Validate Category Against Report Type
-        |--------------------------------------------------------------------------
-        */
-
-        if (!$this->categoryIsValid(
-            $validated['report_type'],
-            $validated['category']
-        )) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'category' =>
-                        'The selected category is not valid for the selected report type.',
-                ]);
-        }
 
         /*
         |--------------------------------------------------------------------------
@@ -1110,6 +1078,10 @@ class ReportComplaintController extends Controller
                 'in:community,person',
             ],
 
+            /*
+             * Category is free text. The suggestion lists are only
+             * hints in the form and are not enforced here.
+             */
             'category' => [
                 'required',
                 'string',
@@ -1351,24 +1323,6 @@ class ReportComplaintController extends Controller
                 ->withErrors([
                     'status' =>
                         'A resolved record cannot be reopened or moved back to another status.',
-                ]);
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Category Validation
-        |--------------------------------------------------------------------------
-        */
-
-        if (!$this->categoryIsValid(
-            $validated['report_type'],
-            $validated['category']
-        )) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'category' =>
-                        'The selected category is not valid for the selected report type.',
                 ]);
         }
 
@@ -1745,4 +1699,4 @@ class ReportComplaintController extends Controller
             'Permanent deletion of Reports & Complaints is disabled. Use the archive workflow instead.'
         );
     }
-};
+}

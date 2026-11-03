@@ -77,23 +77,57 @@
 
 
 {{-- ============================================================
-     SCREEN-ONLY STYLES (toolbar + paper preview)
+     SCREEN-ONLY STYLES (toolbar + paper stage)
+     Theme aware: all colors come from variables that are
+     redefined for dark mode (same selectors the rest of the
+     project uses: html[data-theme="dark"]).
 ============================================================ --}}
 <style>
 
     .mp {
         --ink: #1c1b33;
         --ink-2: #5e5c78;
-        --line: #e3e1ee;
+        --card: #ffffff;
+        --line: #d9d6e8;
         --wash: #f5f4fa;
         --ube: #5a3fd6;
         --ube-soft: #ebe7fb;
         --mango: #ffb020;
 
+        --btn-bg: #5a3fd6;
+        --btn-fg: #ffffff;
+        --btn-hover: #1c1b33;
+        --btn-off: #cfcce0;
+        --btn-off-fg: #5e5c78;
+
+        --paper-shadow: 0 6px 24px rgba(28, 27, 51, .12);
+
         max-width: 1500px;
         margin: 0 auto;
         color: var(--ink);
         font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+
+    html[data-theme="dark"] .mp,
+    html[data-bs-theme="dark"] .mp {
+        --ink: #eef0fa;
+        --ink-2: #b9bcd6;
+        --card: #232338;
+        --line: #3d3d5a;
+        --wash: #171724;
+        --ube: #b3a2ff;
+        --ube-soft: #2d2852;
+        --mango: #ffc247;
+
+        --btn-bg: #b3a2ff;
+        --btn-fg: #17112f;
+        --btn-hover: #d6ccff;
+        --btn-off: #33334a;
+        --btn-off-fg: #9a9db8;
+
+        --paper-shadow: 0 6px 24px rgba(0, 0, 0, .55);
+
+        color-scheme: dark;
     }
 
     .mp-bar { margin-bottom: 20px; }
@@ -129,6 +163,7 @@
         align-items: center;
         gap: 10px 12px;
         margin: 0;
+        color: var(--ink);
         font-family: 'Unbounded', 'Figtree', sans-serif;
         letter-spacing: -.02em;
         font-size: 26px;
@@ -166,12 +201,13 @@
         padding: 5px 12px;
         border: 1px solid var(--line);
         border-radius: 999px;
-        background: #fff;
+        background: var(--card);
+        color: var(--ink);
         font-size: 12.5px;
         font-weight: 600;
     }
 
-    .mp-chip b { font-weight: 700; }
+    .mp-chip b { font-weight: 700; color: var(--ink); }
 
     .mp-print-settings {
         display: flex;
@@ -192,7 +228,7 @@
         padding: 11px 38px 11px 13px;
         border: 1px solid var(--line);
         border-radius: 12px;
-        background: #fff;
+        background-color: var(--card);
         color: var(--ink);
         font: inherit;
         font-size: 13px;
@@ -200,8 +236,13 @@
         cursor: pointer;
     }
 
+    .mp-paper-select option {
+        background: var(--card);
+        color: var(--ink);
+    }
+
     .mp-paper-select:focus {
-        outline: 3px solid rgba(90, 63, 214, .15);
+        outline: 3px solid rgba(138, 116, 255, .35);
         border-color: var(--ube);
     }
 
@@ -213,8 +254,8 @@
         padding: 13px 24px;
         border: 0;
         border-radius: 999px;
-        background: var(--ube);
-        color: #fff;
+        background: var(--btn-bg);
+        color: var(--btn-fg);
         font: inherit;
         font-size: 14.5px;
         font-weight: 700;
@@ -222,9 +263,14 @@
         transition: background .15s, transform .15s;
     }
 
-    .mp-print:hover { background: var(--ink); }
+    .mp-print:hover { background: var(--btn-hover); }
     .mp-print:active { transform: scale(.98); }
-    .mp-print:disabled { background: #cfcce0; cursor: not-allowed; }
+
+    .mp-print:disabled {
+        background: var(--btn-off);
+        color: var(--btn-off-fg);
+        cursor: not-allowed;
+    }
 
     .mp-print:focus-visible,
     .mp-back:focus-visible {
@@ -238,6 +284,8 @@
         color: var(--ink-2);
     }
 
+    .mp-hint strong { color: var(--ink); }
+
     .mp-stage {
         padding: 28px;
         border-radius: 20px;
@@ -247,37 +295,49 @@
     }
 
     /*
-     * Screen preview = real paper width (portrait),
-     * so what you see is what prints.
+     * Screen preview = real paper width (portrait), so what you see is
+     * what prints. The paper itself is always white (see document styles).
      */
-    .mp-stage .print-document {
-        box-sizing: border-box;
+    .mp-stage #masterlistPrintDocument {
         margin: 0 auto;
         padding: 8mm;
-        background: #fff;
-        box-shadow: 0 6px 24px rgba(28, 27, 51, .12);
-        width: 210mm;              /* A4 portrait  */
+        width: 210mm;
+        box-shadow: var(--paper-shadow);
     }
 
-    .mp-stage .print-document.paper-a4    { width: 210mm; }
-    .mp-stage .print-document.paper-short { width: 8.5in; }
-    .mp-stage .print-document.paper-long  { width: 8.5in; }
+    .mp-stage #masterlistPrintDocument.paper-a4    { width: 210mm; }
+    .mp-stage #masterlistPrintDocument.paper-short { width: 8.5in; }
+    .mp-stage #masterlistPrintDocument.paper-long  { width: 8.5in; }
 
     @media (max-width: 767.98px) {
         .mp-title { font-size: 21px; }
         .mp-print { width: 100%; }
         .mp-print-settings { width: 100%; justify-content: stretch; }
-        .mp-paper-select { flex: 1; }
+        .mp-paper-select { flex: 1; min-width: 0; }
         .mp-stage { padding: 12px; }
     }
 
     /*
-     * The real printing is done from an isolated iframe (see script),
-     * so the app layout can never leak into the printout. This is only
-     * a safety net in case someone presses Ctrl+P on the preview page.
+     * The real printing is done from an isolated iframe (see script), so
+     * the app layout can never leak into the printout. This is only a
+     * safety net in case someone uses the browser's own Print menu.
      */
     @media print {
-        .mp-bar { display: none !important; }
+        .mp-bar,
+        .mp-hint { display: none !important; }
+
+        .mp-stage {
+            padding: 0 !important;
+            border: 0 !important;
+            background: #fff !important;
+            overflow: visible !important;
+        }
+
+        .mp-stage #masterlistPrintDocument {
+            width: auto !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+        }
     }
 
 </style>
@@ -286,13 +346,14 @@
 {{-- ============================================================
      DOCUMENT STYLES
      Used by BOTH the on-screen preview and the print iframe.
-     Everything is scoped to .print-document and sized in pt/mm
-     so it scales correctly on A4, Short and Long bond paper.
+     Everything is anchored to #masterlistPrintDocument and sets
+     explicit colors, so neither the dark theme nor Bootstrap can
+     change the paper. Sized in pt/mm so it scales on A4, Short
+     and Long bond paper.
 ============================================================ --}}
 <style id="masterlistDocStyles">
 
-    .print-document {
-        width: 100%;
+    #masterlistPrintDocument {
         color: #111;
         background: #fff;
         font-family: Arial, Helvetica, sans-serif;
@@ -302,15 +363,23 @@
         print-color-adjust: exact;
     }
 
-    .print-document *,
-    .print-document *::before,
-    .print-document *::after {
+    /* Every descendant inherits the paper's colors; app/theme rules cannot override this. */
+    #masterlistPrintDocument *,
+    #masterlistPrintDocument *::before,
+    #masterlistPrintDocument *::after {
         box-sizing: border-box;
+        color: inherit;
+        background-color: transparent;
+    }
+
+    #masterlistPrintDocument img {
+        filter: none;
+        opacity: 1;
     }
 
     /* ---------- OFFICIAL HEADER ---------- */
 
-    .print-document .official-header {
+    #masterlistPrintDocument .official-header {
         display: grid;
         grid-template-columns: 18mm 1fr 18mm;
         align-items: center;
@@ -319,55 +388,55 @@
         break-inside: avoid;
     }
 
-    .print-document .header-logo {
+    #masterlistPrintDocument .header-logo {
         display: flex;
         justify-content: center;
         align-items: center;
     }
 
-    .print-document .header-logo img {
+    #masterlistPrintDocument .header-logo img {
         width: 16mm;
         height: 16mm;
         object-fit: contain;
     }
 
-    .print-document .header-center { line-height: 1.2; }
+    #masterlistPrintDocument .header-center { line-height: 1.2; }
 
-    .print-document .republic-text,
-    .print-document .province-text,
-    .print-document .municipality-text {
+    #masterlistPrintDocument .republic-text,
+    #masterlistPrintDocument .province-text,
+    #masterlistPrintDocument .municipality-text {
         font-size: 7.5pt;
         font-weight: 600;
     }
 
-    .print-document .barangay-text {
+    #masterlistPrintDocument .barangay-text {
         margin-top: 1mm;
         font-size: 11pt;
         font-weight: 800;
         letter-spacing: .5pt;
     }
 
-    .print-document .document-title {
+    #masterlistPrintDocument .document-title {
         margin-top: 1.5mm;
         font-size: 11.5pt;
         font-weight: 800;
         letter-spacing: .4pt;
     }
 
-    .print-document .header-line {
+    #masterlistPrintDocument .header-line {
         margin: 2.5mm 0 3mm;
         border-bottom: 3px double #111;
     }
 
     /* ---------- OPERATION DETAILS ---------- */
 
-    .print-document .operation-box {
+    #masterlistPrintDocument .operation-box {
         margin-bottom: 3mm;
         border: 1px solid #333;
         break-inside: avoid;
     }
 
-    .print-document .operation-heading {
+    #masterlistPrintDocument .operation-heading {
         padding: 1.2mm 2.5mm;
         background: #ececec;
         border-bottom: 1px solid #333;
@@ -376,21 +445,21 @@
         letter-spacing: .4pt;
     }
 
-    .print-document .operation-grid {
+    #masterlistPrintDocument .operation-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
     }
 
-    .print-document .operation-field {
+    #masterlistPrintDocument .operation-field {
         padding: 1.5mm 2.5mm;
         border-right: 1px solid #bbb;
         min-width: 0;
     }
 
-    .print-document .operation-field:nth-child(3n) { border-right: 0; }
-    .print-document .operation-field:nth-child(-n+3) { border-bottom: 1px solid #bbb; }
+    #masterlistPrintDocument .operation-field:nth-child(3n) { border-right: 0; }
+    #masterlistPrintDocument .operation-field:nth-child(-n+3) { border-bottom: 1px solid #bbb; }
 
-    .print-document .field-label {
+    #masterlistPrintDocument .field-label {
         display: block;
         margin-bottom: .6mm;
         font-size: 5.8pt;
@@ -400,24 +469,24 @@
         color: #555;
     }
 
-    .print-document .field-value {
+    #masterlistPrintDocument .field-value {
         display: block;
         font-size: 8pt;
         font-weight: 700;
         overflow-wrap: anywhere;
     }
 
-    /* ---------- PURPOSE + INSTRUCTIONS (side by side) ---------- */
+    /* ---------- PURPOSE + INSTRUCTIONS ---------- */
 
-    .print-document .info-row {
+    #masterlistPrintDocument .info-row {
         display: grid;
         grid-template-columns: 1fr;
         gap: 3mm;
         margin-bottom: 3mm;
     }
 
-    .print-document .purpose-box,
-    .print-document .instruction-box {
+    #masterlistPrintDocument .purpose-box,
+    #masterlistPrintDocument .instruction-box {
         border: 1px solid #555;
         padding: 2mm 2.6mm;
         font-size: 6.6pt;
@@ -425,27 +494,27 @@
         break-inside: avoid;
     }
 
-    .print-document .purpose-title,
-    .print-document .instruction-title {
+    #masterlistPrintDocument .purpose-title,
+    #masterlistPrintDocument .instruction-title {
         margin-bottom: 1mm;
         font-size: 7pt;
         font-weight: 800;
         text-decoration: underline;
     }
 
-    .print-document .purpose-box p { margin: 0 0 1.2mm; }
-    .print-document .purpose-box p:last-child { margin-bottom: 0; }
+    #masterlistPrintDocument .purpose-box p { margin: 0 0 1.2mm; }
+    #masterlistPrintDocument .purpose-box p:last-child { margin-bottom: 0; }
 
-    .print-document .instruction-box ol {
+    #masterlistPrintDocument .instruction-box ol {
         margin: 0;
         padding-left: 4.2mm;
     }
 
-    .print-document .instruction-box li { margin-bottom: .3mm; }
+    #masterlistPrintDocument .instruction-box li { margin-bottom: .3mm; }
 
     /* ---------- FILTER SUMMARY ---------- */
 
-    .print-document .filter-summary {
+    #masterlistPrintDocument .filter-summary {
         display: flex;
         flex-wrap: wrap;
         gap: 1mm 6mm;
@@ -459,24 +528,25 @@
 
     /* ---------- MASTERLIST TABLE ---------- */
 
-    .print-document .masterlist-table {
+    #masterlistPrintDocument .masterlist-table {
         width: 100%;
         border-collapse: collapse;
         table-layout: fixed;
         font-size: 6.6pt;
     }
 
-    .print-document .masterlist-table th,
-    .print-document .masterlist-table td {
+    #masterlistPrintDocument .masterlist-table th,
+    #masterlistPrintDocument .masterlist-table td {
         padding: 1.2mm 1.2mm;
         border: 1px solid #333;
         vertical-align: top;
         overflow-wrap: anywhere;
+        background: #fff;
     }
 
-    .print-document .masterlist-table thead { display: table-header-group; }
+    #masterlistPrintDocument .masterlist-table thead { display: table-header-group; }
 
-    .print-document .masterlist-table thead th {
+    #masterlistPrintDocument .masterlist-table thead th {
         background: #e6e6e6;
         text-align: center;
         vertical-align: middle;
@@ -486,60 +556,59 @@
         letter-spacing: 0;
     }
 
-    .print-document .masterlist-table tr {
+    #masterlistPrintDocument .masterlist-table tr {
         break-inside: avoid;
         page-break-inside: avoid;
     }
 
-    .print-document .masterlist-table tbody tr:nth-child(even) td {
+    #masterlistPrintDocument .masterlist-table tbody tr:nth-child(even) td {
         background: #fbfbfb;
     }
 
-    .print-document .number-column       { width: 4%; }
-    .print-document .resident-column     { width: 15%; }
-    .print-document .age-column          { width: 4%; }
-    .print-document .relationship-column { width: 8%; }
-    .print-document .household-column    { width: 9%; }
-    .print-document .head-column         { width: 12%; }
-    .print-document .purok-column        { width: 6%; }
-    .print-document .address-column      { width: 12%; }
-    .print-document .assessment-column   { width: 19%; }
-    .print-document .remarks-column      { width: 11%; }
+    #masterlistPrintDocument .number-column       { width: 4%; }
+    #masterlistPrintDocument .resident-column     { width: 15%; }
+    #masterlistPrintDocument .age-column          { width: 4%; }
+    #masterlistPrintDocument .relationship-column { width: 8%; }
+    #masterlistPrintDocument .household-column    { width: 9%; }
+    #masterlistPrintDocument .head-column         { width: 12%; }
+    #masterlistPrintDocument .purok-column        { width: 6%; }
+    #masterlistPrintDocument .address-column      { width: 12%; }
+    #masterlistPrintDocument .assessment-column   { width: 19%; }
+    #masterlistPrintDocument .remarks-column      { width: 11%; }
 
-    .print-document .number-cell,
-    .print-document .age-cell,
-    .print-document .purok-cell {
+    #masterlistPrintDocument .number-cell,
+    #masterlistPrintDocument .age-cell,
+    #masterlistPrintDocument .purok-cell {
         vertical-align: middle !important;
         text-align: center;
     }
 
-    .print-document .resident-name {
+    #masterlistPrintDocument .resident-name {
         font-size: 7pt;
         font-weight: 800;
         line-height: 1.2;
     }
 
-    .print-document .resident-category {
+    #masterlistPrintDocument .resident-category {
         margin-top: .5mm;
         font-size: 5.8pt;
         font-style: italic;
         color: #555;
     }
 
-    .print-document .household-id {
+    #masterlistPrintDocument .household-id {
         margin-top: .4mm;
         font-size: 5.8pt;
-        color: #666;
+        color: #555;
     }
 
-    /* Field assessment options: 2-column grid keeps rows short */
-    .print-document .assessment-grid {
+    #masterlistPrintDocument .assessment-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1.2mm 1.5mm;
     }
 
-    .print-document .assessment-option {
+    #masterlistPrintDocument .assessment-option {
         display: flex;
         align-items: center;
         gap: 1mm;
@@ -547,7 +616,7 @@
         line-height: 1.15;
     }
 
-    .print-document .checkbox {
+    #masterlistPrintDocument .checkbox {
         flex: 0 0 auto;
         display: inline-block;
         width: 2.4mm;
@@ -556,7 +625,7 @@
         background: #fff;
     }
 
-    .print-document .remarks-lines {
+    #masterlistPrintDocument .remarks-lines {
         min-height: 11mm;
         background: repeating-linear-gradient(
             to bottom,
@@ -569,19 +638,19 @@
 
     /* ---------- EMPTY ---------- */
 
-    .print-document .doc-empty {
+    #masterlistPrintDocument .doc-empty {
         padding: 8mm;
         border: 1px solid #555;
         text-align: center;
         font-weight: 700;
     }
 
-    .print-document .doc-empty-title {
+    #masterlistPrintDocument .doc-empty-title {
         margin-bottom: 1.5mm;
         font-size: 10pt;
     }
 
-    .print-document .doc-empty-text {
+    #masterlistPrintDocument .doc-empty-text {
         max-width: 160mm;
         margin: 0 auto;
         font-size: 8pt;
@@ -591,17 +660,17 @@
 
     /* ---------- CLOSING BLOCK (kept together on one page) ---------- */
 
-    .print-document .closing {
+    #masterlistPrintDocument .closing {
         margin-top: 4mm;
         break-inside: avoid;
         page-break-inside: avoid;
     }
 
-    .print-document .summary-box {
+    #masterlistPrintDocument .summary-box {
         border: 1px solid #333;
     }
 
-    .print-document .summary-title {
+    #masterlistPrintDocument .summary-title {
         padding: 1.2mm 2.5mm;
         background: #ececec;
         border-bottom: 1px solid #333;
@@ -609,19 +678,19 @@
         font-weight: 800;
     }
 
-    .print-document .summary-grid {
+    #masterlistPrintDocument .summary-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
     }
 
-    .print-document .summary-item {
+    #masterlistPrintDocument .summary-item {
         padding: 1.6mm 2.5mm;
         border-right: 1px solid #bbb;
     }
 
-    .print-document .summary-item:last-child { border-right: 0; }
+    #masterlistPrintDocument .summary-item:last-child { border-right: 0; }
 
-    .print-document .summary-label {
+    #masterlistPrintDocument .summary-label {
         display: block;
         margin-bottom: 1mm;
         font-size: 5.8pt;
@@ -630,7 +699,7 @@
         color: #555;
     }
 
-    .print-document .summary-line {
+    #masterlistPrintDocument .summary-line {
         display: block;
         min-height: 4.5mm;
         border-bottom: 1px solid #222;
@@ -638,53 +707,53 @@
         font-weight: 700;
     }
 
-    .print-document .certification-box {
+    #masterlistPrintDocument .certification-box {
         margin-top: 3mm;
         padding: 2.2mm 2.8mm;
         border: 1px solid #333;
     }
 
-    .print-document .certification-title {
+    #masterlistPrintDocument .certification-title {
         margin-bottom: 1.2mm;
         font-size: 7.5pt;
         font-weight: 800;
     }
 
-    .print-document .certification-box p {
+    #masterlistPrintDocument .certification-box p {
         margin: 0 0 1.5mm;
         font-size: 6.6pt;
         line-height: 1.4;
         text-align: justify;
     }
 
-    .print-document .signature-grid {
+    #masterlistPrintDocument .signature-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10mm;
         margin-top: 2mm;
     }
 
-    .print-document .signature-block { text-align: center; }
+    #masterlistPrintDocument .signature-block { text-align: center; }
 
-    .print-document .signature-space { height: 8mm; }
+    #masterlistPrintDocument .signature-space { height: 8mm; }
 
-    .print-document .signature-line {
+    #masterlistPrintDocument .signature-line {
         margin-bottom: 1mm;
         border-bottom: 1px solid #111;
     }
 
-    .print-document .signature-label {
+    #masterlistPrintDocument .signature-label {
         font-size: 7pt;
         font-weight: 800;
     }
 
-    .print-document .signature-date {
+    #masterlistPrintDocument .signature-date {
         margin-top: 1.4mm;
         font-size: 6.6pt;
         text-align: left;
     }
 
-    .print-document .final-notice {
+    #masterlistPrintDocument .final-notice {
         margin-top: 3mm;
         padding: 1.8mm 2.6mm;
         border: 1px solid #555;
@@ -692,7 +761,7 @@
         line-height: 1.4;
     }
 
-    .print-document .document-footer {
+    #masterlistPrintDocument .document-footer {
         display: flex;
         justify-content: space-between;
         gap: 4mm;
@@ -797,7 +866,8 @@
 
     <p class="mp-hint d-print-none">
         The preview below is shown at the real portrait paper width for the
-        selected size. In the print dialog, keep <strong>Margins: Default</strong>
+        selected size. The paper stays white in both light and dark mode, and
+        prints the same way. In the print dialog, keep <strong>Margins: Default</strong>
         and <strong>Scale: 100%</strong>.
     </p>
 
@@ -1214,6 +1284,7 @@
      | The document is copied into a hidden iframe that has ONLY the document
      | styles plus one @page rule for the chosen paper. This means:
      |   - the app sidebar / topbar can never appear in the printout,
+     |   - the app's dark theme can never reach the paper,
      |   - Chrome switches to the correct portrait paper automatically,
      |   - the table flows across as many pages as needed,
      |     with the column headings repeated on every page.
@@ -1233,7 +1304,7 @@
         }
 
         const clone = source.cloneNode(true);
-        clone.className = 'print-document';
+        clone.removeAttribute('class');
 
         const html =
             '<!DOCTYPE html><html><head><meta charset="utf-8">' +
@@ -1252,7 +1323,6 @@
                     '}' +
                 '}' +
                 'html, body { margin: 0; padding: 0; background: #fff; }' +
-                '* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
             '</style>' +
             '</head><body>' + clone.outerHTML + '</body></html>';
 
@@ -1306,6 +1376,22 @@
 
         });
     }
+
+
+    /*
+     * Ctrl/Cmd+P uses the same isolated print so the app layout never prints.
+     */
+    document.addEventListener('keydown', function (event) {
+
+        if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey
+            && String(event.key).toLowerCase() === 'p'
+            && document.getElementById('masterlistPrintDocument')
+            && {{ $recordCount > 0 ? 'true' : 'false' }}) {
+
+            event.preventDefault();
+            printMasterlist();
+        }
+    });
 
 </script>
 
