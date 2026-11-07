@@ -1,0 +1,43 @@
+# Secrets and environment-specific configuration
+.env
+.env.*
+!.env.example
+
+# Version control and local tooling
+.git
+.gitignore
+.github
+.vscode
+.idea
+
+# Local dependencies and build output
+vendor
+node_modules
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local runtime files, resident records, uploads and generated documents
+storage/app/**
+storage/framework/cache/**
+storage/framework/sessions/**
+storage/framework/views/**
+storage/logs/**
+bootstrap/cache/*.php
+
+# Local databases, exports, backups and archives
+database/*.sqlite
+database/*.sqlite3
+*.sql
+*.sql.gz
+*.dump
+*.bak
+*.backup
+*.zip
+*.7z
+
+# OS/editor temporary files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
