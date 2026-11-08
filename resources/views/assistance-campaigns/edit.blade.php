@@ -1,3 +1,4 @@
+
 @extends('layouts.app')
 
 @section('title', 'Edit Relief Assistance Operation')
@@ -77,13 +78,13 @@
 
     /* ---------- Assistance types ---------- */
     $types = [
-        'Disaster Relief'          => 'bi-cloud-lightning-rain',
-        'AICS Medical Assistance'  => 'bi-heart-pulse',
-        'Food Assistance'          => 'bi-basket',
-        'Cash Assistance'          => 'bi-cash-coin',
-        'Farmer Assistance'        => 'bi-flower2',
-        'Senior Citizen Assistance'=> 'bi-people',
-        'Other Assistance'         => 'bi-three-dots',
+        'Disaster Relief'           => 'bi-cloud-lightning-rain',
+        'AICS Medical Assistance'   => 'bi-heart-pulse',
+        'Food Assistance'           => 'bi-basket',
+        'Cash Assistance'           => 'bi-cash-coin',
+        'Farmer Assistance'         => 'bi-flower2',
+        'Senior Citizen Assistance' => 'bi-people',
+        'Other Assistance'          => 'bi-three-dots',
     ];
 
     $selectedType = old('assistance_type', $operation->assistance_type);
@@ -537,32 +538,6 @@
                                 @error('description')
                                     <div class="rx-error"><i class="bi bi-exclamation-circle"></i>{{ $message }}</div>
                                 @enderror
-                            </div>
-
-                            <div class="rx-c12">
-                                <label class="rx-label" for="disaster_event_id">
-                                    <span>Related disaster event</span>
-                                </label>
-                                <select id="disaster_event_id" name="disaster_event_id"
-                                        class="rx-select @error('disaster_event_id') is-invalid @enderror">
-                                    <option value="">None / not applicable</option>
-                                    @if(isset($disasterEvents))
-                                        @foreach($disasterEvents as $disasterEvent)
-                                            <option value="{{ $disasterEvent->id }}"
-                                                {{ (string) old('disaster_event_id', $operation->disaster_event_id) === (string) $disasterEvent->id ? 'selected' : '' }}>
-                                                {{ $disasterEvent->name
-                                                    ?? $disasterEvent->event_name
-                                                    ?? ('Disaster Event #' . $disasterEvent->id) }}
-                                            </option>
-                                        @endforeach
-                                    @endif
-                                </select>
-                                @error('disaster_event_id')
-                                    <div class="rx-error"><i class="bi bi-exclamation-circle"></i>{{ $message }}</div>
-                                @enderror
-                                <div class="rx-help">
-                                    Optional. It gives context only and does not replace the printed field assessment.
-                                </div>
                             </div>
 
                         </div>

@@ -6,10 +6,10 @@ use App\Models\AttendanceRecord;
 use App\Models\Personnel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Validation\ValidationException;
 
 class AttendanceKioskController extends Controller
 {
@@ -22,9 +22,7 @@ class AttendanceKioskController extends Controller
     }
 
     /**
-     * Identify personnel through manual ID entry or QR token.
-     *
-     * This step does not record attendance.
+     * Identify personnel and automatically toggle Time In / Time Out.
      */
     public function identify(Request $request): JsonResponse
     {
@@ -40,29 +38,32 @@ class AttendanceKioskController extends Controller
         RateLimiter::hit($ipKey, 60);
 
         $validated = $request->validate([
-            'method' => ['required', 'in:manual,qr'],
-            'personnel_id' => ['required_if:method,manual', 'nullable', 'string', 'max:50'],
+            'method' => ['required', 'in:manual,id,qr'],
+            'personnel_id' => ['required_if:method,manual,id', 'nullable', 'string', 'max:50'],
             'qr_token' => ['required_if:method,qr', 'nullable', 'string', 'max:500'],
         ]);
 
-        $personnel = null;
+        $method = $validated['method'] === 'id'
+            ? 'manual'
+            : $validated['method'];
 
-        if ($validated['method'] === 'manual') {
-            $personnel = Personnel::query()
-                ->where('personnel_id', trim($validated['personnel_id']))
-                ->where('status', 'active')
-                ->first();
-        }
+        $personnelQuery = Personnel::query()
+            ->where('status', 'active');
 
-        if ($validated['method'] === 'qr') {
+        if ($method === 'manual') {
+            $personnelQuery->where(
+                'personnel_id',
+                trim($validated['personnel_id'])
+            );
+        } else {
             $token = trim($validated['qr_token']);
 
-            $personnel = Personnel::query()
+            $personnelQuery
                 ->where('qr_token_hash', hash('sha256', $token))
-                ->where('status', 'active')
-                ->whereNotNull('qr_token_hash')
-                ->first();
+                ->whereNotNull('qr_token_hash');
         }
+
+        $personnel = $personnelQuery->first();
 
         if (! $personnel) {
             return response()->json([
@@ -70,30 +71,124 @@ class AttendanceKioskController extends Controller
             ], 422);
         }
 
-        // Store only the personnel reference and identification method.
-        // The PIN must still be verified before attendance is recorded.
-        $request->session()->put([
-            'attendance_kiosk_pending_personnel_id' => $personnel->id,
-            'attendance_kiosk_method' => $validated['method'],
-            'attendance_kiosk_pending_expires_at' => now()->addMinutes(5)->timestamp,
-        ]);
+        /*
+         * Lock the personnel row so simultaneous kiosk requests
+         * cannot create duplicate attendance actions.
+         */
+        $result = DB::transaction(function () use ($personnel, $method) {
+            $lockedPersonnel = Personnel::query()
+                ->whereKey($personnel->id)
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->first();
 
-        $request->session()->forget([
-            'attendance_kiosk_verified_personnel_id',
-            'attendance_kiosk_verified_expires_at',
-        ]);
+            if (! $lockedPersonnel) {
+                return [
+                    'success' => false,
+                    'status' => 422,
+                    'message' => 'Personnel is no longer active or registered.',
+                ];
+            }
+
+            $attendanceDate = today()->toDateString();
+
+            $record = AttendanceRecord::query()
+                ->where('personnel_id', $lockedPersonnel->id)
+                ->whereDate('attendance_date', $attendanceDate)
+                ->lockForUpdate()
+                ->first();
+
+            $now = now();
+            $action = null;
+            $message = null;
+
+            if (! $record || ! $record->hasTimedIn()) {
+                // FIRST SUBMISSION: TIME IN
+                if ($record) {
+                    $record->update([
+                        'time_in' => $now,
+                        'time_in_method' => $method,
+                        'status' => 'present',
+                    ]);
+
+                    $record->refresh();
+                } else {
+                    $record = AttendanceRecord::create([
+                        'personnel_id' => $lockedPersonnel->id,
+                        'attendance_date' => $attendanceDate,
+                        'time_in' => $now,
+                        'time_in_method' => $method,
+                        'status' => 'present',
+                    ]);
+                }
+
+                $action = 'time_in';
+                $message = 'Time In successfully recorded!';
+            } elseif (! $record->hasTimedOut()) {
+                // SECOND SUBMISSION: TIME OUT
+                $record->update([
+                    'time_out' => $now,
+                    'time_out_method' => $method,
+                ]);
+
+                $record->refresh();
+
+                $action = 'time_out';
+                $message = 'Time Out successfully recorded!';
+            } else {
+                // THIRD SUBMISSION: ALREADY COMPLETED
+                $action = 'completed';
+                $message = 'Your attendance is already completed for today.';
+            }
+
+            return [
+                'success' => true,
+                'action' => $action,
+                'message' => $message,
+                'personnel_name' => $lockedPersonnel->full_name,
+                'personnel_id' => $lockedPersonnel->personnel_id,
+                'position' => $lockedPersonnel->position,
+                'date' => Carbon::parse($attendanceDate)->format('F d, Y'),
+                'time_in' => $record->time_in
+                    ? Carbon::parse($record->time_in)->format('h:i:s A')
+                    : null,
+                'time_out' => $record->time_out
+                    ? Carbon::parse($record->time_out)->format('h:i:s A')
+                    : null,
+                'status' => $record->hasTimedOut()
+                    ? 'Completed'
+                    : 'Present',
+            ];
+        });
+
+        $this->clearKioskSession($request);
+
+        if (! $result['success']) {
+            return response()->json([
+                'message' => $result['message'],
+            ], $result['status']);
+        }
 
         return response()->json([
-            'message' => 'Personnel identified. Please enter your six-digit PIN.',
+            'success' => true,
+            'action' => $result['action'],
+            'message' => $result['message'],
             'personnel' => [
-                'name' => $personnel->full_name,
-                'position' => $personnel->position,
+                'name' => $result['personnel_name'],
+                'personnel_id' => $result['personnel_id'],
+                'position' => $result['position'],
+            ],
+            'attendance' => [
+                'date' => $result['date'],
+                'time_in' => $result['time_in'],
+                'time_out' => $result['time_out'],
+                'status' => $result['status'],
             ],
         ]);
     }
 
     /**
-     * Verify the personnel's six-digit PIN.
+     * Legacy PIN verification endpoint.
      */
     public function verifyPin(Request $request): JsonResponse
     {
@@ -162,7 +257,7 @@ class AttendanceKioskController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'PIN verified. You may now choose Time In or Time Out.',
+            'message' => 'PIN verified.',
             'personnel' => [
                 'name' => $personnel->full_name,
                 'position' => $personnel->position,
@@ -171,7 +266,7 @@ class AttendanceKioskController extends Controller
     }
 
     /**
-     * Record an explicitly selected Time In or Time Out.
+     * Legacy endpoint for explicit Time In or Time Out actions.
      */
     public function recordAttendance(Request $request): JsonResponse
     {
@@ -210,7 +305,6 @@ class AttendanceKioskController extends Controller
         }
 
         $result = DB::transaction(function () use ($personnelId, $validated, $method) {
-            // Lock the personnel row to prevent simultaneous attendance actions.
             $personnel = Personnel::query()
                 ->whereKey($personnelId)
                 ->where('status', 'active')
@@ -242,7 +336,7 @@ class AttendanceKioskController extends Controller
                     ];
                 }
 
-                AttendanceRecord::create([
+                $record = AttendanceRecord::create([
                     'personnel_id' => $personnel->id,
                     'attendance_date' => $attendanceDate,
                     'time_in' => now(),
@@ -254,7 +348,7 @@ class AttendanceKioskController extends Controller
                     'success' => true,
                     'message' => 'Time In successfully recorded.',
                     'action' => 'time_in',
-                    'time' => now()->format('h:i:s A'),
+                    'time' => $record->time_in,
                     'name' => $personnel->full_name,
                 ];
             }
@@ -284,12 +378,11 @@ class AttendanceKioskController extends Controller
                 'success' => true,
                 'message' => 'Time Out successfully recorded.',
                 'action' => 'time_out',
-                'time' => now()->format('h:i:s A'),
+                'time' => $record->time_out,
                 'name' => $personnel->full_name,
             ];
         });
 
-        // Require fresh identification and PIN verification for the next transaction.
         $this->clearKioskSession($request);
 
         if (! $result['success']) {
@@ -301,7 +394,7 @@ class AttendanceKioskController extends Controller
         return response()->json([
             'message' => $result['message'],
             'action' => $result['action'],
-            'time' => $result['time'],
+            'time' => Carbon::parse($result['time'])->format('h:i:s A'),
             'personnel_name' => $result['name'],
         ]);
     }

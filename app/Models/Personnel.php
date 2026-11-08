@@ -43,12 +43,6 @@ class Personnel extends Model
         ];
     }
 
-    /**
-     * Prevent permanent deletion.
-     *
-     * Personnel records must be deactivated instead so their
-     * attendance history and identity remain preserved.
-     */
     protected static function booted(): void
     {
         static::deleting(function (Personnel $personnel): void {
@@ -58,25 +52,16 @@ class Personnel extends Model
         });
     }
 
-    /**
-     * Existing RMS account, if this personnel is Captain or Secretary.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Attendance records belonging to this personnel.
-     */
     public function attendanceRecords(): HasMany
     {
         return $this->hasMany(AttendanceRecord::class);
     }
 
-    /**
-     * Set a six-digit PIN using Laravel's secure password hashing.
-     */
     public function setAttendancePin(string $pin): void
     {
         if (! preg_match('/^\d{6}$/', $pin)) {
@@ -89,9 +74,6 @@ class Personnel extends Model
         $this->pin_updated_at = now();
     }
 
-    /**
-     * Verify the supplied six-digit attendance PIN.
-     */
     public function verifyAttendancePin(string $pin): bool
     {
         if (! preg_match('/^\d{6}$/', $pin)) {
@@ -105,26 +87,17 @@ class Personnel extends Model
         return Hash::check($pin, $this->pin_hash);
     }
 
-    /**
-     * Check whether this personnel is active.
-     */
     public function isActive(): bool
     {
         return $this->status === 'active';
     }
 
-    /**
-     * Check whether this personnel has an active QR token.
-     */
     public function hasActiveQrToken(): bool
     {
         return ! empty($this->qr_token_hash)
             && $this->qr_revoked_at === null;
     }
 
-    /**
-     * Verify a raw QR token against its stored hash.
-     */
     public function verifyQrToken(string $token): bool
     {
         if (! $this->hasActiveQrToken() || $token === '') {
@@ -137,9 +110,6 @@ class Personnel extends Model
         );
     }
 
-    /**
-     * Get the personnel's complete display name.
-     */
     public function getFullNameAttribute(): string
     {
         return trim(implode(' ', array_filter([
@@ -150,9 +120,6 @@ class Personnel extends Model
         ])));
     }
 
-    /**
-     * Scope: active personnel only.
-     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active');

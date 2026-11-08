@@ -2,6 +2,11 @@
 
 @section('title', 'Edit Report / Complaint')
 
+{{-- Shared button + text-field styles --}}
+@push('styles')
+
+@endpush
+
 @section('content')
 
 @php
@@ -16,8 +21,6 @@
 
     /*
      * Category suggestions. Hints only: the Category field is free text.
-     * The saved category is always shown in the field, even when it is
-     * not in any list.
      */
     $communitySuggest = collect($communityCategories)->merge([
         'Environmental Incident', 'Snake Sighting', 'Stray Animals',
@@ -490,7 +493,7 @@
             </div>
         </section>
 
-        {{-- ACTIONS --}}
+        {{-- ACTIONS: Cancel = gray ghost, Save = indigo solid --}}
         <div class="rcp-actions">
             <a href="{{ $showRoute }}" class="btn rcp-btn-ghost px-4">Cancel</a>
             <button type="submit" class="btn rcp-btn-primary px-4">
@@ -574,7 +577,7 @@
 
     .rcp-box { border: 1px solid var(--c-line); border-radius: 12px; padding: 1rem; background: var(--c-soft); }
 
-    /* Fields */
+    /* Fields (softened further by the shared _ui styles) */
     .rcp .form-control, .rcp .form-select {
         min-height: 44px;
         background-color: var(--c-field);
@@ -633,7 +636,7 @@
     .rcp-note-info { background: var(--c-info-soft); color: var(--c-info); border-color: var(--c-line); }
     .rcp-note-danger { background: var(--c-danger-soft); color: var(--c-danger); border-color: var(--c-danger); }
 
-    /* Buttons */
+    /* Buttons (final look comes from the shared _ui styles) */
     .rcp-btn-primary { background: var(--c-accent); color: var(--c-accent-ink); border: 0; border-radius: 10px; font-weight: 600; }
     .rcp-btn-primary:hover { filter: brightness(1.08); color: var(--c-accent-ink); }
     .rcp-btn-ghost { background: transparent; color: var(--c-text); border: 1px solid var(--c-line); border-radius: 10px; font-weight: 600; }
@@ -668,7 +671,152 @@
     .rcp-combo-item small { display: block; color: var(--c-muted); }
     .rcp-combo-item.is-active, .rcp-combo-item:hover { background: var(--c-accent-soft); }
     .rcp-combo-empty { padding: .7rem .75rem; font-size: .85rem; color: var(--c-muted); }
+
+    /* =====================================================================
+       UI/UX COLOR SYSTEM  (one color = one meaning, same in all 4 pages)
+       INDIGO = main action | GREEN = resolve | SLATE = close
+       GRAY = secondary/safe | RED = destructive | TEAL/ROSE = record type
+       ===================================================================== */
+    .rcp {
+        --ui-primary: #4338ca; --ui-primary-hover: #3730a3; --ui-primary-soft: #eeecfd; --ui-on-primary: #ffffff;
+        --ui-success: #15803d; --ui-success-hover: #166534; --ui-success-soft: #e0f6ea;
+        --ui-close: #475569;   --ui-close-soft: #eef0f4;
+        --ui-danger: #dc2626;  --ui-danger-soft: #fdecec;
+        --ui-neutral-text: #475569; --ui-neutral-line: #cbd2de; --ui-neutral-hover: #f1f4f9;
+        --ui-field-bg: #ffffff; --ui-field-text: #111827; --ui-field-line: #d5dae5;
+        --ui-placeholder: #a4abbb; --ui-field-locked: #f1f3f8;
+    }
+    html[data-theme="dark"] .rcp, html[data-bs-theme="dark"] .rcp, body[data-theme="dark"] .rcp, body.dark-mode .rcp {
+        --ui-primary: #8b81f0; --ui-primary-hover: #a29af5; --ui-primary-soft: rgba(139,129,240,.16); --ui-on-primary: #12122a;
+        --ui-success: #4ade80; --ui-success-hover: #6ee7a0; --ui-success-soft: rgba(74,222,128,.14);
+        --ui-close: #94a3b8;   --ui-close-soft: rgba(148,163,184,.14);
+        --ui-danger: #f87171;  --ui-danger-soft: rgba(248,113,113,.14);
+        --ui-neutral-text: #c3cbda; --ui-neutral-line: #4a5570; --ui-neutral-hover: rgba(255,255,255,.06);
+        --ui-field-bg: #141a25; --ui-field-text: #f3f6fc; --ui-field-line: #36405a;
+        --ui-placeholder: #667089; --ui-field-locked: #1b2332;
+    }
+
+    /* ---- Buttons: shared shape ---- */
+    .rcp .btn, .rcp .cta, .rcp .view-btn, .rcp .resolve-btn, .rcp .close-btn, .rcp .reset, .rcp .act, .rcp .rcp-btn-primary, .rcp .rcp-btn-ghost {
+        font-weight: 700;
+        transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+
+    /* INDIGO: main / constructive action */
+    .rcp .btn-primary,
+    .rcp .rcp-btn-primary,
+    .rcp .cta,
+    .rcp .act-brand {
+        background: var(--ui-primary); border: 1.5px solid var(--ui-primary); color: var(--ui-on-primary); filter: none;
+    }
+    .rcp .btn-primary:hover,
+    .rcp .rcp-btn-primary:hover,
+    .rcp .cta:hover,
+    .rcp .act-brand:hover {
+        background: var(--ui-primary-hover); border-color: var(--ui-primary-hover); color: var(--ui-on-primary); filter: none;
+    }
+
+    /* GRAY GHOST: secondary / safe (Cancel, Back, View, Print, Reset) */
+    .rcp .btn-outline-secondary,
+    .rcp .rcp-btn-ghost,
+    .rcp .view-btn,
+    .rcp .act-line,
+    .rcp .reset {
+        background: transparent; border: 1.5px solid var(--ui-neutral-line); color: var(--ui-neutral-text);
+    }
+    .rcp .btn-outline-secondary:hover,
+    .rcp .rcp-btn-ghost:hover,
+    .rcp .view-btn:hover,
+    .rcp .act-line:hover,
+    .rcp .reset:hover {
+        background: var(--ui-neutral-hover); border-color: var(--ui-neutral-text); color: var(--ui-neutral-text);
+    }
+
+    /* GREEN: Resolve (positive outcome) */
+    .rcp .resolve-btn { background: var(--ui-success-soft); border: 1.5px solid var(--ui-success); color: var(--ui-success); }
+    .rcp .resolve-btn:hover { background: var(--ui-success); border-color: var(--ui-success); color: #fff; }
+    .rcp .act-green { background: var(--ui-success); border: 1.5px solid var(--ui-success); color: #fff; filter: none; }
+    .rcp .act-green:hover { background: var(--ui-success-hover); border-color: var(--ui-success-hover); color: #fff; filter: none; }
+    html[data-theme="dark"] .rcp .act-green, html[data-bs-theme="dark"] .rcp .act-green, body[data-theme="dark"] .rcp .act-green, body.dark-mode .rcp .act-green { color: #06210f; }
+
+    /* SLATE: Close case (finality, different from Resolve green) */
+    .rcp .close-btn,
+    .rcp .act-close { background: var(--ui-close-soft); border: 1.5px solid var(--ui-close); color: var(--ui-close); }
+    .rcp .close-btn:hover,
+    .rcp .act-close:hover { background: var(--ui-close); border-color: var(--ui-close); color: #fff; }
+    html[data-theme="dark"] .rcp .act-close:hover, html[data-bs-theme="dark"] .rcp .act-close:hover, body[data-theme="dark"] .rcp .act-close:hover, body.dark-mode .rcp .act-close:hover { color: #0f1620; }
+    html[data-theme="dark"] .rcp .close-btn:hover, html[data-bs-theme="dark"] .rcp .close-btn:hover, body[data-theme="dark"] .rcp .close-btn:hover, body.dark-mode .rcp .close-btn:hover { color: #0f1620; }
+
+    /* RED: destructive / disapprove */
+    .rcp .btn-danger,
+    .rcp .btn-outline-danger,
+    .rcp .act-danger { background: var(--ui-danger-soft); border: 1.5px solid var(--ui-danger); color: var(--ui-danger); }
+    .rcp .btn-danger:hover,
+    .rcp .btn-outline-danger:hover,
+    .rcp .act-danger:hover { background: var(--ui-danger); border-color: var(--ui-danger); color: #fff; }
+
+    /* Disabled + focus */
+    .rcp .btn:disabled,
+    .rcp .cta:disabled,
+    .rcp .act:disabled { opacity: .5; cursor: not-allowed; }
+    .rcp .btn:focus-visible,
+    .rcp .cta:focus-visible,
+    .rcp .act:focus-visible,
+    .rcp .view-btn:focus-visible,
+    .rcp .resolve-btn:focus-visible,
+    .rcp .close-btn:focus-visible,
+    .rcp .reset:focus-visible {
+        outline: 3px solid var(--ui-primary); outline-offset: 2px; box-shadow: none;
+    }
+
+    /* ---- Text fields: hint text must NOT look like typed text ---- */
+    .rcp .form-control,
+    .rcp .form-select {
+        background-color: var(--ui-field-bg); color: var(--ui-field-text); border-color: var(--ui-field-line); font-weight: 500;
+    }
+    .rcp .form-control::placeholder,
+    .rcp .form-control.rc-combo-input::placeholder,
+    .rcp textarea.form-control::placeholder {
+        color: var(--ui-placeholder) !important; font-weight: 400; font-style: normal; opacity: 1 !important;
+    }
+    .rcp .form-control:focus,
+    .rcp .form-select:focus {
+        border-color: var(--ui-primary); background-color: var(--ui-field-bg); color: var(--ui-field-text);
+        box-shadow: 0 0 0 .2rem var(--ui-primary-soft);
+    }
+    .rcp .form-control:focus,
+    .rcp .form-select:focus::placeholder { opacity: .5 !important; }
+
+    /* Dropdown still on "-- Select --" looks like a hint, not a value */
+    .rcp .form-select:has(option[value=""]:checked) { color: var(--ui-placeholder); font-weight: 400; }
+    .rcp .form-select option { color: var(--ui-field-text); font-weight: 500; background-color: var(--ui-field-bg); }
+    .rcp .form-select option[value=""] { color: var(--ui-placeholder); }
+
+    /* Empty date/time: dim the mm/dd/yyyy mask (class toggled by the tiny script below) */
+    .rcp input.ui-empty[type="date"]:not(:focus)::-webkit-datetime-edit,
+    .rcp input.ui-empty[type="time"]:not(:focus)::-webkit-datetime-edit { color: var(--ui-placeholder); }
+
+    /* Fixed / read-only values are information, not inputs */
+    .rcp .form-control[readonly] {
+        background-color: var(--ui-field-locked); border-style: dashed; color: var(--ui-field-text); font-weight: 600; cursor: default;
+    }
+    .rcp .form-control.is-invalid, .rcp .form-select.is-invalid { border-color: var(--ui-danger); }
+
 </style>
+
+<script>
+/* Dim empty date/time inputs so the mm/dd/yyyy mask is not mistaken for a value. */
+(function () {
+    var q = '.rcp input[type="date"], .rcp input[type="time"]';
+    function mark(el) { el.classList.toggle('ui-empty', !el.value); }
+    document.querySelectorAll(q).forEach(function (el) {
+        mark(el);
+        el.addEventListener('input', function () { mark(el); });
+        el.addEventListener('change', function () { mark(el); });
+    });
+})();
+</script>
+
 
 
 <script>

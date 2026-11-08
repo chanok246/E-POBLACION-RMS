@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
-use Illuminate\View\View;
 use PragmaRX\Google2FA\Google2FA;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Throwable;
@@ -23,7 +21,6 @@ class TwoFactorController extends Controller
 {
     private const MAX_ATTEMPTS = 5;
     private const DECAY_SECONDS = 300;
-    private const RECOVERY_CODE_COUNT = 8;
     private const TOTP_WINDOW = 1;
     private const TOTP_REPLAY_SECONDS = 120;
 
@@ -59,7 +56,6 @@ class TwoFactorController extends Controller
         'secretary_authenticator_recovery_password_hash',
         'secretary_authenticator_recovery_old_secret_hash',
         'secretary_authenticator_recovery_new_secret',
-        'secretary_authenticator_recovery_new_codes',
     ];
 
     private const REPLACEMENT_SESSION_KEYS = [
@@ -231,40 +227,6 @@ class TwoFactorController extends Controller
         return Cache::add($key, true, self::TOTP_REPLAY_SECONDS);
     }
 
-    private function recoveryCodesPending(Request $request): bool
-    {
-        return $request->session()->get(
-            'two_factor_recovery_codes_pending'
-        ) === true;
-    }
-
-    private function sessionRecoveryCodes(Request $request): ?array
-    {
-        $codes = $request->session()->get('recovery_codes');
-
-        if (
-            ! is_array($codes)
-            || count($codes) !== self::RECOVERY_CODE_COUNT
-        ) {
-            return null;
-        }
-
-        foreach ($codes as $code) {
-            if (! is_string($code) || $code === '') {
-                return null;
-            }
-        }
-
-        return array_values($codes);
-    }
-
-    private function generateRecoveryCodes(): array
-    {
-        return collect(range(1, self::RECOVERY_CODE_COUNT))
-            ->map(fn () => Str::random(10))
-            ->all();
-    }
-
     private function clearAuthenticatorReplacement(Request $request): void
     {
         $request->session()->forget(self::REPLACEMENT_SESSION_KEYS);
@@ -374,11 +336,7 @@ class TwoFactorController extends Controller
             'start'
         );
 
-        if (! in_array(
-            $stage,
-            ['start', 'verify_new'],
-            true
-        )) {
+        if (! in_array($stage, ['start', 'verify_new'], true)) {
             $this->clearAuthenticatorReplacement($request);
 
             return redirect()
@@ -393,7 +351,6 @@ class TwoFactorController extends Controller
             'replacementStage' => $stage,
             'replacementQrCodeSvg' => null,
             'replacementSecretKey' => null,
-            'replacementRecoveryCodes' => [],
         ];
 
         if ($stage === 'verify_new') {
@@ -437,7 +394,6 @@ class TwoFactorController extends Controller
             $data['replacementSecretKey'] = $secret;
         }
 
-
         return $this->sensitiveView(
             'auth.authenticator-recovery',
             $data
@@ -451,7 +407,7 @@ class TwoFactorController extends Controller
      * Lost-phone path: current password + valid, unused authorization
      * created by successful email recovery.
      *
-     * The active secret and recovery codes are not changed here.
+     * The active secret is not changed here.
      */
     public function startAuthenticatorReplacement(
         Request $request
@@ -768,7 +724,7 @@ class TwoFactorController extends Controller
 
         return redirect()->route('settings.index')->with(
             'success',
-            'Your new authenticator is now active. Your existing recovery codes have not been changed.'
+            'Your new authenticator is now active. Existing legacy recovery-code data, if any, was left unchanged.'
         );
     }
 
@@ -899,7 +855,7 @@ class TwoFactorController extends Controller
 
         if (! in_array(
             $stage,
-            ['verify_credentials', 'verify_new', 'confirm_recovery_codes'],
+            ['verify_credentials', 'verify_new'],
             true
         )) {
             $this->clearSecretaryAuthenticatorRecovery($request);
@@ -938,25 +894,6 @@ class TwoFactorController extends Controller
                 ->generate($qrCodeUrl)
                 ->toHtml();
             $data['secretKey'] = $secret;
-        }
-
-        if ($stage === 'confirm_recovery_codes') {
-            $codes = $request->session()->get(
-                'secretary_authenticator_recovery_new_codes'
-            );
-
-            if (
-                ! is_array($codes)
-                || count($codes) !== self::RECOVERY_CODE_COUNT
-            ) {
-                $this->clearSecretaryAuthenticatorRecovery($request);
-
-                return redirect()->route('login')->withErrors([
-                    'username' => 'The temporary recovery codes are unavailable. Ask the Captain to authorize recovery again.',
-                ]);
-            }
-
-            $data['recoveryCodes'] = array_values($codes);
         }
 
         return $this->sensitiveView(
@@ -1012,15 +949,19 @@ class TwoFactorController extends Controller
                 app(Google2FA::class)->generateSecretKey(),
         ]);
 
-        $request->session()->forget(
-            'secretary_authenticator_recovery_new_codes'
-        );
-
         return redirect()->route('secretary-authenticator-recovery.show');
     }
 
+    /**
+     * Verify the new authenticator and activate it immediately.
+     *
+     * The Captain-authorized recovery session, Secretary role, account
+     * status, password hash, and old authenticator secret are rechecked
+     * inside the transaction before the new secret is saved.
+     */
     public function confirmSecretaryAuthenticatorRecovery(
-        Request $request
+        Request $request,
+        AuditLogService $auditLog
     ): RedirectResponse {
         $validated = $request->validate([
             'new_code' => ['required', 'digits:6'],
@@ -1053,13 +994,13 @@ class TwoFactorController extends Controller
             ]);
         }
 
-        $secret = $request->session()->get(
+        $newSecret = $request->session()->get(
             'secretary_authenticator_recovery_new_secret'
         );
 
         if (
             ! app(Google2FA::class)->verifyKey(
-                $secret,
+                $newSecret,
                 $validated['new_code'],
                 self::TOTP_WINDOW
             )
@@ -1070,63 +1011,6 @@ class TwoFactorController extends Controller
             return back()->withErrors([
                 'new_code' => 'The new authenticator code is invalid or already used. Wait for the next code and try again.',
             ]);
-        }
-
-        RateLimiter::clear($key);
-
-        $request->session()->put([
-            'secretary_authenticator_recovery_new_codes' =>
-                $this->generateRecoveryCodes(),
-            'secretary_authenticator_recovery_stage' =>
-                'confirm_recovery_codes',
-        ]);
-
-        return redirect()->route('secretary-authenticator-recovery.show');
-    }
-
-    public function finishSecretaryAuthenticatorRecovery(
-        Request $request,
-        AuditLogService $auditLog
-    ): RedirectResponse {
-        $request->validate([
-            'saved_confirmation' => ['required', 'accepted'],
-        ]);
-
-        $user = $this->secretaryRecoveryUser($request);
-        $newSecret = $request->session()->get(
-            'secretary_authenticator_recovery_new_secret'
-        );
-        $newCodes = $request->session()->get(
-            'secretary_authenticator_recovery_new_codes'
-        );
-
-        if (
-            ! $user
-            || ! $this->secretaryRecoveryStateIsValid(
-                $request,
-                $user,
-                'confirm_recovery_codes'
-            )
-            || ! is_string($newSecret)
-            || $newSecret === ''
-            || ! is_array($newCodes)
-            || count($newCodes) !== self::RECOVERY_CODE_COUNT
-        ) {
-            $this->clearSecretaryAuthenticatorRecovery($request);
-
-            return redirect()->route('login')->withErrors([
-                'username' => 'The recovery session expired or is incomplete. No authenticator changes were made.',
-            ]);
-        }
-
-        foreach ($newCodes as $code) {
-            if (! is_string($code) || $code === '') {
-                $this->clearSecretaryAuthenticatorRecovery($request);
-
-                return redirect()->route('login')->withErrors([
-                    'username' => 'The temporary recovery codes are invalid. No authenticator changes were made.',
-                ]);
-            }
         }
 
         $oldSecretHash = $request->session()->get(
@@ -1141,7 +1025,6 @@ class TwoFactorController extends Controller
             $oldSecretHash,
             $passwordHash,
             $newSecret,
-            $newCodes,
             $auditLog,
             $request
         ): bool {
@@ -1172,10 +1055,6 @@ class TwoFactorController extends Controller
             }
 
             $lockedUser->two_factor_secret = $newSecret;
-            $lockedUser->two_factor_recovery_codes = json_encode(
-                array_values($newCodes),
-                JSON_THROW_ON_ERROR
-            );
             $lockedUser->save();
 
             $auditLog->logAction(
@@ -1192,6 +1071,8 @@ class TwoFactorController extends Controller
             return true;
         });
 
+        RateLimiter::clear($key);
+
         if (! $committed) {
             $this->clearSecretaryAuthenticatorRecovery($request);
 
@@ -1201,6 +1082,7 @@ class TwoFactorController extends Controller
         }
 
         $this->clearSecretaryAuthenticatorRecovery($request);
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -1209,6 +1091,21 @@ class TwoFactorController extends Controller
             'success',
             'Authenticator recovery completed. Sign in with your account password and the new authenticator.'
         );
+    }
+
+    /**
+     * Compatibility endpoint for the old recovery-code confirmation route.
+     * Recovery codes are no longer part of authenticator recovery.
+     */
+    public function finishSecretaryAuthenticatorRecovery(
+        Request $request,
+        AuditLogService $auditLog
+    ): RedirectResponse {
+        return redirect()
+            ->route('secretary-authenticator-recovery.show')
+            ->withErrors([
+                'new_code' => 'The recovery process has changed. Verify the code from your new authenticator to activate it.',
+            ]);
     }
 
     public function showSetup(Request $request): Response|RedirectResponse
@@ -1225,13 +1122,6 @@ class TwoFactorController extends Controller
 
         if ($user->hasTwoFactorEnabled()) {
             return redirect()->route('two-factor.challenge');
-        }
-
-        if (
-            $this->recoveryCodesPending($request)
-            && $this->sessionRecoveryCodes($request) !== null
-        ) {
-            return redirect()->route('two-factor.recovery-codes');
         }
 
         $google2fa = app(Google2FA::class);
@@ -1312,24 +1202,69 @@ class TwoFactorController extends Controller
             ]);
         }
 
+        /*
+         * Recheck the account and secret under a database lock before
+         * confirming initial authenticator enrollment.
+         */
+        $confirmed = DB::transaction(function () use ($user): bool {
+            $lockedUser = User::query()
+                ->whereKey($user->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                ! $lockedUser
+                || ! $lockedUser->isActive()
+                || ! $lockedUser->hasValidSystemRole()
+                || ! $lockedUser->canAccessSystem()
+                || $lockedUser->hasTwoFactorEnabled()
+                || ! is_string($lockedUser->two_factor_secret)
+                || $lockedUser->two_factor_secret === ''
+            ) {
+                return false;
+            }
+
+            $lockedUser->two_factor_confirmed_at = now();
+            $lockedUser->save();
+
+            return true;
+        });
+
+        if (! $confirmed) {
+            return redirect()->route('two-factor.setup')->withErrors([
+                'code' => 'Your account changed during setup. Please restart the authenticator setup process.',
+            ]);
+        }
+
         RateLimiter::clear($key);
 
-        $recoveryCodes = $this->generateRecoveryCodes();
+        /*
+         * Initial authenticator enrollment is now complete.
+         * No recovery codes are generated or stored.
+         * The policy-consent middleware will gate dashboard access.
+         */
+        $request->session()->regenerate();
 
-        $user->two_factor_recovery_codes = json_encode(
-            $recoveryCodes,
-            JSON_THROW_ON_ERROR
-        );
-        $user->save();
-
-        $request->session()->put([
-            'two_factor_recovery_codes_pending' => true,
-            'recovery_codes' => $recoveryCodes,
+        $request->session()->forget([
+            'two_factor_recovery_codes_pending',
+            'recovery_codes',
         ]);
 
-        return redirect()->route('two-factor.recovery-codes');
+        $request->session()->put([
+            'two_factor_pending_user_id' => $user->getAuthIdentifier(),
+            'two_factor_passed' => true,
+        ]);
+
+        return redirect()->intended(route('dashboard'))->with(
+            'success',
+            'Two-factor authentication has been set up successfully.'
+        );
     }
 
+    /**
+     * Compatibility endpoint for the retired recovery-code page.
+     * This endpoint never displays or generates recovery codes.
+     */
     public function showRecoveryCodes(
         Request $request
     ): Response|RedirectResponse {
@@ -1340,97 +1275,44 @@ class TwoFactorController extends Controller
         }
 
         if ($request->session()->get('two_factor_passed') === true) {
-            return redirect()->route('dashboard');
+            return redirect()->intended(route('dashboard'));
         }
 
         if ($user->hasTwoFactorEnabled()) {
             return redirect()->route('two-factor.challenge');
         }
 
-        $codes = $this->sessionRecoveryCodes($request);
-
-        if (! $this->recoveryCodesPending($request) || $codes === null) {
-            $request->session()->forget([
-                'two_factor_recovery_codes_pending',
-                'recovery_codes',
-            ]);
-
-            return redirect()->route('two-factor.setup')->withErrors([
-                'code' => 'Your recovery codes are no longer available. Enter a new authenticator code to generate a fresh set.',
-            ]);
-        }
-
-        return $this->sensitiveView('auth.two-factor-recovery-codes', [
-            'recoveryCodes' => $codes,
+        return redirect()->route('two-factor.setup')->withErrors([
+            'code' => 'Recovery codes are no longer used. Complete authenticator verification to continue.',
         ]);
     }
 
+    /**
+     * Compatibility endpoint for the old setup confirmation route.
+     * Initial setup is now completed immediately after valid TOTP verification.
+     */
     public function finishSetup(Request $request): RedirectResponse
     {
-        $request->validate([
-            'saved_confirmation' => ['required', 'accepted'],
-        ]);
-
         $user = $this->pendingUser($request);
 
         if (! $user) {
             return $this->restartLogin($request);
         }
 
-        if ($request->session()->get('two_factor_passed') === true) {
-            return redirect()->route('dashboard');
+        if (
+            $request->session()->get('two_factor_passed') === true
+            && $user->hasTwoFactorEnabled()
+        ) {
+            return redirect()->intended(route('dashboard'));
         }
 
         if ($user->hasTwoFactorEnabled()) {
             return redirect()->route('two-factor.challenge');
         }
 
-        $codes = $this->sessionRecoveryCodes($request);
-
-        if (! $this->recoveryCodesPending($request) || $codes === null) {
-            $request->session()->forget([
-                'two_factor_recovery_codes_pending',
-                'recovery_codes',
-            ]);
-
-            return redirect()->route('two-factor.setup')->withErrors([
-                'code' => 'Your recovery codes are no longer available. Enter a new authenticator code to generate a fresh set.',
-            ]);
-        }
-
-        if (
-            empty($user->two_factor_secret)
-            || $this->getRecoveryCodes($user) !== $codes
-        ) {
-            $request->session()->forget([
-                'two_factor_recovery_codes_pending',
-                'recovery_codes',
-            ]);
-
-            return redirect()->route('two-factor.setup')->withErrors([
-                'code' => 'Your setup could not be completed. Enter a new authenticator code to try again.',
-            ]);
-        }
-
-        $user->two_factor_confirmed_at = now();
-        $user->save();
-
-        $request->session()->forget([
-            'two_factor_recovery_codes_pending',
-            'recovery_codes',
+        return redirect()->route('two-factor.setup')->withErrors([
+            'code' => 'Complete authenticator verification before continuing.',
         ]);
-
-        $request->session()->regenerate();
-
-        $request->session()->put([
-            'two_factor_pending_user_id' => $user->getAuthIdentifier(),
-            'two_factor_passed' => true,
-        ]);
-
-        return redirect()->route('dashboard')->with(
-            'success',
-            'Two-factor authentication has been set up successfully.'
-        );
     }
 
     public function showChallenge(
@@ -1447,7 +1329,7 @@ class TwoFactorController extends Controller
         }
 
         if ($request->session()->get('two_factor_passed') === true) {
-            return redirect()->route('dashboard');
+            return redirect()->intended(route('dashboard'));
         }
 
         return $this->sensitiveView('auth.two-factor-challenge', []);
@@ -1659,81 +1541,10 @@ class TwoFactorController extends Controller
             );
     }
 
-    private function getRecoveryCodes(User $user): array
-    {
-        $stored = $user->two_factor_recovery_codes;
-
-        if (is_array($stored)) {
-            return array_values(array_filter(
-                $stored,
-                fn ($code) => is_string($code)
-            ));
-        }
-
-        if (! is_string($stored) || $stored === '') {
-            return [];
-        }
-
-        try {
-            $codes = json_decode($stored, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return [];
-        }
-
-        if (! is_array($codes)) {
-            return [];
-        }
-
-        return array_values(array_filter(
-            $codes,
-            fn ($code) => is_string($code)
-        ));
-    }
-
-    private function consumeRecoveryCode(User $user, string $code): bool
-    {
-        return DB::transaction(function () use ($user, $code): bool {
-            $lockedUser = User::query()
-                ->whereKey($user->getKey())
-                ->lockForUpdate()
-                ->first();
-
-            if (
-                ! $lockedUser
-                || ! $lockedUser->isActive()
-                || ! $lockedUser->hasValidSystemRole()
-                || ! $lockedUser->canAccessSystem()
-                || ! $lockedUser->hasTwoFactorEnabled()
-            ) {
-                return false;
-            }
-
-            $recoveryCodes = $this->getRecoveryCodes($lockedUser);
-
-            foreach ($recoveryCodes as $index => $recoveryCode) {
-                if (! hash_equals($recoveryCode, $code)) {
-                    continue;
-                }
-
-                unset($recoveryCodes[$index]);
-
-                $lockedUser->two_factor_recovery_codes = json_encode(
-                    array_values($recoveryCodes),
-                    JSON_THROW_ON_ERROR
-                );
-                $lockedUser->save();
-
-                return true;
-            }
-
-            return false;
-        });
-    }
-
     public function verifyChallenge(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'code' => ['required', 'string', 'max:64'],
+            'code' => ['required', 'digits:6'],
         ]);
 
         $user = $this->pendingUser($request);
@@ -1747,7 +1558,7 @@ class TwoFactorController extends Controller
         }
 
         if ($request->session()->get('two_factor_passed') === true) {
-            return redirect()->route('dashboard');
+            return redirect()->intended(route('dashboard'));
         }
 
         $key = $this->challengeRateLimitKey($user);
@@ -1760,32 +1571,24 @@ class TwoFactorController extends Controller
             ]);
         }
 
-        $code = trim($validated['code']);
+        $code = $validated['code'];
 
         if (
-            preg_match('/^\d{6}$/', $code) === 1
-            && ! empty($user->two_factor_secret)
-        ) {
-            if (app(Google2FA::class)->verifyKey(
+            ! empty($user->two_factor_secret)
+            && app(Google2FA::class)->verifyKey(
                 $user->two_factor_secret,
                 $code,
                 self::TOTP_WINDOW
-            )) {
-                if (! $this->claimTotpCode($user, $code)) {
-                    RateLimiter::hit($key, self::DECAY_SECONDS);
+            )
+        ) {
+            if (! $this->claimTotpCode($user, $code)) {
+                RateLimiter::hit($key, self::DECAY_SECONDS);
 
-                    return back()->withErrors([
-                        'code' => 'That code was already used. Wait for the next code in your authenticator app and try again.',
-                    ]);
-                }
-
-                RateLimiter::clear($key);
-
-                return $this->completeChallenge($request, $user);
+                return back()->withErrors([
+                    'code' => 'That code was already used. Wait for the next code in your authenticator app and try again.',
+                ]);
             }
-        }
 
-        if ($this->consumeRecoveryCode($user, $code)) {
             RateLimiter::clear($key);
 
             return $this->completeChallenge($request, $user);
@@ -1794,7 +1597,7 @@ class TwoFactorController extends Controller
         RateLimiter::hit($key, self::DECAY_SECONDS);
 
         return back()->withErrors([
-            'code' => 'The authenticator or recovery code is invalid, or the recovery code has already been used.',
+            'code' => 'The authenticator code is invalid. Please enter the current six-digit code from your authenticator app.',
         ]);
     }
 

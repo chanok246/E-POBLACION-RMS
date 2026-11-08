@@ -894,7 +894,124 @@
             transition: none !important;
         }
     }
+
+    /* =====================================================================
+       UI/UX COLOR SYSTEM  (one color = one meaning, same in all 4 pages)
+       INDIGO = main action | GREEN = resolve | SLATE = close
+       GRAY = secondary/safe | RED = destructive | TEAL/ROSE = record type
+       ===================================================================== */
+    .cases {
+        --ui-primary: #4338ca; --ui-primary-hover: #3730a3; --ui-primary-soft: #eeecfd; --ui-on-primary: #ffffff;
+        --ui-success: #15803d; --ui-success-hover: #166534; --ui-success-soft: #e0f6ea;
+        --ui-close: #475569;   --ui-close-soft: #eef0f4;
+        --ui-danger: #dc2626;  --ui-danger-soft: #fdecec;
+        --ui-neutral-text: #475569; --ui-neutral-line: #cbd2de; --ui-neutral-hover: #f1f4f9;
+        --ui-field-bg: #ffffff; --ui-field-text: #111827; --ui-field-line: #d5dae5;
+        --ui-placeholder: #a4abbb; --ui-field-locked: #f1f3f8;
+    }
+    html[data-theme="dark"] .cases, html[data-bs-theme="dark"] .cases, body[data-theme="dark"] .cases, body.dark-mode .cases {
+        --ui-primary: #8b81f0; --ui-primary-hover: #a29af5; --ui-primary-soft: rgba(139,129,240,.16); --ui-on-primary: #12122a;
+        --ui-success: #4ade80; --ui-success-hover: #6ee7a0; --ui-success-soft: rgba(74,222,128,.14);
+        --ui-close: #94a3b8;   --ui-close-soft: rgba(148,163,184,.14);
+        --ui-danger: #f87171;  --ui-danger-soft: rgba(248,113,113,.14);
+        --ui-neutral-text: #c3cbda; --ui-neutral-line: #4a5570; --ui-neutral-hover: rgba(255,255,255,.06);
+        --ui-field-bg: #141a25; --ui-field-text: #f3f6fc; --ui-field-line: #36405a;
+        --ui-placeholder: #667089; --ui-field-locked: #1b2332;
+    }
+
+    /* ---- Buttons: shared shape ---- */
+    .cases .btn, .cases .cta, .cases .view-btn, .cases .resolve-btn, .cases .close-btn, .cases .reset, .cases .act, .cases .rcp-btn-primary, .cases .rcp-btn-ghost {
+        font-weight: 700;
+        transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+
+    /* INDIGO: main / constructive action */
+    .cases .btn-primary,
+    .cases .rcp-btn-primary,
+    .cases .cta,
+    .cases .act-brand {
+        background: var(--ui-primary); border: 1.5px solid var(--ui-primary); color: var(--ui-on-primary); filter: none;
+    }
+    .cases .btn-primary:hover,
+    .cases .rcp-btn-primary:hover,
+    .cases .cta:hover,
+    .cases .act-brand:hover {
+        background: var(--ui-primary-hover); border-color: var(--ui-primary-hover); color: var(--ui-on-primary); filter: none;
+    }
+
+    /* GRAY GHOST: secondary / safe (Cancel, Back, View, Print, Reset) */
+    .cases .btn-outline-secondary,
+    .cases .rcp-btn-ghost,
+    .cases .view-btn,
+    .cases .act-line,
+    .cases .reset {
+        background: transparent; border: 1.5px solid var(--ui-neutral-line); color: var(--ui-neutral-text);
+    }
+    .cases .btn-outline-secondary:hover,
+    .cases .rcp-btn-ghost:hover,
+    .cases .view-btn:hover,
+    .cases .act-line:hover,
+    .cases .reset:hover {
+        background: var(--ui-neutral-hover); border-color: var(--ui-neutral-text); color: var(--ui-neutral-text);
+    }
+
+    /* GREEN: Resolve (positive outcome) */
+    .cases .resolve-btn { background: var(--ui-success-soft); border: 1.5px solid var(--ui-success); color: var(--ui-success); }
+    .cases .resolve-btn:hover { background: var(--ui-success); border-color: var(--ui-success); color: #fff; }
+    .cases .act-green { background: var(--ui-success); border: 1.5px solid var(--ui-success); color: #fff; filter: none; }
+    .cases .act-green:hover { background: var(--ui-success-hover); border-color: var(--ui-success-hover); color: #fff; filter: none; }
+    html[data-theme="dark"] .cases .act-green, html[data-bs-theme="dark"] .cases .act-green, body[data-theme="dark"] .cases .act-green, body.dark-mode .cases .act-green { color: #06210f; }
+
+    /* SLATE: Close case (finality, different from Resolve green) */
+    .cases .close-btn,
+    .cases .act-close { background: var(--ui-close-soft); border: 1.5px solid var(--ui-close); color: var(--ui-close); }
+    .cases .close-btn:hover,
+    .cases .act-close:hover { background: var(--ui-close); border-color: var(--ui-close); color: #fff; }
+    html[data-theme="dark"] .cases .act-close:hover, html[data-bs-theme="dark"] .cases .act-close:hover, body[data-theme="dark"] .cases .act-close:hover, body.dark-mode .cases .act-close:hover { color: #0f1620; }
+    html[data-theme="dark"] .cases .close-btn:hover, html[data-bs-theme="dark"] .cases .close-btn:hover, body[data-theme="dark"] .cases .close-btn:hover, body.dark-mode .cases .close-btn:hover { color: #0f1620; }
+
+    /* RED: destructive / disapprove */
+    .cases .btn-danger,
+    .cases .btn-outline-danger,
+    .cases .act-danger { background: var(--ui-danger-soft); border: 1.5px solid var(--ui-danger); color: var(--ui-danger); }
+    .cases .btn-danger:hover,
+    .cases .btn-outline-danger:hover,
+    .cases .act-danger:hover { background: var(--ui-danger); border-color: var(--ui-danger); color: #fff; }
+
+    /* Disabled + focus */
+    .cases .btn:disabled,
+    .cases .cta:disabled,
+    .cases .act:disabled { opacity: .5; cursor: not-allowed; }
+    .cases .btn:focus-visible,
+    .cases .cta:focus-visible,
+    .cases .act:focus-visible,
+    .cases .view-btn:focus-visible,
+    .cases .resolve-btn:focus-visible,
+    .cases .close-btn:focus-visible,
+    .cases .reset:focus-visible {
+        outline: 3px solid var(--ui-primary); outline-offset: 2px; box-shadow: none;
+    }
+
+    /* ---- Text fields: hint text must NOT look like typed text ---- */
+    .cases .toolbar input[type="search"],
+    .cases .toolbar select {
+        background-color: var(--ui-field-bg); color: var(--ui-field-text); border-color: var(--ui-field-line); font-weight: 500;
+    }
+    .cases .toolbar input::placeholder {
+        color: var(--ui-placeholder) !important; font-weight: 400; font-style: normal; opacity: 1 !important;
+    }
+    .cases .toolbar input[type="search"]:focus,
+    .cases .toolbar select:focus {
+        border-color: var(--ui-primary); background-color: var(--ui-field-bg); color: var(--ui-field-text);
+        box-shadow: 0 0 0 .2rem var(--ui-primary-soft);
+    }
+    .cases .toolbar input[type="search"]:focus,
+    .cases .toolbar select:focus::placeholder { opacity: .5 !important; }
+
 </style>
+
+
+
 
 @endpush
 
@@ -906,11 +1023,6 @@
 |--------------------------------------------------------------------------
 | Safe Filter Defaults
 |--------------------------------------------------------------------------
-|
-| The controller may not explicitly pass every filter variable.
-| These defaults prevent "Undefined variable" errors while still
-| preserving values submitted through the request query string.
-|
 */
 
 $search = $search ?? request('search', '');
@@ -998,10 +1110,7 @@ $typeLabels = [
 |--------------------------------------------------------------------------
 | Workflow Status Groups
 |--------------------------------------------------------------------------
-|
-| Only Resolved can proceed to Closed. Disapproved is a terminal
-| off-ramp.
-|
+| Only Resolved can proceed to Closed. Disapproved is a terminal off-ramp.
 */
 
 $activeStatuses = [
@@ -1018,32 +1127,18 @@ $activeStatuses = [
 
 <div class="cases">
 
-{{-- =========================================================
-     HEADER
-     ========================================================== --}}
-
+{{-- HEADER --}}
 <div class="head">
 
     <div>
+        <div class="eyebrow">Barangay case desk</div>
 
-        <div class="eyebrow">
-            Barangay case desk
-        </div>
+        <h1 class="display">Reports &amp; Complaints</h1>
 
-        <h1 class="display">
-            Reports &amp; Complaints
-        </h1>
-
-        <p>
-            Record, monitor, and resolve barangay concerns in one place.
-        </p>
-
+        <p>Record, monitor, and resolve barangay concerns in one place.</p>
     </div>
 
-    <a
-        href="{{ route('reports-complaints.create') }}"
-        class="cta"
-    >
+    <a href="{{ route('reports-complaints.create') }}" class="cta">
         <i class="bi bi-plus-lg"></i>
         New report or complaint
     </a>
@@ -1051,86 +1146,37 @@ $activeStatuses = [
 </div>
 
 
-{{-- =========================================================
-     STATS
-     ========================================================== --}}
-
+{{-- STATS --}}
 <div class="tiles">
 
     <div class="tile" style="--c: var(--brand); --cbg: var(--brand-soft)">
-
-        <div class="icon-badge">
-            <i class="bi bi-clipboard-data"></i>
-        </div>
-
-        <div class="n">
-            {{ number_format($totalReports) }}
-        </div>
-
-        <div class="l">
-            Total records
-        </div>
-
+        <div class="icon-badge"><i class="bi bi-clipboard-data"></i></div>
+        <div class="n">{{ number_format($totalReports) }}</div>
+        <div class="l">Total records</div>
     </div>
-
 
     <div class="tile" style="--c: var(--s-review); --cbg: var(--s-review-bg)">
-
-        <div class="icon-badge">
-            <i class="bi bi-hourglass-split"></i>
-        </div>
-
-        <div class="n">
-            {{ number_format($pendingReports) }}
-        </div>
-
-        <div class="l">
-            Pending or in review
-        </div>
-
+        <div class="icon-badge"><i class="bi bi-hourglass-split"></i></div>
+        <div class="n">{{ number_format($pendingReports) }}</div>
+        <div class="l">Pending or in review</div>
     </div>
-
 
     <div class="tile" style="--c: var(--s-resolution); --cbg: var(--s-resolution-bg)">
-
-        <div class="icon-badge">
-            <i class="bi bi-arrow-repeat"></i>
-        </div>
-
-        <div class="n">
-            {{ number_format($activeReports) }}
-        </div>
-
-        <div class="l">
-            Active cases
-        </div>
-
+        <div class="icon-badge"><i class="bi bi-arrow-repeat"></i></div>
+        <div class="n">{{ number_format($activeReports) }}</div>
+        <div class="l">Active cases</div>
     </div>
 
-
     <div class="tile" style="--c: var(--s-resolved); --cbg: var(--s-resolved-bg)">
-
-        <div class="icon-badge">
-            <i class="bi bi-check2-circle"></i>
-        </div>
-
-        <div class="n">
-            {{ number_format($resolvedReports) }}
-        </div>
-
-        <div class="l">
-            Resolved
-        </div>
-
+        <div class="icon-badge"><i class="bi bi-check2-circle"></i></div>
+        <div class="n">{{ number_format($resolvedReports) }}</div>
+        <div class="l">Resolved</div>
     </div>
 
 </div>
 
 
-{{-- =========================================================
-     FILTERS
-     ========================================================== --}}
-
+{{-- FILTERS --}}
 <form
     method="GET"
     action="{{ route('reports-complaints.index') }}"
@@ -1140,74 +1186,35 @@ $activeStatuses = [
 
     <div class="seg-wrap">
 
-        <div
-            class="seg"
-            role="radiogroup"
-            aria-label="Report type"
-        >
+        <div class="seg" role="radiogroup" aria-label="Report type">
 
             <label>
-
-                <input
-                    type="radio"
-                    name="report_type"
-                    value=""
-                    {{ $reportType ? '' : 'checked' }}
-                >
-
-                <span>
-                    All
-                </span>
-
+                <input type="radio" name="report_type" value="" {{ $reportType ? '' : 'checked' }}>
+                <span>All</span>
             </label>
 
-
             <label class="c-community">
-
-                <input
-                    type="radio"
-                    name="report_type"
-                    value="community"
-                    {{ $reportType === 'community' ? 'checked' : '' }}
-                >
-
+                <input type="radio" name="report_type" value="community" {{ $reportType === 'community' ? 'checked' : '' }}>
                 <span>
                     <i class="bi bi-building"></i>
                     Community reports
                 </span>
-
             </label>
 
-
             <label class="c-person">
-
-                <input
-                    type="radio"
-                    name="report_type"
-                    value="person"
-                    {{ $reportType === 'person' ? 'checked' : '' }}
-                >
-
+                <input type="radio" name="report_type" value="person" {{ $reportType === 'person' ? 'checked' : '' }}>
                 <span>
                     <i class="bi bi-person-exclamation"></i>
                     Person complaints
                 </span>
-
             </label>
 
         </div>
 
-
         <div class="result-line">
-
-            <b>
-                {{ number_format($total) }}
-            </b>
-
+            <b>{{ number_format($total) }}</b>
             {{ \Illuminate\Support\Str::plural('record', $total) }}
-
             {{ $hasFilters ? ' match' : '' }}
-
         </div>
 
     </div>
@@ -1218,13 +1225,7 @@ $activeStatuses = [
         <div class="tb-row">
 
             <div class="search-f">
-
-                <label
-                    class="lbl"
-                    for="search"
-                >
-                    Search
-                </label>
+                <label class="lbl" for="search">Search</label>
 
                 <i class="bi bi-search"></i>
 
@@ -1236,88 +1237,39 @@ $activeStatuses = [
                     autocomplete="off"
                     placeholder="Code, title, resident, or location"
                 >
-
             </div>
 
-
             <div>
+                <label class="lbl" for="status">Status</label>
 
-                <label
-                    class="lbl"
-                    for="status"
-                >
-                    Status
-                </label>
-
-                <select
-                    id="status"
-                    name="status"
-                >
-
-                    <option value="">
-                        All statuses
-                    </option>
+                <select id="status" name="status">
+                    <option value="">All statuses</option>
 
                     @foreach ($statuses as $s)
-
-                        <option
-                            value="{{ $s }}"
-                            @selected($status === $s)
-                        >
-                            {{ $s }}
-                        </option>
-
+                        <option value="{{ $s }}" @selected($status === $s)>{{ $s }}</option>
                     @endforeach
-
                 </select>
-
             </div>
-
 
             <div>
+                <label class="lbl" for="category">Category</label>
 
-                <label
-                    class="lbl"
-                    for="category"
-                >
-                    Category
-                </label>
-
-                <select
-                    id="category"
-                    name="category"
-                >
-
-                    <option value="">
-                        All categories
-                    </option>
+                <select id="category" name="category">
+                    <option value="">All categories</option>
 
                     @foreach ($categories as $item)
-
-                        <option
-                            value="{{ $item }}"
-                            @selected($category === $item)
-                        >
-                            {{ $item }}
-                        </option>
-
+                        <option value="{{ $item }}" @selected($category === $item)>{{ $item }}</option>
                     @endforeach
-
                 </select>
-
             </div>
-
 
             <a
                 href="{{ route('reports-complaints.index') }}"
                 class="reset"
                 title="Clear all filters"
             >
-
                 <i class="bi bi-arrow-counterclockwise"></i>
-
                 Reset
-
             </a>
 
         </div>
@@ -1327,16 +1279,10 @@ $activeStatuses = [
 </form>
 
 
-{{-- =========================================================
-     ACTIVE FILTER CHIPS
-     ========================================================== --}}
-
+{{-- ACTIVE FILTER CHIPS --}}
 @if ($hasFilters)
 
-    <div
-        class="chips"
-        aria-label="Active filters"
-    >
+    <div class="chips" aria-label="Active filters">
 
         @foreach ($params as $key => $value)
 
@@ -1345,42 +1291,28 @@ $activeStatuses = [
                 @switch($key)
 
                     @case('search')
-
                         Search: “{{ $value }}”
-
                         @break
 
                     @case('report_type')
-
                         {{ $typeLabels[$value] ?? $value }}
-
                         @break
 
                     @case('status')
-
                         Status: {{ $value }}
-
                         @break
 
                     @case('category')
-
                         Category: {{ $value }}
-
                         @break
 
                 @endswitch
 
-
                 <a
-                    href="{{ route(
-                        'reports-complaints.index',
-                        \Illuminate\Support\Arr::except($params, $key)
-                    ) }}"
+                    href="{{ route('reports-complaints.index', \Illuminate\Support\Arr::except($params, $key)) }}"
                     aria-label="Remove this filter"
                 >
-
                     <i class="bi bi-x-lg"></i>
-
                 </a>
 
             </span>
@@ -1392,14 +1324,8 @@ $activeStatuses = [
 @endif
 
 
-{{-- =========================================================
-     RECORDS
-     ========================================================== --}}
-
-<div
-    class="board"
-    id="board"
->
+{{-- RECORDS --}}
+<div class="board" id="board">
 
     @if ($reports->count() > 0)
 
@@ -1407,48 +1333,25 @@ $activeStatuses = [
 
             @php
 
-                $url = route(
-                    'reports-complaints.show',
-                    $report
-                );
+                $url = route('reports-complaints.show', $report);
 
-                $isCommunity =
-                    $report->report_type === 'community';
+                $isCommunity = $report->report_type === 'community';
 
-                $statusClass =
-                    $statusMap[$report->status]
-                    ?? 's-filed';
+                $statusClass = $statusMap[$report->status] ?? 's-filed';
 
-                $complainant =
-                    $report->complainant
-                    ? trim(
-                        $report->complainant->first_name .
-                        ' ' .
-                        $report->complainant->last_name
-                    )
+                $complainant = $report->complainant
+                    ? trim($report->complainant->first_name . ' ' . $report->complainant->last_name)
                     : null;
 
-                $subject =
-                    $report->subjectResident
-                    ? trim(
-                        $report->subjectResident->first_name .
-                        ' ' .
-                        $report->subjectResident->last_name
-                    )
+                $subject = $report->subjectResident
+                    ? trim($report->subjectResident->first_name . ' ' . $report->subjectResident->last_name)
                     : null;
 
-                $isActive =
-                    in_array(
-                        $report->status,
-                        $activeStatuses,
-                        true
-                    );
+                $isActive = in_array($report->status, $activeStatuses, true);
 
-                $isResolved =
-                    $report->status === 'Resolved';
+                $isResolved = $report->status === 'Resolved';
 
-                $isClosed =
-                    $report->status === 'Closed';
+                $isClosed = $report->status === 'Closed';
 
             @endphp
 
@@ -1458,11 +1361,7 @@ $activeStatuses = [
                 data-href="{{ $url }}"
             >
 
-
-                {{-- =================================================
-                     MAIN: icon, code, title, location/subject
-                     ================================================== --}}
-
+                {{-- MAIN: icon, code, title, location/subject --}}
                 <div class="rec-main">
 
                     <div class="rec-icon">
@@ -1473,10 +1372,7 @@ $activeStatuses = [
 
                         <div class="rec-top">
 
-                            <a
-                                href="{{ $url }}"
-                                class="code"
-                            >
+                            <a href="{{ $url }}" class="code">
                                 {!! $hl($report->record_code) !!}
                             </a>
 
@@ -1486,18 +1382,9 @@ $activeStatuses = [
 
                         </div>
 
-                        <div
-                            class="ttl"
-                            title="{{ $report->title }}"
-                        >
-                            {!! $hl(
-                                \Illuminate\Support\Str::limit(
-                                    $report->title,
-                                    70
-                                )
-                            ) !!}
+                        <div class="ttl" title="{{ $report->title }}">
+                            {!! $hl(\Illuminate\Support\Str::limit($report->title, 70)) !!}
                         </div>
-
 
                         @if (! $isCommunity && $subject)
 
@@ -1509,12 +1396,7 @@ $activeStatuses = [
 
                             <div class="rec-sub">
                                 <i class="bi bi-geo-alt"></i>
-                                {!! $hl(
-                                    \Illuminate\Support\Str::limit(
-                                        $report->location,
-                                        50
-                                    )
-                                ) !!}
+                                {!! $hl(\Illuminate\Support\Str::limit($report->location, 50)) !!}
                             </div>
 
                         @endif
@@ -1524,41 +1406,23 @@ $activeStatuses = [
                 </div>
 
 
-                {{-- =================================================
-                     META: complainant + category
-                     ================================================== --}}
-
+                {{-- META: complainant + category --}}
                 <div class="rec-meta">
 
-                    <span class="who-label">
-                        Complainant
-                    </span>
+                    <span class="who-label">Complainant</span>
 
                     @if ($complainant)
-
-                        <span class="who">
-                            {!! $hl($complainant) !!}
-                        </span>
-
+                        <span class="who">{!! $hl($complainant) !!}</span>
                     @else
-
-                        <span class="who muted-who">
-                            N/A
-                        </span>
-
+                        <span class="who muted-who">N/A</span>
                     @endif
 
-                    <span class="cat">
-                        {{ $report->category }}
-                    </span>
+                    <span class="cat">{{ $report->category }}</span>
 
                 </div>
 
 
-                {{-- =================================================
-                     SIDE: status + filed date
-                     ================================================== --}}
-
+                {{-- SIDE: status + filed date --}}
                 <div class="rec-side">
 
                     <span class="pill {{ $statusClass }}">
@@ -1576,31 +1440,17 @@ $activeStatuses = [
                 </div>
 
 
-                {{-- =================================================
-                     ACTIONS
-                     ================================================== --}}
+                {{-- ACTIONS --}}
+                <div class="rec-actions" onclick="event.stopPropagation();">
 
-                <div
-                    class="rec-actions"
-                    onclick="event.stopPropagation();"
-                >
-
-
-                    {{-- =========================================
-                         ACTIVE CASE — Active → Resolved
-                         ========================================= --}}
-
+                    {{-- ACTIVE CASE: Active -> Resolved (green) --}}
                     @if ($isActive)
 
                         <form
                             method="POST"
-                            action="{{ route(
-                                'reports-complaints.resolve',
-                                $report
-                            ) }}"
+                            action="{{ route('reports-complaints.resolve', $report) }}"
                             class="d-inline"
                         >
-
                             @csrf
                             @method('PATCH')
 
@@ -1610,40 +1460,24 @@ $activeStatuses = [
                                 title="Mark this case as Resolved"
                                 onclick="return confirm('Mark {{ $report->record_code }} as Resolved?');"
                             >
-
                                 <i class="bi bi-check2-circle"></i>
-
-                                Resolve Case
-
+                                Resolve case
                             </button>
-
                         </form>
 
-
-                    {{-- =========================================
-                         RESOLVED CASE — Resolved → Closed
-                         ========================================= --}}
-
+                    {{-- RESOLVED CASE: Resolved -> Closed (slate) --}}
                     @elseif ($isResolved)
 
                         <span class="resolved-label">
-
                             <i class="bi bi-check2-circle"></i>
-
                             Resolved
-
                         </span>
-
 
                         <form
                             method="POST"
-                            action="{{ route(
-                                'reports-complaints.close',
-                                $report
-                            ) }}"
+                            action="{{ route('reports-complaints.close', $report) }}"
                             class="d-inline"
                         >
-
                             @csrf
                             @method('PATCH')
 
@@ -1653,77 +1487,31 @@ $activeStatuses = [
                                 title="Close this resolved case"
                                 onclick="return confirm('Close {{ $report->record_code }}? This will mark the case as completed.');"
                             >
-
                                 <i class="bi bi-lock-fill"></i>
-
-                                Close Case
-
+                                Close case
                             </button>
-
                         </form>
 
-
-                    {{-- =========================================
-                         CLOSED CASE — view only
-                         ========================================= --}}
-
+                    {{-- CLOSED CASE: view only --}}
                     @elseif ($isClosed)
 
                         <span class="completed-label">
-
                             <i class="bi bi-check-circle"></i>
-
                             Case completed
-
                         </span>
 
                         <span class="closed-label">
-
                             <i class="bi bi-lock-fill"></i>
-
                             Closed
-
                         </span>
 
-
-                    {{-- =========================================
-                         OTHER STATUS (e.g. Disapproved) — view only
-                         ========================================= --}}
-
-                    @else
-
-                        <a
-                            href="{{ $url }}"
-                            class="view-btn"
-                        >
-
-                            <i class="bi bi-eye"></i>
-
-                            View
-
-                        </a>
-
                     @endif
 
-
-                    {{-- =========================================
-                         Always available: View
-                         ========================================= --}}
-
-                    @if ($isActive || $isResolved || $isClosed)
-
-                        <a
-                            href="{{ $url }}"
-                            class="view-btn"
-                        >
-
-                            <i class="bi bi-eye"></i>
-
-                            View
-
-                        </a>
-
-                    @endif
+                    {{-- View (gray ghost) is always available, shown once per card --}}
+                    <a href="{{ $url }}" class="view-btn">
+                        <i class="bi bi-eye"></i>
+                        View
+                    </a>
 
                 </div>
 
@@ -1732,15 +1520,10 @@ $activeStatuses = [
         @endforeach
 
 
-        @if (
-            method_exists($reports, 'hasPages')
-            && $reports->hasPages()
-        )
+        @if (method_exists($reports, 'hasPages') && $reports->hasPages())
 
             <div class="board-foot">
-
                 {{ $reports->withQueryString()->links() }}
-
             </div>
 
         @endif
@@ -1754,44 +1537,25 @@ $activeStatuses = [
                 <i class="bi bi-clipboard-x"></i>
             </div>
 
-
             @if ($hasFilters)
 
-                <h3 class="display">
-                    Nothing matches these filters
-                </h3>
+                <h3 class="display">Nothing matches these filters</h3>
 
-                <p>
-                    Try fewer words, check the spelling,
-                    or remove a filter above.
-                </p>
+                <p>Try fewer words, check the spelling, or remove a filter above.</p>
 
-                <a
-                    href="{{ route('reports-complaints.index') }}"
-                    class="view-btn"
-                >
+                <a href="{{ route('reports-complaints.index') }}" class="view-btn">
                     Reset filters
                 </a>
 
             @else
 
-                <h3 class="display">
-                    No reports or complaints yet
-                </h3>
+                <h3 class="display">No reports or complaints yet</h3>
 
-                <p>
-                    Recorded barangay concerns will appear here.
-                </p>
+                <p>Recorded barangay concerns will appear here.</p>
 
-                <a
-                    href="{{ route('reports-complaints.create') }}"
-                    class="cta"
-                >
-
+                <a href="{{ route('reports-complaints.create') }}" class="cta">
                     <i class="bi bi-plus-lg"></i>
-
                     New report or complaint
-
                 </a>
 
             @endif
@@ -1819,141 +1583,70 @@ $activeStatuses = [
         return;
     }
 
-
     function apply(refocus) {
 
         try {
-
             if (refocus) {
-                sessionStorage.setItem(
-                    'rc_refocus',
-                    '1'
-                );
+                sessionStorage.setItem('rc_refocus', '1');
             }
-
         } catch (e) {}
-
 
         if (board) {
             board.classList.add('loading');
         }
 
         form.submit();
-
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Selects and report type
-    |--------------------------------------------------------------------------
-    */
-
-    form.querySelectorAll(
-        'select, input[type="radio"]'
-    ).forEach(function (el) {
-
-        el.addEventListener(
-            'change',
-            function () {
-                apply(false);
-            }
-        );
-
+    /* Selects and report type */
+    form.querySelectorAll('select, input[type="radio"]').forEach(function (el) {
+        el.addEventListener('change', function () {
+            apply(false);
+        });
     });
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Search
-    |--------------------------------------------------------------------------
-    */
-
+    /* Search (debounced) */
     if (box) {
 
         let timer;
 
-        box.addEventListener(
-            'input',
-            function () {
-
-                clearTimeout(timer);
-
-                timer = setTimeout(
-                    function () {
-                        apply(true);
-                    },
-                    400
-                );
-
-            }
-        );
-
+        box.addEventListener('input', function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                apply(true);
+            }, 400);
+        });
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Restore search focus
-    |--------------------------------------------------------------------------
-    */
-
+    /* Restore search focus after reload */
     try {
 
-        if (
-            box &&
-            sessionStorage.getItem('rc_refocus')
-        ) {
+        if (box && sessionStorage.getItem('rc_refocus')) {
 
-            sessionStorage.removeItem(
-                'rc_refocus'
-            );
+            sessionStorage.removeItem('rc_refocus');
 
             box.focus();
 
-            box.setSelectionRange(
-                box.value.length,
-                box.value.length
-            );
-
+            box.setSelectionRange(box.value.length, box.value.length);
         }
 
     } catch (e) {}
 
-
     /*
-    |--------------------------------------------------------------------------
-    | Whole card is clickable
-    |--------------------------------------------------------------------------
-    |
-    | Real links, forms, and buttons are excluded so that Resolve,
-    | Close Case, and View continue to work normally.
-    |
-    */
+     * Whole card is clickable. Real links, forms and buttons are
+     * excluded so Resolve, Close case and View keep working.
+     */
+    document.querySelectorAll('.rec-card').forEach(function (card) {
 
-    document
-        .querySelectorAll('.rec-card')
-        .forEach(function (card) {
+        card.addEventListener('click', function (e) {
 
-            card.addEventListener(
-                'click',
-                function (e) {
+            if (e.target.closest('a, button, form')) {
+                return;
+            }
 
-                    if (
-                        e.target.closest(
-                            'a, button, form'
-                        )
-                    ) {
-                        return;
-                    }
-
-                    window.location =
-                        card.dataset.href;
-
-                }
-            );
-
+            window.location = card.dataset.href;
         });
+    });
 
 })();
 </script>

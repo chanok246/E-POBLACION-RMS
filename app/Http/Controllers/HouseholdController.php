@@ -25,6 +25,12 @@ class HouseholdController extends Controller
      */
     private array $tableColumnCache = [];
 
+    /**
+     * Philippine mobile number: +63 followed by exactly 10 digits, the first
+     * of which must be 9 (e.g. +639171234567).
+     */
+    private const PH_MOBILE_PATTERN = '/^\+639\d{9}$/';
+
     /*
     |--------------------------------------------------------------------------
     | Household List
@@ -277,6 +283,9 @@ class HouseholdController extends Controller
     {
         $this->authorizeHouseholdManagement();
 
+        // Normalize every contact number (+639XXXXXXXXX) BEFORE validation.
+        $this->normalizeContactNumbers($request);
+
         $civilStatuses = $this->civilStatusOptions();
         $occupations = $this->occupationOptions();
         $educationLevels = $this->studentEducationLevels();
@@ -301,7 +310,7 @@ class HouseholdController extends Controller
             'head.birth_date' => ['nullable', 'date', 'before_or_equal:today'],
             'head.sex' => ['nullable', Rule::in(['Male', 'Female'])],
             'head.civil_status' => ['nullable', Rule::in($civilStatuses)],
-            'head.contact_number' => ['nullable', 'string', 'max:50'],
+            'head.contact_number' => ['nullable', 'string', 'max:13', 'regex:' . self::PH_MOBILE_PATTERN],
             'head.email' => ['nullable', 'string', 'max:255'],
             'head.occupation' => ['nullable', Rule::in($occupations)],
             'head.occupation_other' => ['nullable', 'string', 'max:255'],
@@ -349,7 +358,7 @@ class HouseholdController extends Controller
                 'max:' . now()->year,
             ],
             'members.*.residency_year_estimated' => ['nullable', 'boolean'],
-            'members.*.contact_number' => ['nullable', 'string', 'max:50'],
+            'members.*.contact_number' => ['nullable', 'string', 'max:13', 'regex:' . self::PH_MOBILE_PATTERN],
             'members.*.email' => ['nullable', 'string', 'max:255'],
             'members.*.occupation' => ['nullable', Rule::in($occupations)],
             'members.*.occupation_other' => ['nullable', 'string', 'max:255'],
@@ -361,7 +370,7 @@ class HouseholdController extends Controller
             'members.*.is_solo_parent' => ['nullable', 'boolean'],
             'members.*.student_education_level' => ['nullable', Rule::in($educationLevels)],
             'members.*.is_high_school' => ['nullable', 'boolean'], // legacy
-        ]);
+        ], $this->contactNumberMessages());
 
         /*
         |--------------------------------------------------------------------------
@@ -756,8 +765,8 @@ class HouseholdController extends Controller
 
         $occupation = $this->resolveOccupation($person);
 
-        $contactNumber = trim((string) ($person['contact_number'] ?? ''));
-        $contactNumber = $contactNumber !== '' ? $contactNumber : null;
+        // Stored as +639XXXXXXXXX, or null when the optional field is blank.
+        $contactNumber = $this->contactNumberForStorage($person['contact_number'] ?? null);
 
         $attributes = [
             'first_name' => $firstName,
@@ -788,6 +797,118 @@ class HouseholdController extends Controller
         }
 
         return Resident::create($attributes);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Philippine Contact Numbers
+    |--------------------------------------------------------------------------
+    | Contact numbers stay OPTIONAL. Accepted input representations:
+    |     +639XXXXXXXXX   (the form's format)
+    |     639XXXXXXXXX
+    |     09XXXXXXXXX     (local 11-digit format)
+    | All are normalized to +639XXXXXXXXX before validation and saving.
+    | Anything else (letters, wrong length, prefix other than 9, malformed
+    | country code) is left untouched so the validator rejects it.
+    */
+
+    /**
+     * Blank becomes null; a recognised Philippine mobile number becomes
+     * +639XXXXXXXXX; any other value is returned trimmed so validation
+     * can reject it.
+     */
+    private function normalizePhilippineMobile(mixed $value): mixed
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match(self::PH_MOBILE_PATTERN, $value) === 1) {
+            return $value;
+        }
+
+        if (preg_match('/^639\d{9}$/', $value) === 1) {
+            return '+' . $value;
+        }
+
+        if (preg_match('/^09\d{9}$/', $value) === 1) {
+            return '+63' . substr($value, 1);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Storable value: the normalized +639XXXXXXXXX, or null.
+     */
+    private function contactNumberForStorage(mixed $value): ?string
+    {
+        $normalized = $this->normalizePhilippineMobile($value);
+
+        return is_string($normalized)
+            && preg_match(self::PH_MOBILE_PATTERN, $normalized) === 1
+                ? $normalized
+                : null;
+    }
+
+    /**
+     * Normalize head.contact_number and every members.*.contact_number
+     * in the request before validation.
+     */
+    private function normalizeContactNumbers(Request $request): void
+    {
+        $head = $request->input('head');
+
+        if (is_array($head) && array_key_exists('contact_number', $head)) {
+            $head['contact_number'] =
+                $this->normalizePhilippineMobile($head['contact_number']);
+
+            $request->merge(['head' => $head]);
+        }
+
+        $members = $request->input('members');
+
+        if (is_array($members)) {
+            foreach ($members as $index => $member) {
+                if (is_array($member) && array_key_exists('contact_number', $member)) {
+                    $members[$index]['contact_number'] =
+                        $this->normalizePhilippineMobile($member['contact_number']);
+                }
+            }
+
+            $request->merge(['members' => $members]);
+        }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function contactNumberMessages(): array
+    {
+        $head = 'The household head contact number must be a valid Philippine mobile number: '
+            . '+63 followed by 10 digits starting with 9 (e.g. +639171234567).';
+
+        $member = 'Each household member contact number must be a valid Philippine mobile number: '
+            . '+63 followed by 10 digits starting with 9 (e.g. +639171234567).';
+
+        return [
+            'head.contact_number.regex' => $head,
+            'head.contact_number.max' => $head,
+            'head.contact_number.string' => $head,
+            'members.*.contact_number.regex' => $member,
+            'members.*.contact_number.max' => $member,
+            'members.*.contact_number.string' => $member,
+        ];
     }
 
     /*

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -177,37 +176,6 @@
             user-select: all;
         }
 
-        .codes {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            margin: 18px 0;
-        }
-
-        .code {
-            border: 1px solid #dbe2ea;
-            background: #f8fafc;
-            border-radius: 7px;
-            padding: 12px 8px;
-            text-align: center;
-            font-family: Consolas, monospace;
-            overflow-wrap: anywhere;
-            user-select: all;
-        }
-
-        .check {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            font-weight: 400;
-            line-height: 1.5;
-        }
-
-        .check input {
-            margin-top: 4px;
-            flex-shrink: 0;
-        }
-
         .footer {
             text-align: center;
             color: #667085;
@@ -218,10 +186,6 @@
         @media (max-width: 480px) {
             .card {
                 padding: 21px 17px;
-            }
-
-            .codes {
-                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -245,7 +209,7 @@
             This private recovery session was authorized by the Captain
             after an in-person identity check. It expires within 15 minutes
             of authorization. The Captain must not view your password,
-            authenticator setup key, QR code, or recovery codes.
+            authenticator setup key, or QR code.
         </div>
 
         @if ($errors->any())
@@ -348,61 +312,20 @@
                 </div>
 
                 <button type="submit">
-                    Verify New Authenticator
+                    Verify and Activate New Authenticator
                 </button>
             </form>
 
-        @elseif ($stage === 'confirm_recovery_codes')
-            <p>
-                Your new authenticator has been verified. Save the new
-                recovery codes somewhere private and secure before
-                completing recovery.
+            <p class="muted">
+                After the new authenticator code is verified, the new
+                authenticator will be activated immediately. You will
+                then be returned to the login page to sign in again.
             </p>
-
-            <div class="warning">
-                These codes are shown for this recovery session only.
-                Each code is intended for one-time use. Do not share them
-                with the Captain or anyone else.
-            </div>
-
-            <div class="codes">
-                @foreach ($recoveryCodes as $code)
-                    <div class="code">{{ $code }}</div>
-                @endforeach
-            </div>
-
-            <form
-                method="POST"
-                action="{{ route('secretary-authenticator-recovery.finish') }}"
-            >
-                @csrf
-
-                <div class="field">
-                    <label class="check" for="saved_confirmation">
-                        <input
-                            id="saved_confirmation"
-                            name="saved_confirmation"
-                            type="checkbox"
-                            value="1"
-                            required
-                        >
-                        <span>
-                            I have securely saved my new recovery codes and
-                            understand that my old authenticator and old
-                            recovery codes will be replaced after completion.
-                        </span>
-                    </label>
-                </div>
-
-                <button type="submit">
-                    Confirm and Activate New Authenticator
-                </button>
-            </form>
 
         @else
             <div class="error" role="alert">
-                The recovery stage is invalid. Do not continue using this
-                page. Ask the Captain to authorize recovery again.
+                The recovery stage is invalid or expired. Do not continue
+                using this page. Ask the Captain to authorize recovery again.
             </div>
         @endif
     </main>

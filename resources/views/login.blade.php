@@ -31,17 +31,19 @@
         :root {
             --ink: #12201a;
             --muted: #566a60;
-            --faint: #8a9d92;
+            --faint: #66796e;
             --line: #e2e8e4;
             --line-strong: #c9d4cd;
             --paper: #f4f8f6;
             --sheet: #ffffff;
 
             /* Watermelon (primary) */
-            --brand: #e5505c;
-            --brand-dark: #c93a47;
+            --brand: #c92a43;
+            --brand-dark: #a31f3a;
             --brand-soft: #fde8ea;
             --pink: #ff7b88;
+            --brand-grad: linear-gradient(135deg, #d63a50, #b81f3a); /* white text >= 4.5:1 across the whole gradient */
+            --field-border: #7a8e83;      /* input outline >= 3:1 on white */
 
             /* Rind / leaf (secondary) */
             --leaf: #2f9e5b;
@@ -54,7 +56,7 @@
 
             --mint: #5ef0a8;
             --sun: #ffc933;
-            --red: #c0302d;
+            --red: #b3261e;
             --red-soft: #fce7e6;
 
             --font-head: 'Space Grotesk', 'Public Sans', system-ui, sans-serif;
@@ -92,7 +94,7 @@
             display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 14px;
             min-height: 100vh; min-height: 100svh;
             background:
-                radial-gradient(60% 40% at 100% 0%, rgba(229, 80, 92, .08), transparent 70%),
+                radial-gradient(60% 40% at 100% 0%, rgba(201, 42, 67, .08), transparent 70%),
                 radial-gradient(50% 40% at 0% 100%, rgba(47, 158, 91, .08), transparent 70%),
                 var(--paper);
         }
@@ -129,7 +131,7 @@
         .slide::after {
             content: ''; position: absolute; inset: 0;
             background:
-                radial-gradient(55% 45% at 88% 8%, rgba(229, 80, 92, .38), transparent 70%),
+                radial-gradient(55% 45% at 88% 8%, rgba(201, 42, 67, .38), transparent 70%),
                 linear-gradient(0deg, rgba(6, 35, 26, .95) 0%, rgba(6, 35, 26, .6) 42%, rgba(6, 35, 26, .18) 75%),
                 linear-gradient(180deg, rgba(6, 35, 26, .55) 0%, rgba(6, 35, 26, 0) 24%);
         }
@@ -215,13 +217,13 @@
             background: rgba(255, 255, 255, .08); color: #fff; display: grid; place-items: center; cursor: pointer;
             backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: background .15s, border-color .15s;
         }
-        .carousel-nav:hover { background: rgba(229, 80, 92, .35); border-color: var(--pink); }
+        .carousel-nav:hover { background: rgba(201, 42, 67, .35); border-color: var(--pink); }
         .carousel-nav:focus-visible, .carousel-indicators button:focus-visible, .scroll-indicator:focus-visible { outline-color: var(--mint); }
 
         .scroll-indicator {
             position: absolute; z-index: 6; right: 16px; bottom: 74px; display: inline-flex; align-items: center; gap: 8px;
-            background: linear-gradient(135deg, #f27984, var(--brand)); color: #fff; border: 0; border-radius: 999px; padding: 9px 14px 9px 16px;
-            font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 8px 20px rgba(229, 80, 92, .4);
+            background: var(--brand-grad); color: #fff; border: 0; border-radius: 999px; padding: 9px 14px 9px 16px;
+            font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 8px 20px rgba(201, 42, 67, .4);
         }
         .scroll-indicator .mouse { display: inline-block; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); }
         @media (min-width: 960px) { .scroll-indicator { display: none; } }
@@ -261,7 +263,7 @@
         .role-pills { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
         .role-thumb {
             position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 9px;
-            background: linear-gradient(135deg, #f27984, var(--brand)); box-shadow: 0 6px 16px rgba(229, 80, 92, .35); transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+            background: var(--brand-grad); box-shadow: 0 6px 16px rgba(201, 42, 67, .35); transition: transform .28s cubic-bezier(.4, 0, .2, 1);
         }
         .role-pills[data-active="1"] .role-thumb { transform: translateX(100%); }
         .role-pill {
@@ -294,13 +296,13 @@
         .input-icon.right:hover { background: var(--paper); color: var(--ink); }
         .form-input {
             width: 100%; min-height: 48px; padding: 11px 14px; font: inherit; color: var(--ink); background: #fff;
-            border: 1.5px solid var(--line-strong); border-radius: 12px; transition: border-color .15s, box-shadow .15s;
+            border: 1.5px solid var(--field-border); border-radius: 12px; transition: border-color .15s, box-shadow .15s;
         }
         .form-input.has-icon-left { padding-left: 42px; }
         .form-input.has-icon-right { padding-right: 48px; }
         .form-input::placeholder { color: var(--faint); }
-        .form-input:hover { border-color: var(--faint); }
-        .form-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(229, 80, 92, .15); }
+        .form-input:hover { border-color: var(--ink); }
+        .form-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(201, 42, 67, .15); }
         .input-wrap:focus-within .input-icon.left { color: var(--brand); }
         .form-input.is-invalid { border-color: var(--red); }
         .form-input.is-invalid:focus { box-shadow: 0 0 0 4px var(--red-soft); }
@@ -334,7 +336,7 @@
         .forgot-note h2 { font-size: 14px; margin: 0 0 6px; color: var(--ink); display: flex; align-items: center; gap: 8px; }
         .forgot-note h2 i { color: var(--leaf); }
 
-        /* Recovery panels (email password reset + Captain credential) */
+        /* Recovery panel (email password reset) */
         .recovery-mode-hidden { display: none !important; }
         .recovery-panel { margin: 0 0 22px; }
         .recovery-panel h2 { font-size: 21px; margin-bottom: 8px; }
@@ -342,20 +344,18 @@
         .recovery-panel .recovery-back { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; font-size: 14px; font-weight: 600; text-decoration: none; }
         .recovery-panel .recovery-back:hover { text-decoration: underline; }
         .recovery-panel .recovery-security { margin-top: 16px; color: var(--muted); font-size: 12.5px; }
-        .recovery-panel .recovery-alt { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line-strong); font-size: 13px; color: var(--muted); }
-        .recovery-panel .recovery-alt a { font-weight: 600; }
 
         .btn-primary {
             width: 100%; min-height: 50px; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-            border: 0; border-radius: 12px; background: linear-gradient(135deg, #f27984, var(--brand)); color: #fff; font-weight: 700; font-size: 16px; cursor: pointer;
-            box-shadow: 0 10px 22px rgba(229, 80, 92, .32);
+            border: 0; border-radius: 12px; background: var(--brand-grad); color: #fff; font-weight: 700; font-size: 16px; cursor: pointer;
+            box-shadow: 0 10px 22px rgba(201, 42, 67, .32);
             transition: filter .15s, transform .15s, box-shadow .15s;
         }
-        .btn-primary:hover { filter: brightness(1.06); box-shadow: 0 12px 28px rgba(229, 80, 92, .42); }
+        .btn-primary:hover { filter: brightness(.92); box-shadow: 0 12px 28px rgba(201, 42, 67, .42); }
         .btn-primary:active { transform: scale(.99); }
         .btn-primary i { transition: transform .2s; }
         .btn-primary:hover i { transform: translateX(3px); }
-        .btn-primary[disabled] { background: var(--faint); box-shadow: none; cursor: progress; }
+        .btn-primary[disabled] { background: #7f8f86; box-shadow: none; cursor: progress; }
         .btn-primary .spin { display: none; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .4); border-top-color: #fff; animation: spin .7s linear infinite; }
         .btn-primary.is-loading .spin { display: inline-block; }
         .btn-primary.is-loading i { display: none; }
@@ -383,7 +383,7 @@
             display: flex; flex-direction: column; background: var(--sheet); border: 1px solid var(--line);
             border-radius: 16px; padding: 22px; transition: border-color .15s, transform .15s, box-shadow .15s;
         }
-        .privacy-card:hover { border-color: var(--brand); transform: translateY(-3px); box-shadow: 0 14px 30px rgba(229, 80, 92, .12); }
+        .privacy-card:hover { border-color: var(--brand); transform: translateY(-3px); box-shadow: 0 14px 30px rgba(201, 42, 67, .12); }
         .pc-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-dark); font-size: 20px; margin-bottom: 16px; }
         .privacy-card:nth-child(even) .pc-icon { background: var(--leaf-soft); color: var(--leaf-dark); }
         .privacy-card:nth-child(even):hover { border-color: var(--leaf); box-shadow: 0 14px 30px rgba(47, 158, 91, .12); }
@@ -418,9 +418,9 @@
         .lm-foot { padding: 14px 28px 20px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; }
         .lm-done {
             min-height: 42px; padding: 0 22px; border: 0; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14.5px;
-            color: #fff; background: linear-gradient(135deg, #f27984, var(--brand));
+            color: #fff; background: var(--brand-grad);
         }
-        .lm-done:hover { filter: brightness(1.06); }
+        .lm-done:hover { filter: brightness(.92); }
         .lm-label { font-size: 14px; color: var(--muted); }
         .lm-chips { list-style: none; margin: -4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
         .lm-chips li { padding: 6px 12px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); font-size: 13.5px; font-weight: 500; }
@@ -486,8 +486,8 @@
         ============================================================ */
         .scroll-top {
             position: fixed; right: 18px; bottom: 18px; z-index: 50; width: 46px; height: 46px; border-radius: 14px; border: 0;
-            background: linear-gradient(135deg, #f27984, var(--brand)); color: #fff; font-size: 18px; display: grid; place-items: center; cursor: pointer;
-            box-shadow: 0 10px 24px rgba(229, 80, 92, .4); opacity: 0; visibility: hidden; transform: translateY(10px);
+            background: var(--brand-grad); color: #fff; font-size: 18px; display: grid; place-items: center; cursor: pointer;
+            box-shadow: 0 10px 24px rgba(201, 42, 67, .4); opacity: 0; visibility: hidden; transform: translateY(10px);
             transition: opacity .2s, transform .2s, visibility .2s;
         }
         .scroll-top.is-visible { opacity: 1; visibility: visible; transform: none; }
@@ -511,7 +511,7 @@
             cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
         }
         .attendance-kiosk-launcher:hover { background:var(--brand-soft); border-color:var(--pink); color:var(--brand-dark); transform:translateY(-1px); }
-        .attendance-kiosk-launcher:focus-visible, .kiosk-window button:focus-visible { outline:3px solid rgba(229,80,92,.4); outline-offset:2px; }
+        .attendance-kiosk-launcher:focus-visible, .kiosk-window button:focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
         .attendance-kiosk-overlay {
             position:fixed; inset:0; z-index:10000; display:none; flex-direction:column;
             background:#fdf7f8;
@@ -541,10 +541,10 @@
         .kiosk-window button:hover { background:var(--paper); border-color:var(--faint); }
         .kiosk-window button.kiosk-close {
             border-color:transparent; color:#fff;
-            background:linear-gradient(135deg, #f27984, var(--brand));
-            box-shadow:0 6px 14px rgba(229,80,92,.3);
+            background:var(--brand-grad);
+            box-shadow:0 6px 14px rgba(201,42,67,.3);
         }
-        .kiosk-window button.kiosk-close:hover { filter:brightness(1.06); }
+        .kiosk-window button.kiosk-close:hover { filter:brightness(.92); }
         .kiosk-frame { display:block; width:100%; flex:1; min-height:0; border:0; background:#fdf7f8; }
         body.kiosk-overlay-open { overflow:hidden; }
         @media (max-width:480px) {
@@ -868,135 +868,6 @@
                         Recovery codes expire. Password recovery does not sign you in or disable two-factor authentication.
                     </p>
 
-                    {{-- Existing Captain-only alternative, kept here so it stays with password recovery. --}}
-                    <p class="recovery-alt">
-                        Captain only: <a href="{{ route('captain-recovery.show') }}">use your one-time recovery credential instead</a>.
-                    </p>
-
-                    <a class="recovery-back" href="{{ route('login') }}">
-                        <i class="bi bi-arrow-left" aria-hidden="true"></i>
-                        Return to normal sign in
-                    </a>
-                </div>
-            @endif
-
-            {{-- Captain password recovery --}}
-            @if ($showCaptainRecoveryForm ?? false)
-                <div class="recovery-panel" id="captainRecoveryPanel">
-                    <h2>Captain Password Recovery</h2>
-                    <p class="recovery-intro">
-                        @if ($captainRecoveryVerified ?? false)
-                            Verification successful. Choose a new password to complete the Captain password reset.
-                        @else
-                            Enter the one-time recovery credential generated earlier from the Captain's Settings.
-                            The credential does not expire automatically and can be used only once.
-                        @endif
-                    </p>
-
-                    @if ($errors->has('recovery_credential') || $errors->has('password') || $errors->has('password_confirmation'))
-                        <div class="alert-error" role="alert">
-                            <strong>
-                                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-                                <span>We could not complete the password reset.</span>
-                            </strong>
-                            <ul>
-                                @error('recovery_credential')
-                                    <li>{{ $message }}</li>
-                                @enderror
-                                @error('password')
-                                    <li>{{ $message }}</li>
-                                @enderror
-                                @error('password_confirmation')
-                                    <li>{{ $message }}</li>
-                                @enderror
-                            </ul>
-                        </div>
-                    @endif
-
-                    @if (! ($captainRecoveryVerified ?? false))
-                        <form method="POST" action="{{ route('captain-recovery.verify') }}" id="captainRecoveryForm">
-                            @csrf
-
-                            <div class="form-group">
-                                <label class="form-label" for="recovery_credential">One-time recovery credential</label>
-                                <div class="input-wrap">
-                                    <i class="bi bi-shield-lock input-icon left" aria-hidden="true"></i>
-                                    <input type="password"
-                                           id="recovery_credential"
-                                           name="recovery_credential"
-                                           class="form-input has-icon-left {{ $errors->has('recovery_credential') ? 'is-invalid' : '' }}"
-                                           placeholder="Enter your recovery credential"
-                                           autocomplete="off"
-                                           autocapitalize="none"
-                                           spellcheck="false"
-                                           maxlength="200"
-                                           required>
-                                </div>
-                                @error('recovery_credential')
-                                    <span class="field-error" role="alert">{{ $message }}</span>
-                                @enderror
-                                <p class="field-tip" style="display:block;color:var(--muted);font-weight:400;">
-                                    Do not share this credential. Verification does not reset your password yet.
-                                </p>
-                            </div>
-
-                            <button type="submit" class="btn-primary" id="captainRecoverySubmit">
-                                <span>Verify recovery credential</span>
-                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                            </button>
-                        </form>
-                    @else
-                        <form method="POST" action="{{ route('captain-recovery.reset') }}" id="captainRecoveryForm">
-                            @csrf
-
-                            <div class="form-group">
-                                <label class="form-label" for="recovery_password">New password</label>
-                                <div class="input-wrap">
-                                    <i class="bi bi-lock input-icon left" aria-hidden="true"></i>
-                                    <input type="password"
-                                           id="recovery_password"
-                                           name="password"
-                                           class="form-input has-icon-left {{ $errors->has('password') ? 'is-invalid' : '' }}"
-                                           placeholder="At least 12 characters"
-                                           autocomplete="new-password"
-                                           minlength="12"
-                                           required>
-                                </div>
-                                @error('password')
-                                    <span class="field-error" role="alert">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="password_confirmation">Confirm new password</label>
-                                <div class="input-wrap">
-                                    <i class="bi bi-lock-fill input-icon left" aria-hidden="true"></i>
-                                    <input type="password"
-                                           id="password_confirmation"
-                                           name="password_confirmation"
-                                           class="form-input has-icon-left {{ $errors->has('password_confirmation') ? 'is-invalid' : '' }}"
-                                           placeholder="Re-enter your new password"
-                                           autocomplete="new-password"
-                                           minlength="12"
-                                           required>
-                                </div>
-                                @error('password_confirmation')
-                                    <span class="field-error" role="alert">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <button type="submit" class="btn-primary" id="captainRecoverySubmit">
-                                <span>Reset Captain password</span>
-                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                            </button>
-
-                            <p class="recovery-security">
-                                <i class="bi bi-shield-check" aria-hidden="true"></i>
-                                This resets only the Captain password. Two-factor authentication remains required.
-                            </p>
-                        </form>
-                    @endif
-
                     <a class="recovery-back" href="{{ route('login') }}">
                         <i class="bi bi-arrow-left" aria-hidden="true"></i>
                         Return to normal sign in
@@ -1006,7 +877,7 @@
 
             {{-- Normal login form remains in the page so existing login scripts stay intact. --}}
             <form method="POST" action="{{ route('login.authenticate') }}" id="loginForm" novalidate
-                  class="{{ (($showCaptainRecoveryForm ?? false) || ($showEmailPasswordRecoveryForm ?? false)) ? 'recovery-mode-hidden' : '' }}">
+                  class="{{ ($showEmailPasswordRecoveryForm ?? false) ? 'recovery-mode-hidden' : '' }}">
                 @csrf
 
                 @php
@@ -1877,14 +1748,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // When the recovery form is active, focus its first invalid field instead.
-    if (document.getElementById('captainRecoveryPanel')) {
-        var recoveryInvalid = document.querySelector('#captainRecoveryForm .form-input.is-invalid');
-
-        if (recoveryInvalid) {
-            recoveryInvalid.focus();
-        }
-    }
-
     if (document.getElementById('emailPasswordRecoveryPanel')) {
         var emailRecoveryInvalid = document.querySelector('#emailPasswordRecoveryPanel .form-input.is-invalid');
 

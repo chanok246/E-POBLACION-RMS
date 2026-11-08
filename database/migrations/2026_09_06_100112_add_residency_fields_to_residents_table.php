@@ -11,34 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('residents', function (Blueprint $table) {
-            /*
-            |--------------------------------------------------------------------------
-            | Residency Information
-            |--------------------------------------------------------------------------
-            |
-            | Original Resident:
-            |     Resident who is originally/currently established in the
-            |     barangay without the migrant residency requirement.
-            |
-            | Migrant Resident:
-            |     Resident who moved into the barangay and must complete
-            |     six months of residency before being considered eligible
-            |     under the system's residency rule.
-            |
-            */
+        /*
+         * The original residents migration already creates:
+         * - residency_type
+         * - residency_start_year
+         * - residency_year_estimated
+         *
+         * The September 13 corrective migration handles the
+         * residency-year structure and removes this legacy date.
+         *
+         * Therefore, do not add residency_type again.
+         */
 
-            $table->enum('residency_type', [
-                'Original Resident',
-                'Migrant Resident',
-            ])
-                ->default('Original Resident')
-                ->after('occupation');
-
-            $table->date('residency_start_date')
-                ->nullable()
-                ->after('residency_type');
-        });
+        if (
+            Schema::hasTable('residents')
+            && !Schema::hasColumn('residents', 'residency_start_date')
+        ) {
+            Schema::table('residents', function (Blueprint $table) {
+                $table->date('residency_start_date')
+                    ->nullable()
+                    ->after('residency_type');
+            });
+        }
     }
 
     /**
@@ -46,11 +40,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('residents', function (Blueprint $table) {
-            $table->dropColumn([
-                'residency_type',
-                'residency_start_date',
-            ]);
-        });
+        if (Schema::hasColumn('residents', 'residency_start_date')) {
+            Schema::table('residents', function (Blueprint $table) {
+                $table->dropColumn('residency_start_date');
+            });
+        }
     }
 };

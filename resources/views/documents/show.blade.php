@@ -6,34 +6,42 @@
 <style>
     /* =========================================================
        DOCUMENT PROCESSING — watermelon theme
-       One journey only: done = green, current = pink, next = grey.
+       SEMANTIC COLORS
+         Green = done / primary action
+         Blue  = current step (in progress) / info
+         Gray  = not yet
+         Red   = declined / stop only
        Click a step to see its details.
        ========================================================= */
     .docs {
         --ink: #3a2a2e; --muted: #8a6f75; --paper: #ffffff; --wash: #fdf1f3; --line: #f0d0d6;
-        --brand: #e5505c; --brand-soft: rgba(229,80,92,.11); --green: #4fae4e; --green-d: #3b8a40; --green-bg: rgba(79,174,78,.14); --sun: #ffc933;
+        --brand: #237a35; --brand-soft: rgba(35,122,53,.11);
+        --green: #2f9e44; --green-d: #237a35; --green-bg: rgba(47,158,68,.14); --sun: #ffc933;
+        --info: #1c7ed6; --info-soft: rgba(28,126,214,.12);
         --pending: #b26a00;     --pending-bg: #fff1d6;
         --processing: #0b7285;  --processing-bg: #d8f3f8;
         --approved: #2b8a3e;    --approved-bg: #dcf5e3;
         --completed: #5f3dc4;   --completed-bg: #e8e1fb;
         --released: #1f4e9c;    --released-bg: #dbe8fb;
-        --disapproved: #c92a2a; --disapproved-bg: #fde3e3;
+        --disapproved: #c92a3b; --disapproved-bg: #fde3e3;
         font-family: var(--font); color: var(--ink);
     }
     html[data-theme="dark"] .docs {
         --ink: #f6eff1; --muted: #a8b8ad; --paper: #17251d; --wash: #1c2d23; --line: #2b4033;
-        --brand: #ff7f8b; --brand-soft: rgba(255,127,139,.16); --green: #5fc062; --green-d: #8fe29a; --green-bg: rgba(95,192,98,.16);
+        --brand: #5fc062; --brand-soft: rgba(95,192,98,.16);
+        --green: #5fc062; --green-d: #8fe29a; --green-bg: rgba(95,192,98,.16);
+        --info: #6cb2ff; --info-soft: rgba(108,178,255,.15);
         --pending: #f5b942;     --pending-bg: #3a2c10;
         --processing: #5ccfe0;  --processing-bg: #0f3038;
         --approved: #6fd48a;    --approved-bg: #143222;
         --completed: #b7a0f5;   --completed-bg: #2a2150;
         --released: #8db6f7;    --released-bg: #182c4d;
-        --disapproved: #ff8f8f; --disapproved-bg: #401a1d;
+        --disapproved: #ff7b87; --disapproved-bg: #401a1d;
     }
     .docs * { box-sizing: border-box; }
     .docs [hidden] { display: none !important; }
     .docs .display { letter-spacing: -.02em; }
-    .docs a:focus-visible, .docs button:focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
+    .docs a:focus-visible, .docs button:focus-visible { outline: 3px solid var(--info); outline-offset: 2px; }
 
     .back { display: inline-flex; gap: .4rem; align-items: center; color: var(--brand); text-decoration: none; font-weight: 700; font-size: .92rem; }
     .back:hover { text-decoration: underline; color: var(--brand); }
@@ -64,6 +72,7 @@
 
     /* =========================================================
        THE JOURNEY (single, clickable, colour-coded)
+       done = green · current = blue · next = grey
        ========================================================= */
     .journey { overflow-x: auto; padding: .75rem .25rem 1rem; scrollbar-width: thin; }
     .journey ol { list-style: none; margin: 0; padding: 0; display: flex; min-width: 650px; width: 100%; }
@@ -74,28 +83,29 @@
     .jdot { width: 46px; height: 46px; margin: 0 auto .6rem; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--paper); border: 3px solid var(--line); color: var(--muted); position: relative; z-index: 1; transition: transform .15s, box-shadow .15s; }
     .jbtn:hover .jdot { transform: translateY(-2px) scale(1.04); }
     .jstep.done .jdot { background: var(--green); border-color: var(--green); color: #fff; }
-    .jstep.now .jdot { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 0 0 5px var(--brand-soft), 0 8px 18px rgba(229,80,92,.3); }
+    .jstep.now .jdot { background: var(--info); border-color: var(--info); color: #fff; box-shadow: 0 0 0 5px var(--info-soft), 0 8px 18px rgba(28,126,214,.3); }
     html[data-theme="dark"] .jstep.done .jdot, html[data-theme="dark"] .jstep.now .jdot { color: #0f1a14; }
     .jstep.sel .jdot { box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--c-sel, var(--line)); }
-    .jstep.done { --c-sel: var(--green); } .jstep.now { --c-sel: var(--brand); }
+    .jstep.done { --c-sel: var(--green); } .jstep.now { --c-sel: var(--info); }
     .jname { font-size: .83rem; font-weight: 700; color: var(--muted); line-height: 1.25; }
     .jstep.done .jname { color: var(--green-d); }
-    .jstep.now .jname { color: var(--brand); }
+    .jstep.now .jname { color: var(--info); }
     .jstate { display: block; margin-top: .15rem; font-size: .72rem; font-weight: 600; color: var(--muted); }
 
     /* Detail panel for the clicked step */
     .jd { margin-top: .5rem; padding: 1.1rem 1.2rem; border-radius: 1.2rem; border: 1.5px solid var(--cd, var(--line)); background: var(--bgd, var(--wash)); }
     .jd.done { --cd: var(--green); --bgd: var(--green-bg); }
-    .jd.now { --cd: var(--brand); --bgd: var(--brand-soft); }
+    .jd.now { --cd: var(--info); --bgd: var(--info-soft); }
     .jd-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: .8rem; }
     .jd-head b { font-size: 1.02rem; font-weight: 800; }
     .jd-tag { display: inline-flex; align-items: center; gap: .35rem; padding: .22rem .7rem; border-radius: 999px; font-size: .78rem; font-weight: 800; background: var(--paper); color: var(--muted); }
     .jd.done .jd-tag { color: var(--green-d); }
-    .jd.now .jd-tag { color: var(--brand); }
+    .jd.now .jd-tag { color: var(--info); }
     .jd ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
     .jd li { display: flex; gap: .7rem; align-items: flex-start; padding: .65rem .8rem; border-radius: .9rem; background: var(--paper); }
     .jd li .ck { width: 1.45rem; height: 1.45rem; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: .75rem; border: 2px solid var(--line); color: transparent; }
     .jd li.ok .ck { background: var(--green); border-color: var(--green); color: #fff; }
+    html[data-theme="dark"] .jd li.ok .ck { color: #0f1a14; }
     .jd li .tx { flex: 1; min-width: 0; }
     .jd li b { display: block; font-weight: 700; }
     .jd li:not(.ok) b { color: var(--muted); font-weight: 600; }
@@ -123,10 +133,11 @@
     .side .stage-now { font-size: 1.1rem; font-weight: 800; margin: 0 0 .35rem; }
     .act { display: flex; width: 100%; justify-content: center; align-items: center; gap: .5rem; min-height: 46px; border-radius: 999px; font-weight: 800; border: 1.5px solid transparent; text-decoration: none; padding: .55rem 1rem; transition: filter .15s, transform .15s; }
     .act:hover { transform: translateY(-1px); }
-    .act-brand { background: linear-gradient(135deg, #f27984, var(--brand)); color: #fff; box-shadow: 0 8px 18px rgba(229,80,92,.28); }
-    .act-green { background: linear-gradient(135deg, #69bb68, var(--green)); color: #fff; box-shadow: 0 8px 18px rgba(79,174,78,.28); }
-    html[data-theme="dark"] .act-brand, html[data-theme="dark"] .act-green { color: #0f1a14; }
-    .act-brand:hover, .act-green:hover { filter: brightness(1.06); color: #fff; }
+    /* every forward step = primary action = green */
+    .act-brand, .act-green { background: linear-gradient(135deg, #2f9e44, var(--brand)); color: #fff; box-shadow: 0 8px 18px rgba(35,122,53,.28); }
+    html[data-theme="dark"] .act-brand, html[data-theme="dark"] .act-green { color: #0b2314; background: linear-gradient(135deg, #8fe29a, var(--brand)); box-shadow: none; }
+    .act-brand:hover, .act-green:hover { filter: brightness(1.08); color: #fff; }
+    html[data-theme="dark"] .act-brand:hover, html[data-theme="dark"] .act-green:hover { color: #0b2314; }
     .act-line { background: transparent; border-color: var(--brand); color: var(--brand); }
     .act-line:hover { background: var(--brand-soft); color: var(--brand); }
     .act-danger { background: transparent; border-color: var(--disapproved); color: var(--disapproved); }
@@ -620,7 +631,7 @@
         var bg    = dark ? '#0f1a14' : '#f4d9df';
         var fg    = dark ? '#f6eff1' : '#3a2a2e';
         var muted = dark ? '#a8b8ad' : '#8a6f75';
-        var brand = dark ? '#ff7f8b' : '#e5505c';
+        var brand = dark ? '#5fc062' : '#237a35';
         var track = dark ? 'rgba(255,255,255,.12)' : 'rgba(58,42,46,.12)';
 
         win.document.open();

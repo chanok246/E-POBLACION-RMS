@@ -59,7 +59,31 @@ $isFourPsChecked = filter_var(
     FILTER_VALIDATE_BOOLEAN
 );
 
+/*
+|--------------------------------------------------------------------------
+| Saved (database) coordinates
+|--------------------------------------------------------------------------
+|
+| These are the coordinates currently stored for the household. They are
+| used for display and for the "Restore saved location" button. They are
+| never changed unless the user intentionally captures or picks a new
+| location and then submits the form.
+|
+*/
+
+$savedLatitude = $household->latitude;
+$savedLongitude = $household->longitude;
+
+$hasSavedCoordinates = is_numeric($savedLatitude)
+    && is_numeric($savedLongitude)
+    && abs((float) $savedLatitude) <= 90
+    && abs((float) $savedLongitude) <= 180;
+
 @endphp
+
+@if($canManageHouseholds)
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+@endif
 
 <style>
     /* ============================================================
@@ -199,6 +223,130 @@ $isFourPsChecked = filter_var(
         font-family: Consolas, "Courier New", monospace;
     }
 
+    .household-edit-page .gps-saved-box {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 1.25rem;
+        padding: 0.6rem 0.85rem;
+        border: 1px dashed var(--he-border);
+        border-radius: 8px;
+        background-color: var(--he-surface);
+        font-size: 0.85rem;
+    }
+
+    .household-edit-page .gps-saved-box .gps-saved-label {
+        color: var(--he-muted);
+        font-weight: 600;
+    }
+
+    .household-edit-page .gps-saved-box .gps-saved-value {
+        font-family: Consolas, "Courier New", monospace;
+        color: var(--he-heading);
+        font-weight: 700;
+    }
+
+    .household-edit-page .gps-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .household-edit-page .gps-accuracy-line {
+        font-size: 0.85rem;
+        color: var(--he-muted);
+    }
+
+    .household-edit-page .gps-accuracy-line strong {
+        color: var(--he-heading);
+    }
+
+    .household-edit-page .gps-feedback {
+        margin-bottom: 0;
+        font-size: 0.9rem;
+    }
+
+    .household-edit-page .gps-changed-note {
+        font-size: 0.85rem;
+        color: #b45309;
+        font-weight: 600;
+    }
+
+    html[data-theme="dark"] .household-edit-page .gps-changed-note {
+        color: #fbbf24;
+    }
+
+    /* Embedded map picker.
+       isolation + z-index 0 keeps Leaflet's internal z-indexes inside the
+       map box so the map never covers the navbar, sidebar or dropdowns. */
+
+    .household-edit-page .gps-map-panel {
+        margin-top: 0.25rem;
+    }
+
+    .household-edit-page .gps-map-wrap {
+        position: relative;
+        z-index: 0;
+        isolation: isolate;
+        border: 1px solid var(--he-border);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .household-edit-page #householdPickerMap {
+        width: 100%;
+        height: 380px;
+        background: #dfe5ea;
+    }
+
+    .household-edit-page #householdPickerMap.is-picking,
+    .household-edit-page #householdPickerMap.is-picking.leaflet-grab {
+        cursor: crosshair;
+    }
+
+    .household-edit-page .gps-map-hint {
+        font-size: 0.82rem;
+        color: var(--he-muted);
+    }
+
+    .household-edit-page .gps-pin-wrap,
+    .household-edit-page .gps-dot-wrap {
+        background: none;
+        border: 0;
+    }
+
+    .household-edit-page .gps-pin {
+        position: relative;
+        display: block;
+        width: 28px;
+        height: 28px;
+        background: #0d6efd;
+        border: 3px solid #fff;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 2px 9px rgba(0, 0, 0, 0.55), 0 0 0 2px #0d6efd;
+    }
+
+    .household-edit-page .gps-pin::after {
+        content: "";
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        left: 7px;
+        top: 7px;
+        border-radius: 50%;
+        background: #fff;
+    }
+
+    .household-edit-page .gps-dot {
+        display: block;
+        width: 18px;
+        height: 18px;
+        border: 3px solid #fff;
+        border-radius: 50%;
+        background: #198754;
+        box-shadow: 0 0 0 2px #198754, 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+
     /* ============================================================
        HOUSEHOLD CLASSIFICATION
     ============================================================ */
@@ -325,6 +473,14 @@ $isFourPsChecked = filter_var(
         .household-edit-page .edit-form-actions .btn {
             width: 100%;
         }
+
+        .household-edit-page .gps-actions .btn {
+            width: 100%;
+        }
+
+        .household-edit-page #householdPickerMap {
+            height: 320px;
+        }
     }
 
     /* ============================================================
@@ -334,7 +490,9 @@ $isFourPsChecked = filter_var(
     @media print {
         .household-edit-page .household-edit-header,
         .household-edit-page .edit-form-actions,
-        .household-edit-page .alert {
+        .household-edit-page .alert,
+        .household-edit-page .gps-actions,
+        .household-edit-page .gps-map-panel {
             display: none !important;
         }
 
@@ -477,6 +635,7 @@ $isFourPsChecked = filter_var(
     <form
         action="{{ route('households.update', $household->id) }}"
         method="POST"
+        id="householdEditForm"
     >
 
         @csrf
@@ -688,28 +847,51 @@ $isFourPsChecked = filter_var(
 
 
                     {{-- ====================================================
-                        TEMPORARY GPS EDITING
+                        HOUSEHOLD LOCATION (GPS + MAP PICKER)
                     ===================================================== --}}
 
                     <div class="col-12">
 
-                        <div class="gps-section">
+                        <div
+                            class="gps-section"
+                            id="gpsSection"
+                            data-saved-latitude="{{ $hasSavedCoordinates ? $savedLatitude : '' }}"
+                            data-saved-longitude="{{ $hasSavedCoordinates ? $savedLongitude : '' }}"
+                        >
 
                             <div class="d-flex align-items-center mb-2">
 
                                 <i class="bi bi-geo-alt-fill me-2 text-primary"></i>
 
                                 <div class="gps-section-title">
-                                    GPS Coordinates
+                                    Household Location
                                 </div>
 
                             </div>
 
                             <div class="gps-coordinate-note mb-3">
 
-                                Temporary editing is enabled so you can
-                                replace the dummy coordinates with the actual
-                                location from Google Maps.
+                                Capture your current position or pick the
+                                household on the map. The coordinates below
+                                are only saved when you click the save button
+                                at the bottom of this page.
+
+                            </div>
+
+
+                            {{-- CURRENTLY SAVED COORDINATES --}}
+
+                            <div class="gps-saved-box mb-3" id="savedCoordinatesBox">
+
+                                <span>
+                                    <span class="gps-saved-label">Currently saved Latitude:</span>
+                                    <span class="gps-saved-value">{{ $hasSavedCoordinates ? $savedLatitude : 'Not set' }}</span>
+                                </span>
+
+                                <span>
+                                    <span class="gps-saved-label">Currently saved Longitude:</span>
+                                    <span class="gps-saved-value">{{ $hasSavedCoordinates ? $savedLongitude : 'Not set' }}</span>
+                                </span>
 
                             </div>
 
@@ -792,19 +974,112 @@ $isFourPsChecked = filter_var(
                             </div>
 
 
-                            <div class="mt-3">
+                            {{-- ACTION BUTTONS --}}
 
-                                <div class="alert alert-info mb-0">
+                            <div class="gps-actions mt-3">
 
-                                    <i class="bi bi-info-circle me-2"></i>
+                                <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    id="locateCurrentPositionBtn"
+                                >
 
-                                    <strong>Google Maps:</strong>
+                                    <i class="bi bi-crosshair me-1"></i>
 
-                                    Open Google Maps, right-click the actual
-                                    household location, copy the latitude and
-                                    longitude, then paste the values above.
+                                    <span id="locateCurrentPositionLabel">Locate Current Position</span>
+
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary"
+                                    id="togglePickerMapBtn"
+                                    aria-expanded="false"
+                                    aria-controls="pickerMapPanel"
+                                >
+
+                                    <i class="bi bi-map me-1"></i>
+
+                                    <span id="togglePickerMapLabel">Pick Location on Map</span>
+
+                                </button>
+
+                                @if($hasSavedCoordinates)
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-light border"
+                                        id="restoreSavedLocationBtn"
+                                    >
+
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+
+                                        Restore Saved Location
+
+                                    </button>
+
+                                @endif
+
+                            </div>
+
+
+                            {{-- GPS ACCURACY + FEEDBACK --}}
+
+                            <div class="gps-accuracy-line mt-3" id="gpsAccuracyLine" hidden>
+
+                                GPS accuracy:
+
+                                <strong id="gpsAccuracyValue">—</strong>
+
+                            </div>
+
+                            <div
+                                class="alert gps-feedback mt-2"
+                                id="gpsFeedback"
+                                role="status"
+                                aria-live="polite"
+                                hidden
+                            ></div>
+
+                            <div class="gps-changed-note mt-2" id="gpsChangedNote" hidden>
+
+                                <i class="bi bi-exclamation-circle me-1"></i>
+
+                                The coordinates were changed but are not saved yet.
+                                Verify them, then click the save button below.
+
+                            </div>
+
+
+                            {{-- EMBEDDED MAP PICKER --}}
+
+                            <div class="gps-map-panel" id="pickerMapPanel" hidden>
+
+                                <div class="gps-map-hint mt-3 mb-2">
+
+                                    <i class="bi bi-cursor-fill me-1"></i>
+
+                                    Click the map to place the pin, or drag the pin
+                                    to fine-tune the household location. The Latitude
+                                    and Longitude fields update automatically.
 
                                 </div>
+
+                                <div class="gps-map-wrap">
+
+                                    <div id="householdPickerMap" aria-label="Household location picker map"></div>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="gps-coordinate-note mt-3">
+
+                                Browser location requires HTTPS or localhost, and a
+                                laptop's location is usually less accurate than
+                                dedicated GPS hardware. Always verify the pin against
+                                the actual house.
 
                             </div>
 
@@ -1133,5 +1408,447 @@ $isFourPsChecked = filter_var(
 @endif
 
 </div>
+
+@if($canManageHouseholds)
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
+
+    const $ = id => document.getElementById(id);
+
+    const latInput = $('latitude');
+    const lngInput = $('longitude');
+    const section = $('gpsSection');
+
+    if (!latInput || !lngInput || !section) return;
+
+    /* ------------------------------------------------------------
+       Constants and saved (database) coordinates
+    ------------------------------------------------------------ */
+
+    const DEFAULT_CENTER = [16.187656, 119.847793];
+    const DEFAULT_ZOOM = 15;
+    const LOCATED_ZOOM = 19;
+
+    const parseNumber = value => {
+        if (value === null || value === undefined || String(value).trim() === '') return null;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
+    };
+
+    const validCoords = (lat, lng) =>
+        lat !== null && lng !== null &&
+        Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+
+    const savedLat = parseNumber(section.dataset.savedLatitude);
+    const savedLng = parseNumber(section.dataset.savedLongitude);
+    const hasSaved = validCoords(savedLat, savedLng);
+
+    /* The value the fields had when the page opened (may include old() input). */
+    const initialLat = latInput.value;
+    const initialLng = lngInput.value;
+
+    const readInputs = () => {
+        const lat = parseNumber(latInput.value);
+        const lng = parseNumber(lngInput.value);
+        return validCoords(lat, lng) ? { lat, lng } : null;
+    };
+
+    /* ------------------------------------------------------------
+       Feedback helpers
+    ------------------------------------------------------------ */
+
+    const feedback = $('gpsFeedback');
+    const accuracyLine = $('gpsAccuracyLine');
+    const accuracyValue = $('gpsAccuracyValue');
+    const changedNote = $('gpsChangedNote');
+
+    function showFeedback(type, message) {
+        feedback.className = 'alert gps-feedback mt-2 alert-' + type;
+        feedback.textContent = message;
+        feedback.hidden = false;
+    }
+
+    function hideFeedback() {
+        feedback.hidden = true;
+        feedback.textContent = '';
+    }
+
+    function showAccuracy(meters) {
+        if (meters === null) {
+            accuracyLine.hidden = true;
+            accuracyValue.textContent = '—';
+            return;
+        }
+
+        accuracyValue.textContent = Math.round(meters) + ' meters';
+        accuracyLine.hidden = false;
+    }
+
+    function refreshChangedNote() {
+        const savedLatText = hasSaved ? String(savedLat) : '';
+        const savedLngText = hasSaved ? String(savedLng) : '';
+
+        const changed =
+            String(latInput.value).trim() !== savedLatText ||
+            String(lngInput.value).trim() !== savedLngText;
+
+        changedNote.hidden = !changed;
+    }
+
+    /* ------------------------------------------------------------
+       Map picker (Leaflet, created the first time it is opened)
+    ------------------------------------------------------------ */
+
+    const panel = $('pickerMapPanel');
+    const toggleBtn = $('togglePickerMapBtn');
+    const toggleLabel = $('togglePickerMapLabel');
+
+    const leafletReady = typeof L !== 'undefined';
+
+    let map = null;
+    let pickMarker = null;
+    let accuracyCircle = null;
+    let gpsDot = null;
+
+    function pinIcon() {
+        return L.divIcon({
+            className: 'gps-pin-wrap',
+            html: '<span class="gps-pin"></span>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 28]
+        });
+    }
+
+    function ensureMap() {
+        if (map || !leafletReady) return;
+
+        const current = readInputs();
+
+        map = L.map('householdPickerMap', {
+            center: current ? [current.lat, current.lng] : DEFAULT_CENTER,
+            zoom: current ? 18 : DEFAULT_ZOOM,
+            maxZoom: 20,
+            zoomControl: true
+        });
+
+        const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 20,
+            maxNativeZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        });
+
+        const satellite = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            {
+                maxZoom: 20,
+                maxNativeZoom: 18,
+                attribution: 'Tiles &copy; Esri &mdash; Maxar, Earthstar Geographics'
+            }
+        );
+
+        satellite.addTo(map);
+
+        L.control.layers({ 'Satellite': satellite, 'Street': street }, null, { position: 'topright' }).addTo(map);
+        L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+        $('householdPickerMap').classList.add('is-picking');
+
+        map.on('click', function (e) {
+            applyCoords(e.latlng.lat, e.latlng.lng, 'map');
+        });
+
+        if (current) placeMarker(current.lat, current.lng);
+    }
+
+    function placeMarker(lat, lng) {
+        if (!map) return;
+
+        if (!pickMarker) {
+            pickMarker = L.marker([lat, lng], {
+                draggable: true,
+                keyboard: true,
+                icon: pinIcon(),
+                zIndexOffset: 1000
+            }).addTo(map);
+
+            pickMarker.on('drag', function (e) {
+                const p = e.target.getLatLng();
+                writeInputs(p.lat, p.lng);
+            });
+
+            pickMarker.on('dragend', function (e) {
+                const p = e.target.getLatLng();
+                writeInputs(p.lat, p.lng);
+                showAccuracy(null);
+                clearGpsOverlay();
+                showFeedback('info', 'Pin moved. The Latitude and Longitude fields were updated. Verify them before saving.');
+            });
+        } else {
+            pickMarker.setLatLng([lat, lng]);
+        }
+    }
+
+    function removeMarker() {
+        if (pickMarker && map) {
+            map.removeLayer(pickMarker);
+        }
+        pickMarker = null;
+    }
+
+    function clearGpsOverlay() {
+        if (!map) return;
+
+        if (accuracyCircle) {
+            map.removeLayer(accuracyCircle);
+            accuracyCircle = null;
+        }
+
+        if (gpsDot) {
+            map.removeLayer(gpsDot);
+            gpsDot = null;
+        }
+    }
+
+    function openPanel() {
+        if (!leafletReady) {
+            showFeedback(
+                'danger',
+                'The map library could not be loaded. Check your internet connection or firewall, then reload the page. You can still type the coordinates manually.'
+            );
+            return;
+        }
+
+        panel.hidden = false;
+        toggleBtn.setAttribute('aria-expanded', 'true');
+        toggleLabel.textContent = 'Hide Map';
+
+        ensureMap();
+
+        /* The container was hidden when Leaflet measured it. */
+        setTimeout(function () {
+            if (!map) return;
+
+            map.invalidateSize();
+
+            const current = readInputs();
+
+            if (current) {
+                placeMarker(current.lat, current.lng);
+                map.setView([current.lat, current.lng], Math.max(map.getZoom(), 18));
+            }
+        }, 60);
+    }
+
+    function closePanel() {
+        panel.hidden = true;
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        toggleLabel.textContent = 'Pick Location on Map';
+    }
+
+    toggleBtn.addEventListener('click', function () {
+        panel.hidden ? openPanel() : closePanel();
+    });
+
+    /* ------------------------------------------------------------
+       Writing coordinates (never submits the form)
+    ------------------------------------------------------------ */
+
+    function writeInputs(lat, lng) {
+        latInput.value = Number(lat).toFixed(7);
+        lngInput.value = Number(lng).toFixed(7);
+        refreshChangedNote();
+    }
+
+    function applyCoords(lat, lng, source) {
+        writeInputs(lat, lng);
+        placeMarker(lat, lng);
+
+        if (source === 'map') {
+            showAccuracy(null);
+            clearGpsOverlay();
+            showFeedback('success', 'Location selected on the map. The Latitude and Longitude fields were updated. Verify them before saving.');
+        }
+    }
+
+    /* Manual typing keeps the pin and the note in sync. */
+    function onManualInput() {
+        refreshChangedNote();
+
+        const current = readInputs();
+
+        if (current && map) {
+            placeMarker(current.lat, current.lng);
+        }
+    }
+
+    latInput.addEventListener('input', onManualInput);
+    lngInput.addEventListener('input', onManualInput);
+
+    /* ------------------------------------------------------------
+       Locate Current Position (one-time browser geolocation)
+    ------------------------------------------------------------ */
+
+    const locateBtn = $('locateCurrentPositionBtn');
+    const locateLabel = $('locateCurrentPositionLabel');
+
+    function setLocating(on) {
+        locateBtn.disabled = on;
+        locateLabel.textContent = on ? 'Locating…' : 'Locate Current Position';
+    }
+
+    function afterAttemptLabel() {
+        locateLabel.textContent = 'Try Locating Again';
+    }
+
+    locateBtn.addEventListener('click', function () {
+        if (!('geolocation' in navigator)) {
+            showFeedback('danger', 'This browser does not support location capture. Use "Pick Location on Map" or type the coordinates manually.');
+            return;
+        }
+
+        if (window.isSecureContext === false) {
+            showFeedback(
+                'warning',
+                'Location capture needs a secure connection (HTTPS) or localhost. This page is opened over an ordinary HTTP address, so the browser will likely block it. Use "Pick Location on Map" instead.'
+            );
+        } else {
+            showFeedback('info', 'Requesting your current position. Please allow the location prompt in your browser…');
+        }
+
+        setLocating(true);
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+
+                setLocating(false);
+                afterAttemptLabel();
+
+                if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+                    showAccuracy(null);
+                    showFeedback('danger', 'The browser returned invalid location data. Please try again.');
+                    return;
+                }
+
+                writeInputs(lat, lng);
+                placeMarker(lat, lng);
+
+                const hasAccuracy = Number.isFinite(accuracy) && accuracy >= 0;
+                showAccuracy(hasAccuracy ? accuracy : null);
+
+                /* Show the accuracy circle if the map is already open. */
+                if (map) {
+                    clearGpsOverlay();
+
+                    if (hasAccuracy) {
+                        accuracyCircle = L.circle([lat, lng], {
+                            radius: accuracy,
+                            color: '#0d6efd',
+                            weight: 2,
+                            fillColor: '#0d6efd',
+                            fillOpacity: 0.12,
+                            interactive: false
+                        }).addTo(map);
+                    }
+
+                    map.setView([lat, lng], Math.max(map.getZoom(), LOCATED_ZOOM));
+                }
+
+                if (!hasAccuracy) {
+                    showFeedback('warning', 'Location captured, but the browser did not report its accuracy. Verify the pin against the actual house before saving.');
+                } else if (accuracy > 100) {
+                    showFeedback(
+                        'warning',
+                        'Location captured, but accuracy is poor (about ' + Math.round(accuracy) +
+                        ' meters). The coordinates may be far from the house. Try again, move to an open area, or fine-tune the pin on the map.'
+                    );
+                } else if (accuracy > 50) {
+                    showFeedback(
+                        'warning',
+                        'Location captured with moderate accuracy (about ' + Math.round(accuracy) +
+                        ' meters). Verify the pin against the actual house before saving.'
+                    );
+                } else {
+                    showFeedback(
+                        'success',
+                        'Location captured (accuracy about ' + Math.round(accuracy) +
+                        ' meters). The Latitude and Longitude fields were updated. Verify them before saving.'
+                    );
+                }
+            },
+            function (error) {
+                setLocating(false);
+                afterAttemptLabel();
+                showAccuracy(null);
+
+                const messages = {
+                    1: ['danger', 'Location permission was denied. Allow location access for this site in your browser settings, then click "Try Locating Again". You can also use "Pick Location on Map".'],
+                    2: ['danger', 'Your location is unavailable. Check that location services are turned on for this device, then try again.'],
+                    3: ['warning', 'The location request timed out. Click "Try Locating Again", or use "Pick Location on Map".']
+                };
+
+                const m = messages[error.code] || ['danger', 'Unable to capture your current position. Please try again.'];
+                showFeedback(m[0], m[1]);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 0
+            }
+        );
+    });
+
+    /* ------------------------------------------------------------
+       Restore saved location
+    ------------------------------------------------------------ */
+
+    const restoreBtn = $('restoreSavedLocationBtn');
+
+    if (restoreBtn) {
+        restoreBtn.addEventListener('click', function () {
+            if (!hasSaved) return;
+
+            latInput.value = String(savedLat);
+            lngInput.value = String(savedLng);
+
+            clearGpsOverlay();
+            showAccuracy(null);
+            refreshChangedNote();
+
+            if (map) {
+                placeMarker(savedLat, savedLng);
+                map.setView([savedLat, savedLng], Math.max(map.getZoom(), 18));
+            }
+
+            showFeedback('info', 'The saved location was restored in the fields.');
+        });
+    }
+
+    /* ------------------------------------------------------------
+       Initial state
+    ------------------------------------------------------------ */
+
+    refreshChangedNote();
+
+    /* Unused-value guards so the initial values stay referenced for debugging. */
+    void initialLat;
+    void initialLng;
+
+    if (window.isSecureContext === false) {
+        showFeedback(
+            'warning',
+            'This page is not using HTTPS or localhost, so "Locate Current Position" may be blocked by the browser. "Pick Location on Map" will still work.'
+        );
+    }
+});
+</script>
+
+@endif
 
 @endsection

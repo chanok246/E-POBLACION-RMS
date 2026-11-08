@@ -1,48 +1,65 @@
 @php
-    $account = auth()->user();
-    $theme = $account?->theme ?? 'system';
-
-    // Keep the email-recovery step open when the user is already in that flow.
+    // Open the Email tab when the user is already in the email-code flow.
     $emailStepOpen = session('status') || $errors->has('email_code');
 @endphp
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ $theme }}">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
+
     <title>Two-Factor Verification | e-Poblacion</title>
 
     <link rel="icon" type="image/png" href="{{ asset('icon.png') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Public+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 
     <style>
-        /* Same watermelon x tech-green theme as the login page. */
+        /*
+         * Color coding (UX rationale)
+         *  - Green (brand)  = primary action / authenticator app
+         *  - Leaf green     = email verification + success / verified states
+         *  - Crimson + icon = errors only (never used for buttons)
+         */
         :root {
             color-scheme: light;
+
             --page: #f4f8f6;
             --card: #ffffff;
+            --aside: #fbfdfc;
             --text: #12201a;
             --muted: #566a60;
             --faint: #8a9d92;
             --border: #dce5df;
             --input: #ffffff;
-            --brand: #e5505c;
-            --brand-dark: #c93a47;
-            --brand-soft: #fde8ea;
+
+            --brand: #0a911a;
+            --brand-dark: #087514;
+            --brand-soft: #e1f5e3;
+
             --leaf: #2f9e5b;
             --leaf-dark: #1f7a43;
             --leaf-soft: #e3f4ea;
-            --pink: #ff7b88;
+
+
             --sun: #ffc933;
+
             --error: #b42318;
             --error-soft: #fce7e6;
             --success: #1f7a43;
             --success-soft: #e3f4ea;
+
+
+            --accent: var(--brand);
+            --accent-dark: var(--brand-dark);
+            --accent-soft: var(--brand-soft);
+            --accent-ring: rgba(10, 145, 26, .20);
+
             --font-head: 'Space Grotesk', 'Public Sans', system-ui, sans-serif;
             --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
@@ -52,19 +69,24 @@
             color-scheme: dark;
             --page: #08140f;
             --card: #10201a;
+            --aside: #0c1914;
             --text: #eef6f1;
             --muted: #a9bdb3;
             --faint: #7f958a;
             --border: #274034;
             --input: #0a1812;
-            --brand-soft: #3a1c21;
-            --brand-dark: #ff8e98;
+
+            --brand: #1fae30;
+            --brand-dark: #7fe68a;
+            --brand-soft: #12301a;
             --leaf-soft: #12301f;
             --leaf-dark: #7fe0a6;
+
             --error: #ffaaa3;
             --error-soft: #3a1b1a;
             --success: #8de0b2;
             --success-soft: #12301f;
+
         }
 
         @media (prefers-color-scheme: dark) {
@@ -72,252 +94,949 @@
                 color-scheme: dark;
                 --page: #08140f;
                 --card: #10201a;
+                --aside: #0c1914;
                 --text: #eef6f1;
                 --muted: #a9bdb3;
                 --faint: #7f958a;
                 --border: #274034;
                 --input: #0a1812;
-                --brand-soft: #3a1c21;
-                --brand-dark: #ff8e98;
+
+                --brand: #1fae30;
+                --brand-dark: #7fe68a;
+                --brand-soft: #12301a;
                 --leaf-soft: #12301f;
                 --leaf-dark: #7fe0a6;
+
                 --error: #ffaaa3;
                 --error-soft: #3a1b1a;
                 --success: #8de0b2;
                 --success-soft: #12301f;
+
             }
         }
 
-        *, *::before, *::after { box-sizing: border-box; }
+        /* Each verification method has its own accent color. */
+        [data-method="auth"] {
+            --accent: var(--brand);
+            --accent-dark: var(--brand-dark);
+            --accent-soft: var(--brand-soft);
+            --accent-ring: rgba(10, 145, 26, .20);
+        }
+
+        [data-method="email"] {
+            --accent: var(--leaf);
+            --accent-dark: var(--leaf-dark);
+            --accent-soft: var(--leaf-soft);
+            --accent-ring: rgba(47, 158, 91, .22);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            min-height: 100%;
+        }
 
         body {
             margin: 0;
             min-height: 100vh;
             min-height: 100svh;
-            padding: 24px 16px;
+            padding: 20px;
+
             display: grid;
             place-items: center;
+
             background:
-                radial-gradient(60% 40% at 100% 0%, rgba(229, 80, 92, .10), transparent 70%),
-                radial-gradient(50% 40% at 0% 100%, rgba(47, 158, 91, .10), transparent 70%),
+                radial-gradient(55% 45% at 100% 0%, rgba(10, 145, 26, .10), transparent 70%),
+                radial-gradient(50% 45% at 0% 100%, rgba(255, 201, 51, .10), transparent 70%),
                 var(--page);
+
             color: var(--text);
             font-family: var(--font-body);
-            font-size: 15px;
-            line-height: 1.55;
+            font-size: 14px;
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
         }
 
-        h1, h2, h3 { font-family: var(--font-head); letter-spacing: -0.02em; margin: 0; line-height: 1.2; }
-        p { margin: 0; }
-
-        .container { width: 100%; max-width: 480px; }
-
-        /* Brand */
-        .brand { margin-bottom: 20px; text-align: center; }
-        .brand-logo {
-            width: 56px; height: 56px; border-radius: 16px; object-fit: cover; background: var(--brand-soft);
-            box-shadow: 0 0 0 4px var(--brand-soft); display: inline-block;
+        h1, h2, h3, p {
+            margin: 0;
         }
-        .brand h1 { margin-top: 14px; font-size: 26px; font-weight: 700; }
-        .brand p { color: var(--muted); font-size: 14px; margin-top: 2px; }
 
-        /* Card */
-        .card {
-            position: relative; overflow: hidden;
-            padding: 30px 26px 26px;
+        h1, h2, h3 {
+            font-family: var(--font-head);
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        /* ==============================
+           MAIN LANDSCAPE CONTAINER
+        ============================== */
+
+        .shell {
+            position: relative;
+
+            width: 100%;
+            max-width: 1040px;
+
+            display: grid;
+            grid-template-columns: 5fr 7fr;
+
             border: 1px solid var(--border);
-            border-radius: 22px;
+            border-radius: 24px;
+            overflow: hidden;
+
             background: var(--card);
-            box-shadow: 0 2px 4px rgba(6, 35, 26, .04), 0 24px 50px rgba(6, 35, 26, .10);
-        }
-        .card::before {
-            content: ''; position: absolute; left: 0; right: 0; top: 0; height: 5px;
-            background: linear-gradient(90deg, var(--brand), var(--pink) 45%, var(--sun) 70%, var(--leaf));
-        }
-        @media (min-width: 480px) { .card { padding: 36px 34px 30px; } }
 
-        /* Progress steps */
-        .steps {
-            list-style: none; margin: 0 0 22px; padding: 0; display: flex; align-items: center; gap: 10px;
-            font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+            box-shadow:
+                0 2px 4px rgba(6, 35, 26, .04),
+                0 28px 60px rgba(6, 35, 26, .12);
         }
-        .steps li { display: inline-flex; align-items: center; gap: 7px; color: var(--faint); }
-        .steps .dot {
-            width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
-            font-size: 12px; background: var(--border); color: var(--muted);
-        }
-        .steps .is-done { color: var(--leaf-dark); }
-        .steps .is-done .dot { background: var(--leaf); color: #fff; }
-        .steps .is-current { color: var(--brand-dark); }
-        .steps .is-current .dot { background: var(--brand); color: #fff; }
-        .steps .bar { flex: 1; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--leaf), var(--brand)); opacity: .5; }
 
-        h2.title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-        .lead { color: var(--muted); font-size: 14.5px; }
+        .shell::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            height: 4px;
+            z-index: 2;
 
-        /* Alerts */
-        .message {
-            display: flex; gap: 10px; align-items: flex-start;
-            margin: 18px 0 0; padding: 12px 14px; border-radius: 10px; font-size: 14px; overflow-wrap: anywhere;
+            background: linear-gradient(90deg, var(--brand), var(--leaf) 55%, var(--sun));
         }
-        .message i { margin-top: 2px; }
-        .message.error { background: var(--error-soft); border-left: 5px solid var(--error); color: var(--error); }
-        .message.success { background: var(--success-soft); border-left: 5px solid var(--leaf); color: var(--success); }
-        .message ul { margin: 0; padding-left: 18px; }
 
-        /* Method blocks */
-        .method {
-            margin-top: 22px; padding: 20px; border: 1px solid var(--border); border-radius: 16px;
-            background: color-mix(in srgb, var(--page) 55%, var(--card));
-        }
-        .method-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
-        .method-icon {
-            flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 18px;
-            background: var(--brand-soft); color: var(--brand-dark);
-        }
-        .method-icon.leaf { background: var(--leaf-soft); color: var(--leaf-dark); }
-        .method-head h3 { font-size: 16.5px; font-weight: 700; }
-        .method-head p { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+        /* ==============================
+           LEFT PANEL
+           BRANDING
+        ============================== */
 
-        /* Collapsible email-recovery block */
-        details.method { padding: 0; }
-        details.method > summary {
-            list-style: none; cursor: pointer; padding: 18px 20px; display: flex; align-items: center; gap: 12px;
-            border-radius: 16px;
-        }
-        details.method > summary::-webkit-details-marker { display: none; }
-        details.method > summary .method-head { margin: 0; flex: 1; }
-        details.method > summary .chev { color: var(--muted); transition: transform .2s; }
-        details.method[open] > summary .chev { transform: rotate(180deg); }
-        details.method .method-body { padding: 0 20px 20px; }
-        details.method .method-body > * + * { margin-top: 14px; }
+        .side {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
 
-        /* Form controls */
-        label { display: block; margin: 0 0 7px; font-size: 13.5px; font-weight: 600; }
-        .input-wrap { position: relative; }
-        .input-wrap i {
-            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-            color: var(--faint); font-size: 17px; pointer-events: none;
-        }
-        input[type="text"] {
-            display: block; width: 100%; min-height: 48px; padding: 11px 14px 11px 42px;
-            border: 1.5px solid var(--border); border-radius: 12px; background: var(--input); color: var(--text);
-            font: inherit; transition: border-color .15s, box-shadow .15s;
-        }
-        input[type="text"]::placeholder { color: var(--faint); }
-        input[type="text"]:hover { border-color: var(--faint); }
-        input[type="text"]:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(229, 80, 92, .15); }
-        .input-wrap:focus-within i { color: var(--brand); }
-        .code-input { letter-spacing: .08em; font-family: var(--font-mono); font-weight: 500; }
+            padding: 32px 30px 26px;
 
-        /* ---------- 6-box code entry ---------- */
-        .otp { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
-        .otp .otp-box {
-            width: 100%; min-width: 0; height: 58px; padding: 0; text-align: center;
-            font-family: var(--font-mono); font-size: 24px; font-weight: 700; letter-spacing: 0;
-            border: 1.5px solid var(--border); border-radius: 12px; background: var(--input); color: var(--text);
-            caret-color: var(--brand); transition: border-color .15s, box-shadow .15s, transform .15s, background .15s;
-        }
-        .otp .otp-box:hover { border-color: var(--faint); }
-        .otp .otp-box:focus {
-            outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(229, 80, 92, .15); transform: translateY(-1px);
-        }
-        .otp .otp-box.filled { border-color: var(--leaf); background: color-mix(in srgb, var(--leaf-soft) 55%, var(--input)); }
-        .otp.leaf .otp-box:focus { border-color: var(--leaf); box-shadow: 0 0 0 4px rgba(47, 158, 91, .18); }
-        .otp.is-invalid .otp-box { border-color: var(--error); animation: otp-shake .35s; }
-        @keyframes otp-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-        .otp-hint { margin-top: 10px; text-align: center; color: var(--faint); font-size: 12.5px; }
-        .link-btn {
-            width: auto; min-height: 0; margin: 14px auto 0; padding: 4px 6px; background: none; color: var(--brand-dark);
-            font-size: 13.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; box-shadow: none;
-        }
-        .link-btn:hover { filter: brightness(1.1); }
-        .center { display: flex; }
-        [hidden] { display: none !important; }
+            background:
+                radial-gradient(90% 60% at 0% 0%, rgba(10, 145, 26, .08), transparent 70%),
+                radial-gradient(80% 60% at 100% 100%, rgba(255, 201, 51, .07), transparent 70%),
+                var(--aside);
 
-        :focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+            border-right: 1px solid var(--border);
+        }
 
-        button {
-            display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-            width: 100%; min-height: 48px; padding: 10px 16px; border: 0; border-radius: 12px;
-            font: inherit; font-weight: 700; cursor: pointer;
-            transition: filter .15s, transform .15s, box-shadow .15s, background .15s;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        button:active { transform: scale(.99); }
-        .btn-primary {
-            background: linear-gradient(135deg, #f27984, var(--brand)); color: #fff;
-            box-shadow: 0 10px 22px rgba(229, 80, 92, .30);
-        }
-        .btn-primary:hover { filter: brightness(1.06); box-shadow: 0 12px 28px rgba(229, 80, 92, .40); }
-        .btn-secondary { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
-        .btn-secondary:hover { background: var(--page); border-color: var(--faint); }
-        .btn-leaf { background: var(--leaf); color: #fff; }
-        .btn-leaf:hover { filter: brightness(1.08); }
 
-        .divider {
-            display: flex; align-items: center; gap: 12px; margin: 22px 0 0;
-            color: var(--faint); font-family: var(--font-mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em;
+        /* Large official seal that fills the left panel */
+
+        .seal-stage {
+            position: relative;
+            flex: 1;
+            min-height: 200px;
         }
-        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        .seal-stage::before {
+            content: '';
+            position: absolute;
+            inset: 6%;
+
+            border-radius: 50%;
+            background:
+                radial-gradient(closest-side, rgba(10, 145, 26, .16), rgba(255, 201, 51, .10) 62%, transparent 100%);
+        }
+
+        .seal {
+            position: absolute;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+            padding: 6px;
+
+            object-fit: contain;
+            object-position: center;
+
+            filter: drop-shadow(0 14px 22px rgba(6, 35, 26, .22));
+            -webkit-user-drag: none;
+            user-select: none;
+        }
+
+        .brand h1 {
+            font-size: 19px;
+            font-weight: 700;
+        }
+
+        .brand p {
+            margin-top: 2px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .side-divider {
+            height: 1px;
+            background: var(--border);
+        }
+
+        .side-foot {
+            display: grid;
+            gap: 13px;
+            margin-top: auto;
+        }
 
         .security-note {
-            margin: 18px 0 0; display: flex; gap: 8px; justify-content: center; align-items: flex-start;
-            color: var(--muted); font-size: 12.5px; text-align: center;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.5;
         }
-        .security-note i { color: var(--leaf); margin-top: 2px; }
 
-        .footer { margin-top: 18px; text-align: center; }
-        .footer button { max-width: 200px; margin: 0 auto; min-height: 44px; }
+        .security-note i {
+            margin-top: 2px;
+            color: var(--leaf);
+        }
 
-        @media (max-width: 420px) {
-            .otp { gap: 7px; }
-            .otp .otp-box { height: 50px; font-size: 20px; border-radius: 10px; }
-            .card { padding: 26px 18px 22px; }
-            .method { padding: 16px; }
-            details.method > summary { padding: 16px; }
-            details.method .method-body { padding: 0 16px 16px; }
-            .steps .label-text { display: none; }
+        .btn-signout {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+
+            width: 100%;
+            min-height: 42px;
+            padding: 8px 14px;
+
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+
+            background: transparent;
+            color: var(--text);
+
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+
+            cursor: pointer;
+            transition: background .15s, border-color .15s;
+        }
+
+        .btn-signout:hover {
+            background: var(--page);
+            border-color: var(--faint);
+        }
+
+        /* ==============================
+           RIGHT PANEL
+           AUTHENTICATOR + EMAIL
+        ============================== */
+
+        .main {
+            min-width: 0;
+
+            display: flex;
+            flex-direction: column;
+            gap: 17px;
+
+            padding: 34px 34px 30px;
+        }
+
+        .steps {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .steps li {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--faint);
+        }
+
+        .steps .dot {
+            width: 20px;
+            height: 20px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 50%;
+            background: var(--border);
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .steps .is-done {
+            color: var(--leaf-dark);
+        }
+
+        .steps .is-done .dot {
+            background: var(--leaf);
+            color: #ffffff;
+        }
+
+        .steps .is-current {
+            color: var(--brand-dark);
+        }
+
+        .steps .is-current .dot {
+            background: var(--brand);
+            color: #ffffff;
+        }
+
+        .steps .bar {
+            flex: 1;
+            min-width: 18px;
+            height: 2px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--leaf), var(--brand));
+            opacity: .5;
+        }
+
+        .intro h2 {
+            font-size: 27px;
+            font-weight: 700;
+        }
+
+        .intro p {
+            margin-top: 7px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        /* Verification method tabs */
+
+        .tabs {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+
+            padding: 5px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+
+            background: var(--page);
+        }
+
+        .tab {
+            min-height: 43px;
+            padding: 8px 12px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+
+            border: 0;
+            border-radius: 10px;
+
+            background: transparent;
+            color: var(--muted);
+
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+
+            cursor: pointer;
+            transition: background .15s, color .15s, box-shadow .15s;
+        }
+
+        .tab i {
+            font-size: 16px;
+        }
+
+        .tab:hover {
+            color: var(--text);
+        }
+
+        .tab[aria-selected="true"] {
+            background: var(--card);
+            color: var(--accent-dark);
+
+            box-shadow:
+                0 1px 2px rgba(6, 35, 26, .08),
+                inset 0 -2px 0 var(--accent);
+        }
+
+        /* Alerts */
+
+        .message {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+
+            padding: 10px 13px;
+            border-radius: 10px;
+
+            font-size: 12.5px;
+            overflow-wrap: anywhere;
+        }
+
+        .message i {
+            margin-top: 2px;
+        }
+
+        .message.error {
+            background: var(--error-soft);
+            border-left: 4px solid var(--error);
+            color: var(--error);
+        }
+
+        .message.success {
+            background: var(--success-soft);
+            border-left: 4px solid var(--leaf);
+            color: var(--success);
+        }
+
+        .message ul {
+            margin: 0;
+            padding-left: 16px;
+        }
+
+        /* Verification panels */
+
+        .panel {
+            flex: 1;
+            min-height: 250px;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 18px;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .panel-icon {
+            width: 44px;
+            height: 44px;
+            flex: none;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 12px;
+            background: var(--accent-soft);
+            color: var(--accent-dark);
+            font-size: 19px;
+        }
+
+        .panel-head h3 {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .panel-head p {
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 12.5px;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            margin: 0 0 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        /* Six-digit authenticator input */
+
+        .otp {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .otp .otp-box {
+            width: 100%;
+            min-width: 0;
+            height: 56px;
+            padding: 0;
+
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 23px;
+            font-weight: 700;
+
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+
+            background: var(--input);
+            color: var(--text);
+
+            caret-color: var(--accent);
+
+            transition:
+                border-color .15s,
+                box-shadow .15s,
+                transform .15s,
+                background .15s;
+        }
+
+        .otp .otp-box:hover {
+            border-color: var(--faint);
+        }
+
+        .otp .otp-box:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-ring);
+            transform: translateY(-1px);
+        }
+
+        .otp .otp-box.filled {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+
+        .otp.is-invalid .otp-box {
+            border-color: var(--error);
+            animation: otp-shake .35s;
+        }
+
+        @keyframes otp-shake {
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        .hint {
+            margin-top: 9px;
+            color: var(--faint);
+            font-size: 11.5px;
+        }
+
+        /* Email verification panel */
+
+        .email-flow {
+            display: grid;
+            gap: 14px;
+        }
+
+        .email-step {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+
+            padding: 12px 14px;
+
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--page);
+            transition: background .2s, border-color .2s;
+        }
+
+        .email-step.is-done {
+            border-color: var(--leaf);
+            background: var(--leaf-soft);
+        }
+
+        .email-step-num {
+            width: 26px;
+            height: 26px;
+            flex: none;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 50%;
+            background: var(--accent);
+            color: #ffffff;
+
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .email-step-text {
+            flex: 1;
+            min-width: 160px;
+        }
+
+        .email-step-text strong {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .email-step-text span {
+            display: block;
+            margin-top: 2px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .email-step form {
+            flex: none;
+        }
+
+        .email-step .btn {
+            width: auto;
+            min-height: 40px;
+            padding: 8px 14px;
+        }
+
+        .email-verify-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .email-verify-head p {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* Buttons */
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+
+            width: 100%;
+            min-height: 46px;
+            padding: 10px 14px;
+
+            border: 0;
+            border-radius: 11px;
+
+            font: inherit;
+            font-size: 12.5px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition:
+                filter .15s,
+                transform .15s,
+                box-shadow .15s,
+                background .15s;
+        }
+
+        .btn:active {
+            transform: scale(.99);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #ffffff;
+            box-shadow: 0 8px 18px var(--accent-ring);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.07);
+        }
+
+        .btn-outline {
+            background: var(--card);
+            color: var(--leaf-dark);
+            border: 1.5px solid var(--leaf);
+        }
+
+        .btn-outline:hover {
+            background: var(--leaf-soft);
+        }
+
+        /* "Lost your code?" text link under the main button */
+
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+
+            width: auto;
+            margin: 14px auto 0;
+            padding: 4px 6px;
+
+            border: 0;
+            background: none;
+            color: var(--leaf-dark);
+
+            font: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            cursor: pointer;
+        }
+
+        .link-btn:hover {
+            filter: brightness(1.15);
+        }
+
+        .link-row {
+            display: flex;
+            justify-content: center;
+        }
+
+        :focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        /* ==============================
+           RESPONSIVE LAYOUT
+        ============================== */
+
+        @media (max-height: 760px) and (min-width: 821px) {
+            body {
+                padding: 12px;
+            }
+
+            .side {
+                padding: 25px 26px 20px;
+                gap: 17px;
+            }
+
+            .main {
+                padding: 25px 28px 22px;
+                gap: 13px;
+            }
+
+            .intro h2 {
+                font-size: 24px;
+            }
+
+            .panel {
+                min-height: 210px;
+                gap: 13px;
+            }
+
+            .otp .otp-box {
+                height: 50px;
+            }
+        }
+
+        @media (max-width: 820px) {
+            body {
+                padding: 14px;
+                place-items: start center;
+            }
+
+            .shell {
+                max-width: 560px;
+                grid-template-columns: 1fr;
+            }
+
+            /* On phones the verification comes first, branding/recovery below. */
+            .main {
+                order: -1;
+                padding: 24px 22px;
+            }
+
+            .side {
+                padding: 25px 22px 20px;
+                gap: 17px;
+
+                border-right: 0;
+                border-top: 1px solid var(--border);
+            }
+
+            .panel {
+                min-height: 0;
+            }
+
+            .side-foot {
+                margin-top: 0;
+            }
+
+            .seal-stage {
+                flex: none;
+                width: min(100%, 240px);
+                height: 240px;
+                min-height: 0;
+                margin: 0 auto;
+            }
+
+            .intro h2 {
+                font-size: 23px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .shell {
+                border-radius: 18px;
+            }
+
+            .side {
+                padding: 23px 17px 18px;
+            }
+
+            .main {
+                padding: 21px 17px;
+            }
+
+            .brand h1 {
+                font-size: 17px;
+            }
+
+            .brand p {
+                font-size: 10px;
+            }
+
+            .otp {
+                gap: 7px;
+            }
+
+            .otp .otp-box {
+                height: 48px;
+                font-size: 20px;
+                border-radius: 10px;
+            }
+
+            .email-step form,
+            .email-step .btn {
+                width: 100%;
+            }
+
+            .steps .label-text {
+                display: none;
+            }
         }
 
         @media (prefers-reduced-motion: reduce) {
-            * { transition: none !important; }
+            * {
+                transition: none !important;
+                animation: none !important;
+            }
         }
     </style>
 </head>
+
 <body>
-    <main class="container">
+    <main class="shell">
 
-        <header class="brand">
-            <img class="brand-logo" src="{{ asset('icon.png') }}" alt="e-Poblacion logo">
-            <h1>e-Poblacion</h1>
-            <p>Barangay Poblacion Record Management System</p>
-        </header>
+        {{-- ==========================================
+             LEFT PANEL: BRANDING
+        =========================================== --}}
+        <aside class="side">
 
-        <section class="card" aria-labelledby="page-title">
+            <header class="brand">
+                <div>
+                    <h1>e-Poblacion</h1>
+                    <p>Barangay Poblacion Record Management System</p>
+                </div>
+            </header>
 
-            {{-- Progress: password already accepted, now verifying identity --}}
+            <div class="side-divider"></div>
+
+            {{-- Large official seal: fills the space between the header and the footer. --}}
+            <div class="seal-stage">
+                <img
+                    class="seal"
+                    src="{{ asset('icon.png') }}"
+                    alt="Barangay Poblacion official seal"
+                    width="640"
+                    height="640"
+                    decoding="async"
+                    fetchpriority="high"
+                    draggable="false"
+                >
+            </div>
+
+            <div class="side-foot">
+
+                <p class="security-note">
+                    <i class="bi bi-shield-check" aria-hidden="true"></i>
+
+                    <span>
+                        Never share your verification codes with anyone.
+                        Email recovery is available only after your account
+                        password has been verified.
+                    </span>
+                </p>
+
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+
+                    <button type="submit" class="btn-signout">
+                        <i class="bi bi-box-arrow-left" aria-hidden="true"></i>
+                        <span>Sign Out</span>
+                    </button>
+                </form>
+
+            </div>
+        </aside>
+
+
+        {{-- ==========================================
+             RIGHT PANEL: AUTHENTICATOR + EMAIL
+        =========================================== --}}
+        <section
+            class="main"
+            id="mainSection"
+            data-method="{{ $emailStepOpen ? 'email' : 'auth' }}"
+            aria-labelledby="page-title"
+        >
+
+            {{-- Sign-in progress --}}
             <ol class="steps" aria-label="Sign-in progress">
                 <li class="is-done">
-                    <span class="dot"><i class="bi bi-check-lg" aria-hidden="true"></i></span>
+                    <span class="dot">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                    </span>
                     <span class="label-text">Password</span>
                 </li>
+
                 <li class="bar" aria-hidden="true"></li>
+
                 <li class="is-current" aria-current="step">
                     <span class="dot">2</span>
                     <span class="label-text">Verify identity</span>
                 </li>
             </ol>
 
-            <h2 class="title" id="page-title">Two-Factor Verification</h2>
-            <p class="lead">
-                Your password has been accepted. Verify your identity to
-                continue to the records system.
-            </p>
+            {{-- Page heading --}}
+            <div class="intro">
+                <h2 id="page-title">Two-Factor Verification</h2>
 
+                <p>
+                    Your password has been accepted. Verify your identity
+                    to continue to the records system.
+                </p>
+            </div>
+
+
+            {{-- Validation errors --}}
             @if ($errors->any())
                 <div class="message error" role="alert">
                     <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+
                     <ul>
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
@@ -326,6 +1045,8 @@
                 </div>
             @endif
 
+
+            {{-- Status messages --}}
             @if (session('status'))
                 <div class="message success" role="status">
                     <i class="bi bi-check-circle" aria-hidden="true"></i>
@@ -340,116 +1061,210 @@
                 </div>
             @endif
 
-            {{-- Option 1: authenticator code or saved recovery code --}}
-            <div class="method">
-                <div class="method-head">
-                    <div class="method-icon"><i class="bi bi-phone" aria-hidden="true"></i></div>
+
+            {{-- Verification method tabs --}}
+            <div class="tabs" role="tablist" aria-label="Verification method">
+
+                <button
+                    type="button"
+                    class="tab"
+                    role="tab"
+                    id="tab-auth"
+                    data-target="auth"
+                    aria-controls="panel-auth"
+                    aria-selected="{{ $emailStepOpen ? 'false' : 'true' }}"
+                >
+                    <i class="bi bi-phone" aria-hidden="true"></i>
+                    <span>Authenticator</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="tab"
+                    role="tab"
+                    id="tab-email"
+                    data-target="email"
+                    aria-controls="panel-email"
+                    aria-selected="{{ $emailStepOpen ? 'true' : 'false' }}"
+                >
+                    <i class="bi bi-envelope" aria-hidden="true"></i>
+                    <span>Email</span>
+                </button>
+
+            </div>
+
+
+            {{-- ======================================
+                 METHOD 1: AUTHENTICATOR APP
+            ======================================= --}}
+            <div
+                class="panel"
+                id="panel-auth"
+                data-method="auth"
+                role="tabpanel"
+                aria-labelledby="tab-auth"
+                @if ($emailStepOpen) hidden @endif
+            >
+
+                <div class="panel-head">
+                    <div class="panel-icon">
+                        <i class="bi bi-phone" aria-hidden="true"></i>
+                    </div>
+
                     <div>
-                        <h3>Authenticator or recovery code</h3>
+                        <h3>Authenticator app</h3>
                         <p>
-                            Enter the current six-digit code from your authenticator app,
-                            or one of your saved recovery codes. Each recovery code works only once.
+                            Enter the current six-digit code from your
+                            authenticator app.
                         </p>
                     </div>
                 </div>
 
-                <form method="POST" action="{{ route('two-factor.verify') }}" id="mainForm" novalidate>
+                <form
+                    method="POST"
+                    action="{{ route('two-factor.verify') }}"
+                    id="authForm"
+                    novalidate
+                >
                     @csrf
 
-                    {{-- Mode A: six boxes (authenticator app code) --}}
-                    <div id="otpMode">
-                        <label id="otpLabel">Authenticator code</label>
-                        <div class="otp" data-otp role="group" aria-labelledby="otpLabel">
-                            @for ($i = 1; $i <= 6; $i++)
-                                <input
-                                    class="otp-box"
-                                    type="text"
-                                    inputmode="numeric"
-                                    pattern="[0-9]*"
-                                    maxlength="1"
-                                    autocomplete="{{ $i === 1 ? 'one-time-code' : 'off' }}"
-                                    aria-label="Digit {{ $i }} of 6"
-                                    @if ($i === 1 && ! $emailStepOpen) autofocus @endif
-                                >
-                            @endfor
-                            <input type="hidden" name="code" data-otp-value>
-                        </div>
-                        <p class="otp-hint">Type or paste the 6-digit code.</p>
-                    </div>
+                    <label id="otpLabel">
+                        Authenticator code
+                    </label>
 
-                    {{-- Mode B: saved recovery code (longer, free text) --}}
-                    <div id="recoveryMode" hidden>
-                        <label for="recovery_code">Recovery code</label>
-                        <div class="input-wrap">
-                            <i class="bi bi-key" aria-hidden="true"></i>
+                    <div
+                        class="otp"
+                        data-otp
+                        role="group"
+                        aria-labelledby="otpLabel"
+                    >
+                        @for ($i = 1; $i <= 6; $i++)
                             <input
-                                id="recovery_code"
-                                class="code-input"
-                                name="code"
+                                class="otp-box"
                                 type="text"
-                                maxlength="64"
-                                autocomplete="off"
-                                autocapitalize="off"
-                                spellcheck="false"
-                                placeholder="Enter a saved recovery code"
-                                disabled
+                                inputmode="numeric"
+                                pattern="[0-9]*"
+                                maxlength="1"
+                                autocomplete="{{ $i === 1 ? 'one-time-code' : 'off' }}"
+                                aria-label="Digit {{ $i }} of 6"
+                                @if ($i === 1 && ! $emailStepOpen) autofocus @endif
                             >
-                        </div>
+                        @endfor
+
+                        <input
+                            type="hidden"
+                            name="code"
+                            data-otp-value
+                        >
                     </div>
 
-                    <button type="submit" class="btn-primary" style="margin-top:16px;">
+                    <p class="hint">
+                        Type or paste the six-digit code.
+                    </p>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        style="margin-top: 16px;"
+                    >
                         <span>Verify and Continue</span>
                         <i class="bi bi-arrow-right" aria-hidden="true"></i>
                     </button>
-
-                    <div class="center" style="justify-content:center;">
-                        <button type="button" class="link-btn" id="modeToggle">Use a recovery code instead</button>
-                    </div>
                 </form>
+
+                {{-- Shortcut to the email recovery in the left panel --}}
+                <div class="link-row">
+                    <button type="button" class="link-btn" data-open-email style="margin-top:0;">
+                        <i class="bi bi-envelope" aria-hidden="true"></i>
+                        <span>Forgot your authenticator code? Use email instead</span>
+                    </button>
+                </div>
+
             </div>
 
-            <div class="divider" aria-hidden="true">or</div>
 
-            {{-- Option 2: email recovery (only after the password was verified) --}}
-            <details class="method" id="emailRecovery" @if ($emailStepOpen) open @endif>
-                <summary>
-                    <div class="method-head">
-                        <div class="method-icon leaf"><i class="bi bi-envelope-check" aria-hidden="true"></i></div>
-                        <div>
-                            <h3>Can't use your authenticator?</h3>
-                            <p>Verify with a one-time code sent to your registered email.</p>
-                        </div>
+            {{-- ======================================
+                 METHOD 2: EMAIL CODE
+            ======================================= --}}
+            <div
+                class="panel"
+                id="panel-email"
+                data-method="email"
+                role="tabpanel"
+                aria-labelledby="tab-email"
+                @unless ($emailStepOpen) hidden @endunless
+            >
+
+                <div class="panel-head">
+                    <div class="panel-icon">
+                        <i class="bi bi-envelope-check" aria-hidden="true"></i>
                     </div>
-                    <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
-                </summary>
 
-                <div class="method-body">
-                    <p class="lead" style="font-size:13.5px;">
-                        Request a one-time code sent to the email address already
-                        registered to your account. The code expires in 10 minutes.
-                    </p>
+                    <div>
+                        <h3>Email verification</h3>
+                        <p>
+                            Can't use your authenticator? Get a one-time code
+                            at your registered email address.
+                        </p>
+                    </div>
+                </div>
 
-                    <form
-                        method="POST"
-                        action="{{ route('two-factor.email-recovery.send') }}"
-                    >
-                        @csrf
+                <div class="email-flow">
 
-                        <button type="submit" class="btn-secondary">
-                            <i class="bi bi-envelope-arrow-up" aria-hidden="true"></i>
-                            <span>Send Code to Registered Email</span>
-                        </button>
-                    </form>
+                    {{-- Step 1: send the code to the registered email --}}
+                    <div class="email-step @if ($emailStepOpen) is-done @endif">
+                        <span class="email-step-num" aria-hidden="true">
+                            @if ($emailStepOpen)
+                                <i class="bi bi-check-lg"></i>
+                            @else
+                                1
+                            @endif
+                        </span>
 
+                        <div class="email-step-text">
+                            <strong>{{ $emailStepOpen ? 'Code sent' : 'Send the code' }}</strong>
+                            <span>
+                                @if ($emailStepOpen)
+                                    Check your inbox, then enter it below. Need another one?
+                                @else
+                                    We'll email it to the address registered to your account.
+                                @endif
+                            </span>
+                        </div>
+
+                        <form
+                            method="POST"
+                            action="{{ route('two-factor.email-recovery.send') }}"
+                        >
+                            @csrf
+
+                            <button type="submit" class="btn btn-outline" id="sendEmailCode">
+                                <i class="bi bi-envelope-arrow-up" aria-hidden="true"></i>
+                                <span>{{ $emailStepOpen ? 'Send again' : 'Send code' }}</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    {{-- Step 2: verify the email code --}}
                     <form
                         method="POST"
                         action="{{ route('two-factor.email-recovery.verify') }}"
+                        id="emailRecoveryForm"
                         novalidate
                     >
                         @csrf
 
-                        <label id="emailOtpLabel">Email verification code</label>
-                        <div class="otp leaf" data-otp role="group" aria-labelledby="emailOtpLabel">
+                        <div class="email-verify-head">
+                            <span class="email-step-num" aria-hidden="true">2</span>
+                            <p id="emailOtpLabel">Enter the six-digit email code</p>
+                        </div>
+
+                        <div
+                            class="otp"
+                            data-otp
+                            role="group"
+                            aria-labelledby="emailOtpLabel"
+                        >
                             @for ($i = 1; $i <= 6; $i++)
                                 <input
                                     class="otp-box"
@@ -462,132 +1277,260 @@
                                     @if ($i === 1 && $emailStepOpen) autofocus @endif
                                 >
                             @endfor
-                            <input type="hidden" name="email_code" data-otp-value>
+
+                            <input
+                                type="hidden"
+                                name="email_code"
+                                data-otp-value
+                            >
                         </div>
 
-                        <button type="submit" class="btn-leaf" style="margin-top:16px;">
+                        <p class="hint">
+                            The code expires after 10 minutes. Check your spam
+                            folder if it doesn't arrive.
+                        </p>
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            style="margin-top: 16px;"
+                        >
                             <span>Verify Email Code</span>
                             <i class="bi bi-arrow-right" aria-hidden="true"></i>
                         </button>
                     </form>
+
                 </div>
-            </details>
 
-            <p class="security-note">
-                <i class="bi bi-shield-check" aria-hidden="true"></i>
-                <span>
-                    Never share your verification codes with anyone.
-                    Email recovery is available only after your account
-                    password has been verified.
-                </span>
-            </p>
+            </div>
+
         </section>
-
-        <footer class="footer">
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="btn-secondary">
-                    <i class="bi bi-box-arrow-left" aria-hidden="true"></i>
-                    <span>Sign Out</span>
-                </button>
-            </form>
-        </footer>
     </main>
+
 
     <script>
     (function () {
-        /* ---- six-box code inputs ---- */
+
+        /* ======================================
+           SIX-DIGIT OTP INPUT HANDLER
+        ======================================= */
+
         function setupOtp(group) {
-            var boxes = Array.prototype.slice.call(group.querySelectorAll('.otp-box'));
+            var boxes = Array.prototype.slice.call(
+                group.querySelectorAll('.otp-box')
+            );
+
             var hidden = group.querySelector('[data-otp-value]');
 
             function sync() {
-                var v = boxes.map(function (b) { return b.value; }).join('');
-                hidden.value = v;
-                boxes.forEach(function (b) { b.classList.toggle('filled', b.value !== ''); });
+                hidden.value = boxes.map(function (box) {
+                    return box.value;
+                }).join('');
+
+                boxes.forEach(function (box) {
+                    box.classList.toggle('filled', box.value !== '');
+                });
+
                 group.classList.remove('is-invalid');
             }
 
             function fill(start, text) {
                 var digits = text.replace(/\D/g, '').split('');
-                for (var i = 0; i < digits.length && start + i < boxes.length; i++) {
+
+                for (
+                    var i = 0;
+                    i < digits.length && start + i < boxes.length;
+                    i++
+                ) {
                     boxes[start + i].value = digits[i];
                 }
+
                 sync();
-                boxes[Math.min(start + digits.length, boxes.length - 1)].focus();
+
+                var nextIndex = Math.min(
+                    start + digits.length,
+                    boxes.length - 1
+                );
+
+                boxes[nextIndex].focus();
             }
 
             boxes.forEach(function (box, i) {
+
                 box.addEventListener('input', function () {
-                    var d = box.value.replace(/\D/g, '');
+                    var digits = box.value.replace(/\D/g, '');
+
                     box.value = '';
-                    if (d.length > 1) { fill(i, d); return; }   /* autofill / SMS suggestion */
-                    box.value = d;
+
+                    if (digits.length > 1) {
+                        fill(i, digits);
+                        return;
+                    }
+
+                    box.value = digits;
                     sync();
-                    if (d && i < boxes.length - 1) boxes[i + 1].focus();
+
+                    if (digits && i < boxes.length - 1) {
+                        boxes[i + 1].focus();
+                    }
                 });
 
                 box.addEventListener('keydown', function (e) {
+
                     if (e.key === 'Backspace' && !box.value && i > 0) {
-                        boxes[i - 1].value = ''; sync(); boxes[i - 1].focus(); e.preventDefault();
+                        boxes[i - 1].value = '';
+                        sync();
+                        boxes[i - 1].focus();
+                        e.preventDefault();
+
                     } else if (e.key === 'ArrowLeft' && i > 0) {
-                        boxes[i - 1].focus(); e.preventDefault();
-                    } else if (e.key === 'ArrowRight' && i < boxes.length - 1) {
-                        boxes[i + 1].focus(); e.preventDefault();
+                        boxes[i - 1].focus();
+                        e.preventDefault();
+
+                    } else if (
+                        e.key === 'ArrowRight' &&
+                        i < boxes.length - 1
+                    ) {
+                        boxes[i + 1].focus();
+                        e.preventDefault();
                     }
+
                 });
 
                 box.addEventListener('paste', function (e) {
                     e.preventDefault();
-                    var text = (e.clipboardData || window.clipboardData).getData('text');
+
+                    var text = (
+                        e.clipboardData || window.clipboardData
+                    ).getData('text');
+
                     fill(0, text);
                 });
 
-                box.addEventListener('focus', function () { box.select(); });
+                box.addEventListener('focus', function () {
+                    box.select();
+                });
+
             });
 
-            /* block submit until all six boxes are filled */
+            /* Require all six digits before submitting. */
             var form = group.closest('form');
+
             if (form) {
                 form.addEventListener('submit', function (e) {
-                    if (group.offsetParent === null || hidden.disabled) return;   /* hidden mode */
+
                     if (hidden.value.length !== 6) {
                         e.preventDefault();
-                        group.classList.remove('is-invalid'); void group.offsetWidth;
+
+                        group.classList.remove('is-invalid');
+                        void group.offsetWidth;
                         group.classList.add('is-invalid');
-                        var empty = boxes.filter(function (b) { return !b.value; })[0] || boxes[0];
+
+                        var empty = boxes.filter(function (box) {
+                            return !box.value;
+                        })[0] || boxes[0];
+
                         empty.focus();
                     }
+
                 });
             }
         }
 
+
+        /* Initialize authenticator and email OTP groups. */
         document.querySelectorAll('[data-otp]').forEach(setupOtp);
 
-        /* ---- authenticator <-> recovery code toggle ---- */
-        var toggle = document.getElementById('modeToggle');
-        var otpMode = document.getElementById('otpMode');
-        var recMode = document.getElementById('recoveryMode');
-        var recInput = document.getElementById('recovery_code');
-        var otpHidden = otpMode.querySelector('[data-otp-value]');
-        var useRecovery = false;
 
-        toggle.addEventListener('click', function () {
-            useRecovery = !useRecovery;
-            otpMode.hidden = useRecovery;
-            recMode.hidden = !useRecovery;
-            recInput.disabled = !useRecovery;
-            otpHidden.disabled = useRecovery;
-            toggle.textContent = useRecovery ? 'Use authenticator code instead' : 'Use a recovery code instead';
-            (useRecovery ? recInput : otpMode.querySelector('.otp-box')).focus();
+        /* ======================================
+           AUTHENTICATOR / EMAIL TABS
+        ======================================= */
+
+        var section = document.getElementById('mainSection');
+
+        var tabs = Array.prototype.slice.call(
+            document.querySelectorAll('.tab')
+        );
+
+        var panels = Array.prototype.slice.call(
+            document.querySelectorAll('.panel')
+        );
+
+        function activate(method, focusInput) {
+
+            section.setAttribute('data-method', method);
+
+            tabs.forEach(function (tab) {
+                tab.setAttribute(
+                    'aria-selected',
+                    tab.getAttribute('data-target') === method
+                        ? 'true'
+                        : 'false'
+                );
+            });
+
+            panels.forEach(function (panel) {
+                panel.hidden =
+                    panel.getAttribute('data-method') !== method;
+            });
+
+            if (focusInput) {
+                var panel = document.getElementById('panel-' + method);
+
+                var target = method === 'email' &&
+                    !panel.querySelector('.email-step.is-done')
+                    ? document.getElementById('sendEmailCode')
+                    : panel.querySelector('.otp-box');
+
+                if (target) {
+                    target.focus();
+                }
+            }
+        }
+
+        tabs.forEach(function (tab, i) {
+
+            tab.addEventListener('click', function () {
+                activate(tab.getAttribute('data-target'), true);
+            });
+
+            tab.addEventListener('keydown', function (e) {
+
+                var next = null;
+
+                if (e.key === 'ArrowRight') {
+                    next = tabs[(i + 1) % tabs.length];
+                }
+
+                if (e.key === 'ArrowLeft') {
+                    next = tabs[
+                        (i - 1 + tabs.length) % tabs.length
+                    ];
+                }
+
+                if (next) {
+                    e.preventDefault();
+                    next.focus();
+                    activate(next.getAttribute('data-target'), false);
+                }
+
+            });
+
         });
 
-        document.getElementById('mainForm').addEventListener('submit', function (e) {
-            if (useRecovery && !recInput.value.trim()) { e.preventDefault(); recInput.focus(); }
+
+        /* ======================================
+           SHORTCUT: "USE EMAIL INSTEAD" LINK
+        ======================================= */
+
+        document.querySelectorAll('[data-open-email]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                activate('email', true);
+            });
         });
 
-        /* Reopen the recovery mode if the server sent the user back with an error on a long code */
     })();
     </script>
+
 </body>
 </html>

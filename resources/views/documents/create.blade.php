@@ -6,22 +6,29 @@
 <style>
     /* =========================================================
        NEW DOCUMENT REQUEST — watermelon theme
+       SEMANTIC COLORS
+         Green  = primary action / selected / success
+         Blue   = info / guidance
+         Amber  = pending / warning
+         Red    = errors / restrictions / remove
        ========================================================= */
     .docs {
         --ink: #3a2a2e; --muted: #8a6f75; --paper: #ffffff; --wash: #fdf1f3; --line: #f0d0d6;
-        --brand: #e5505c; --brand-soft: rgba(229,80,92,.11); --green: #4fae4e; --green-d: #3b8a40; --sun: #ffc933;
-        --hover: #fdf1f3; --pending: #b26a00; --pending-bg: #fff1d6; --bad: #c9302c; --bad-bg: #fde3e3; --good: #3b8a40;
+        --brand: #237a35; --brand-soft: rgba(35,122,53,.11); --green: #2f9e44; --green-d: #237a35; --sun: #ffc933;
+        --info: #1c7ed6; --info-soft: rgba(28,126,214,.12);
+        --hover: #fdf1f3; --pending: #b26a00; --pending-bg: #fff1d6; --bad: #c92a3b; --bad-bg: #fde3e3; --good: #237a35;
         font-family: var(--font); color: var(--ink);
     }
     html[data-theme="dark"] .docs {
         --ink: #f6eff1; --muted: #a8b8ad; --paper: #17251d; --wash: #1c2d23; --line: #2b4033;
-        --brand: #ff7f8b; --brand-soft: rgba(255,127,139,.16); --green: #5fc062; --green-d: #8fe29a;
-        --hover: #1f3126; --pending: #ffc15c; --pending-bg: #3a2c10; --bad: #ff8a95; --bad-bg: #401a1d; --good: #8fe29a;
+        --brand: #5fc062; --brand-soft: rgba(95,192,98,.16); --green: #5fc062; --green-d: #8fe29a;
+        --info: #6cb2ff; --info-soft: rgba(108,178,255,.15);
+        --hover: #1f3126; --pending: #ffc15c; --pending-bg: #3a2c10; --bad: #ff7b87; --bad-bg: #401a1d; --good: #8fe29a;
     }
     .docs * { box-sizing: border-box; }
     .docs [hidden] { display: none !important; }
     .docs .display { letter-spacing: -.02em; }
-    .docs a:focus-visible, .docs button:focus-visible, .docs input:focus-visible, .docs textarea:focus-visible, .docs .type input:focus-visible + .box { outline: 3px solid var(--green); outline-offset: 2px; }
+    .docs a:focus-visible, .docs button:focus-visible, .docs input:focus-visible, .docs textarea:focus-visible, .docs .type input:focus-visible + .box { outline: 3px solid var(--info); outline-offset: 2px; }
 
     .back { display: inline-flex; gap: .4rem; align-items: center; color: var(--brand); text-decoration: none; font-weight: 700; font-size: .92rem; }
     .back:hover { text-decoration: underline; color: var(--brand); }
@@ -37,8 +44,8 @@
     /* ---------- Steps ---------- */
     .step { background: var(--paper); border: 1px solid var(--line); border-radius: 1.4rem; padding: 1.3rem 1.4rem 1.45rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(120,40,55,.04), 0 10px 24px rgba(120,40,55,.05); }
     .step-title { display: flex; align-items: center; gap: .7rem; margin-bottom: .2rem; }
-    .step-title .n { width: 1.95rem; height: 1.95rem; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #ef6b78, var(--brand)); color: #fff; font-weight: 800; font-size: .9rem; flex: none; box-shadow: 0 4px 10px rgba(229,80,92,.28); }
-    html[data-theme="dark"] .step-title .n { color: #2b0c12; }
+    .step-title .n { width: 1.95rem; height: 1.95rem; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #2f9e44, var(--brand)); color: #fff; font-weight: 800; font-size: .9rem; flex: none; box-shadow: 0 4px 10px rgba(35,122,53,.28); }
+    html[data-theme="dark"] .step-title .n { color: #0b2314; background: linear-gradient(135deg, #8fe29a, var(--brand)); box-shadow: none; }
     .step-title h2 { font-size: 1.15rem; font-weight: 800; margin: 0; }
     .step-hint { color: var(--muted); font-size: .9rem; margin: 0 0 1rem 2.65rem; }
     .req-mark { color: var(--bad); }
@@ -66,6 +73,68 @@
     .picked small { color: var(--muted); }
     .link-btn { background: none; border: 0; color: var(--brand); font-weight: 700; padding: .25rem .6rem; border-radius: 999px; }
     .link-btn:hover { background: var(--paper); }
+
+    /* ---------- Active case restriction modal (red = restriction) ---------- */
+    .case-modal-backdrop {
+        position: fixed; inset: 0; z-index: 2000;
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem; background: rgba(20, 12, 15, .65);
+        overflow-y: auto;
+    }
+    .case-modal {
+        width: min(100%, 620px); max-height: min(85vh, 760px);
+        overflow-y: auto; background: var(--paper); color: var(--ink);
+        border: 1px solid var(--line); border-radius: 1.35rem;
+        box-shadow: 0 24px 70px rgba(0,0,0,.3);
+    }
+    .case-modal-head {
+        display: flex; align-items: flex-start; gap: .85rem;
+        padding: 1.2rem 1.3rem; border-bottom: 1px solid var(--line);
+    }
+    .case-modal-icon {
+        width: 2.7rem; height: 2.7rem; flex: none; display: grid;
+        place-items: center; border-radius: 50%;
+        color: var(--bad); background: var(--bad-bg); font-size: 1.25rem;
+    }
+    .case-modal-head h3 { margin: 0; font-size: 1.12rem; font-weight: 800; }
+    .case-modal-head p { margin: .3rem 0 0; color: var(--muted); font-size: .88rem; line-height: 1.45; }
+    .case-modal-body { padding: 1.1rem 1.3rem; }
+    .case-policy {
+        padding: .85rem 1rem; margin-bottom: 1rem; border-radius: .9rem;
+        border: 1px solid var(--bad); background: var(--bad-bg);
+        color: var(--bad); font-size: .9rem; line-height: 1.5;
+    }
+    .case-list { display: grid; gap: .8rem; }
+    .case-item {
+        padding: .9rem 1rem; border: 1px solid var(--line);
+        border-radius: 1rem; background: var(--wash);
+    }
+    .case-item-top {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        flex-wrap: wrap; gap: .5rem; margin-bottom: .55rem;
+    }
+    .case-number { font-weight: 800; overflow-wrap: anywhere; }
+    .case-status {
+        display: inline-flex; align-items: center; padding: .25rem .65rem;
+        border-radius: 999px; color: var(--pending); background: var(--pending-bg);
+        font-size: .78rem; font-weight: 800;
+    }
+    .case-item h4 { margin: 0 0 .35rem; font-size: .96rem; font-weight: 800; }
+    .case-description {
+        margin: 0; color: var(--muted); font-size: .87rem;
+        line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere;
+    }
+    .case-date { display: block; margin-top: .65rem; color: var(--muted); font-size: .78rem; }
+    .case-modal-foot {
+        display: flex; justify-content: flex-end; padding: 1rem 1.3rem;
+        border-top: 1px solid var(--line);
+    }
+    .case-modal-close {
+        border: 0; border-radius: 999px; padding: .7rem 1.3rem;
+        background: var(--bad); color: #fff; font-weight: 800;
+    }
+    html[data-theme="dark"] .case-modal-close { color: #2b0c12; }
+    .case-modal-close:hover { filter: brightness(1.06); }
 
     /* ---------- Document type cards ---------- */
     .types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
@@ -113,7 +182,7 @@
     /* ---------- Document-specific panels ---------- */
     .panel { margin: 0 0 1.2rem; padding: 1.05rem; border: 1px solid var(--line); border-radius: 1.2rem; background: var(--wash); }
     .panel-head { display: flex; align-items: flex-start; gap: .7rem; margin-bottom: 1rem; }
-    .panel-head > i { color: var(--brand); font-size: 1.2rem; margin-top: .1rem; }
+    .panel-head > i { color: var(--info); font-size: 1.2rem; margin-top: .1rem; }
     .panel-head b { display: block; font-weight: 800; }
     .panel-head small { display: block; margin-top: .15rem; color: var(--muted); line-height: 1.45; }
     .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
@@ -122,8 +191,8 @@
     .detail-field.full { grid-column: 1 / -1; }
     .helper { display: block; margin-top: .35rem; color: var(--muted); font-size: .8rem; line-height: 1.4; }
     .required { color: var(--bad); }
-    .solo-parent-note { display: flex; gap: .7rem; align-items: flex-start; margin-bottom: 1rem; padding: .8rem .9rem; border-radius: 1rem; background: var(--brand-soft); font-size: .86rem; line-height: 1.45; }
-    .solo-parent-note i { color: var(--brand); font-size: 1.1rem; margin-top: .1rem; }
+    .solo-parent-note { display: flex; gap: .7rem; align-items: flex-start; margin-bottom: 1rem; padding: .8rem .9rem; border-radius: 1rem; background: var(--info-soft); font-size: .86rem; line-height: 1.45; }
+    .solo-parent-note i { color: var(--info); font-size: 1.1rem; margin-top: .1rem; }
     .solo-parent-note p { margin: 0; }
 
     /* ---------- Solo Parent picker ---------- */
@@ -134,9 +203,10 @@
     .solo-result { display: flex; align-items: center; gap: .7rem; padding: .65rem; border-radius: .8rem; }
     .solo-result:hover { background: var(--hover); }
     .solo-result .result-main { flex: 1; min-width: 0; }
-    .solo-result .result-status { color: var(--bad); font-size: .78rem; }
-    .solo-add-btn { flex: none; display: inline-flex; align-items: center; gap: .3rem; border: 0; background: var(--green); color: #fff; border-radius: 999px; padding: .4rem .85rem; font-size: .82rem; font-weight: 700; }
-    .solo-add-btn:hover { filter: brightness(1.07); }
+    .solo-result .result-status { color: var(--muted); font-size: .78rem; }
+    .solo-add-btn { flex: none; display: inline-flex; align-items: center; gap: .3rem; border: 0; background: var(--brand); color: #fff; border-radius: 999px; padding: .4rem .85rem; font-size: .82rem; font-weight: 700; }
+    html[data-theme="dark"] .solo-add-btn { color: #0b2314; }
+    .solo-add-btn:hover { filter: brightness(1.1); }
     .solo-result-added { color: var(--good); font-size: .8rem; font-weight: 700; white-space: nowrap; }
     .solo-household-warning { display: none; margin-top: .55rem; padding: .65rem .8rem; border-radius: .9rem; background: var(--bad-bg); color: var(--bad); font-size: .8rem; line-height: 1.4; }
     .solo-household-warning.show { display: block; }
@@ -169,15 +239,15 @@
     .pill::before { content: ''; width: .5rem; height: .5rem; border-radius: 50%; background: var(--pending); }
     .summary-note { padding: 0 1.25rem 1rem; color: var(--muted); font-size: .85rem; margin: 0; }
     .actions { padding: 1rem 1.25rem; border-top: 1px solid var(--line); display: grid; gap: .6rem; }
-    .btn-go { display: inline-flex; justify-content: center; align-items: center; gap: .5rem; border: 0; border-radius: 999px; padding: .85rem 1.2rem; font-weight: 800; background: linear-gradient(135deg, #f27984, var(--brand)); color: #fff; box-shadow: 0 8px 18px rgba(229,80,92,.3); transition: transform .15s, filter .15s; }
-    html[data-theme="dark"] .btn-go { color: #2b0c12; }
+    .btn-go { display: inline-flex; justify-content: center; align-items: center; gap: .5rem; border: 0; border-radius: 999px; padding: .85rem 1.2rem; font-weight: 800; background: linear-gradient(135deg, #2f9e44, var(--brand)); color: #fff; box-shadow: 0 8px 18px rgba(35,122,53,.3); transition: transform .15s, filter .15s; }
+    html[data-theme="dark"] .btn-go { color: #0b2314; background: linear-gradient(135deg, #8fe29a, var(--brand)); box-shadow: none; }
     .btn-go:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
     .btn-go:disabled { background: var(--wash); color: var(--muted); box-shadow: none; cursor: not-allowed; }
     .btn-cancel { text-align: center; padding: .6rem; border-radius: 999px; color: var(--muted); text-decoration: none; font-weight: 700; }
     .btn-cancel:hover { color: var(--ink); background: var(--wash); }
     .missing { color: var(--muted); font-size: .82rem; text-align: center; margin: 0; }
-    .verify { display: flex; gap: .8rem; padding: 1rem 1.25rem; border-radius: 1.3rem; background: var(--wash); border: 1px dashed var(--line); font-size: .88rem; color: var(--muted); }
-    .verify i { font-size: 1.3rem; color: var(--green); }
+    .verify { display: flex; gap: .8rem; padding: 1rem 1.25rem; border-radius: 1.3rem; background: var(--info-soft); border: 1px dashed var(--info); font-size: .88rem; color: var(--muted); }
+    .verify i { font-size: 1.3rem; color: var(--info); }
     .verify b { display: block; color: var(--ink); margin-bottom: .25rem; }
     .verify p { margin: 0; }
     @media (prefers-reduced-motion: reduce) { .docs * { transition: none !important; } }
@@ -188,7 +258,6 @@
 @section('content')
 
 @php
-    /* Resident data for the front-end search (sex + birth date are used by the Solo Parent picker) */
     $residentData = $residents->map(fn ($r) => [
         'id'                 => $r->id,
         'name'               => (string) $r->full_name,
@@ -238,6 +307,35 @@
             </div>
         </div>
     @endif
+
+    {{-- Active respondent case restriction popup --}}
+    <div class="case-modal-backdrop" id="activeCaseModal" role="dialog"
+         aria-modal="true" aria-labelledby="activeCaseModalTitle"
+         aria-describedby="activeCaseModalDescription" hidden>
+        <div class="case-modal">
+            <div class="case-modal-head">
+                <span class="case-modal-icon"><i class="bi bi-shield-exclamation"></i></span>
+                <div>
+                    <h3 id="activeCaseModalTitle">Document request restricted</h3>
+                    <p id="activeCaseModalDescription">
+                        This resident has one or more active cases recorded as a respondent.
+                    </p>
+                </div>
+            </div>
+            <div class="case-modal-body">
+                <div class="case-policy">
+                    <strong>Request cannot proceed.</strong>
+                    A resident with an active or unresolved case as a respondent cannot request or obtain barangay documents under this policy until all applicable cases are resolved or closed.
+                </div>
+                <div class="case-list" id="activeCaseList"></div>
+            </div>
+            <div class="case-modal-foot">
+                <button type="button" class="case-modal-close" id="closeActiveCaseModal">
+                    <i class="bi bi-check-lg"></i> I Understand
+                </button>
+            </div>
+        </div>
+    </div>
 
 
     <form method="POST" action="{{ route('documents.store') }}" id="requestForm" novalidate>
@@ -343,7 +441,7 @@
                     </div>
 
 
-                    {{-- CTC NUMBER (printed on the certificate automatically) --}}
+                    {{-- CTC NUMBER --}}
                     <div class="panel" id="ctcDetails" data-docs="Barangay Clearance" hidden>
                         <div class="panel-head">
                             <i class="bi bi-person-vcard"></i>
@@ -603,20 +701,29 @@
     /* =========================================================
        DATA FROM LARAVEL
        ========================================================= */
-    const residents       = @json($residentData);
-    const householdMap    = @json($soloParentHouseholdMembers ?? []);
-    const oldChildIds     = @json(old('document_details.child_resident_ids', []));
-    const oldSingleChild  = @json(old('document_details.child_resident_id'));
+    const residents = @json($residentData);
+    const householdMap = @json($soloParentHouseholdMembers ?? []);
+    const oldChildIds = @json(old('document_details.child_resident_ids', []));
+    const oldSingleChild = @json(old('document_details.child_resident_id'));
 
-    /* Which documents show which panel (also set in data-docs on each panel). */
+    // Keys are resident IDs; values are active cases where the resident is respondent.
+    const activeRespondentCases = @json(
+        $activeRespondentCasesByResident ?? [],
+        JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
+    );
+
     const $ = (id) => document.getElementById(id);
 
-    const form       = $('requestForm');
-    const hidden     = $('resident_id');
-    const input      = $('resident_search');
-    const list       = $('resident_list');
-    const picked     = $('picked');
+    const form = $('requestForm');
+    const hidden = $('resident_id');
+    const input = $('resident_search');
+    const list = $('resident_list');
+    const picked = $('picked');
     const searchWrap = $('searchWrap');
+
+    const caseModal = $('activeCaseModal');
+    const caseList = $('activeCaseList');
+    const closeCaseModalButton = $('closeActiveCaseModal');
 
     const checkedType = () =>
         (document.querySelector('input[name="document_type"]:checked') || {}).value || '';
@@ -624,7 +731,7 @@
     let matches = [];
     let active = -1;
     let selectedSolo = [];
-
+    let caseModalPreviousFocus = null;
 
     /* =========================================================
        HELPERS
@@ -654,6 +761,79 @@
         return out;
     };
 
+    function getActiveCases(residentId) {
+        const cases = activeRespondentCases[String(residentId)] || [];
+        return Array.isArray(cases) ? cases : [];
+    }
+
+    function clearResidentSelection() {
+        hidden.value = '';
+        picked.hidden = true;
+        searchWrap.hidden = false;
+        $('pickedName').textContent = '';
+        $('pickedAddr').textContent = '';
+        $('pickedAvatar').textContent = '';
+        $('combo').classList.remove('invalid');
+        resetSolo();
+        updateSummary();
+    }
+
+    function showActiveCaseModal(resident, cases) {
+        caseModalPreviousFocus = document.activeElement;
+
+        caseList.innerHTML = cases.map((item) => {
+            const caseNumber = item.case_number || 'Case number not recorded';
+            const title = item.title || 'Untitled case';
+            const description = item.description || 'No case description recorded.';
+            const status = item.status || 'Status not recorded';
+            const dateFiled = item.date_filed || 'Filing date not recorded';
+
+            return `
+                <article class="case-item">
+                    <div class="case-item-top">
+                        <span class="case-number">${esc(caseNumber)}</span>
+                        <span class="case-status">${esc(status)}</span>
+                    </div>
+                    <h4>${esc(title)}</h4>
+                    <p class="case-description">${esc(description)}</p>
+                    <small class="case-date"><i class="bi bi-calendar3"></i> Date filed: ${esc(dateFiled)}</small>
+                </article>
+            `;
+        }).join('');
+
+        $('activeCaseModalDescription').textContent =
+            (resident && resident.name ? resident.name : 'This resident') +
+            ' has ' + cases.length + ' active or unresolved case' +
+            (cases.length === 1 ? '' : 's') + ' recorded as a respondent.';
+
+        caseModal.hidden = false;
+        document.body.style.overflow = 'hidden';
+        closeCaseModalButton.focus();
+    }
+
+    function closeActiveCaseModal() {
+        caseModal.hidden = true;
+        document.body.style.overflow = '';
+
+        if (caseModalPreviousFocus && typeof caseModalPreviousFocus.focus === 'function') {
+            caseModalPreviousFocus.focus();
+        } else {
+            input.focus();
+        }
+    }
+
+    closeCaseModalButton.addEventListener('click', closeActiveCaseModal);
+
+    caseModal.addEventListener('click', (e) => {
+        if (e.target === caseModal) closeActiveCaseModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (!caseModal.hidden && e.key === 'Escape') {
+            e.preventDefault();
+            closeActiveCaseModal();
+        }
+    });
 
     /* =========================================================
        STEP 1 · RESIDENT SEARCH
@@ -716,6 +896,18 @@
     function chooseResident(r) {
         if (!r) return;
 
+        // Always check the respondent-case restriction before selecting the resident.
+        const activeCases = getActiveCases(r.id);
+
+        if (activeCases.length > 0) {
+            // Clear any previously selected resident to prevent submitting under the wrong name.
+            clearResidentSelection();
+            input.value = '';
+            openList(false);
+            showActiveCaseModal(r, activeCases);
+            return;
+        }
+
         hidden.value = String(r.id);
         $('pickedName').textContent = r.name;
         $('pickedAddr').textContent = r.address || 'No address on file';
@@ -725,20 +917,16 @@
         $('combo').classList.remove('invalid');
         openList(false);
 
-        /* A different parent means a different household list. */
+        // A different parent means a different household list.
         resetSolo();
         updateSummary();
     }
 
     function clearResident() {
-        hidden.value = '';
+        clearResidentSelection();
         input.value = '';
-        picked.hidden = true;
-        searchWrap.hidden = false;
-        resetSolo();
         input.focus();
         renderList();
-        updateSummary();
     }
 
     input.addEventListener('input', renderList);
@@ -772,8 +960,6 @@
 
     /* =========================================================
        STEP 3 · DOCUMENT PANELS
-       Panel inputs are disabled while hidden, so only the
-       selected document's details are ever submitted.
        ========================================================= */
     const REQUIRED = {
         ctcDetails: [],
@@ -847,8 +1033,8 @@
     /* =========================================================
        SOLO PARENT
        ========================================================= */
-    const soloSearch  = $('solo_parent_resident_search');
-    const soloList    = $('solo_parent_resident_list');
+    const soloSearch = $('solo_parent_resident_search');
+    const soloList = $('solo_parent_resident_list');
     const soloWarning = $('soloHouseholdWarning');
 
     const householdMembers = () => {
@@ -857,7 +1043,7 @@
     };
 
     const memberById = (id) => householdMembers().find((m) => String(m.resident_id) === String(id)) || null;
-    const isMember   = (id) => !!memberById(id);
+    const isMember = (id) => !!memberById(id);
     const isSelected = (id) => selectedSolo.includes(String(id));
 
     function showWarning(message) {
@@ -901,8 +1087,8 @@
             const m = memberById(id);
             if (!m) return;
 
-            const name  = m.full_name || 'Unnamed resident';
-            const sex   = normalizeSex(m.sex);
+            const name = m.full_name || 'Unnamed resident';
+            const sex = normalizeSex(m.sex);
             const birth = m.birth_date_display || 'Birth date not recorded';
 
             const card = document.createElement('div');
@@ -1021,7 +1207,10 @@
     });
     soloSearch.addEventListener('input', renderSoloSearch);
     soloSearch.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') { soloList.hidden = true; soloSearch.setAttribute('aria-expanded', 'false'); }
+        if (e.key === 'Escape') {
+            soloList.hidden = true;
+            soloSearch.setAttribute('aria-expanded', 'false');
+        }
         if (e.key === 'Enter') e.preventDefault();
     });
 
@@ -1066,7 +1255,10 @@
     }
 
     document.querySelectorAll('input[name="document_type"]').forEach((el) =>
-        el.addEventListener('change', () => { syncPanels(); updateSummary(); }));
+        el.addEventListener('change', () => {
+            syncPanels();
+            updateSummary();
+        }));
 
 
     /* =========================================================
@@ -1078,12 +1270,15 @@
         const resident = residents.find((x) => String(x.id) === String(hidden.value));
         const doc = checkedType();
 
-        if (!resident || !doc) {
+        // Final client-side safeguard. The controller also enforces this server-side.
+        if (!resident || !doc || getActiveCases(hidden.value).length > 0) {
             e.preventDefault();
 
             if (!resident) {
                 $('combo').classList.add('invalid');
                 input.focus();
+            } else if (getActiveCases(hidden.value).length > 0) {
+                showActiveCaseModal(resident, getActiveCases(hidden.value));
             } else {
                 const firstType = document.querySelector('input[name="document_type"]');
                 if (firstType) firstType.focus();
@@ -1142,15 +1337,22 @@
 
 
     /* =========================================================
-       INITIAL STATE (also restores values after a validation error)
+       INITIAL STATE
        ========================================================= */
     const oldResident = residents.find((x) => String(x.id) === String(hidden.value));
 
-    if (oldResident) chooseResident(oldResident);
+    if (oldResident) {
+        // Do not restore an old resident selection if that resident is now restricted.
+        chooseResident(oldResident);
+    } else {
+        hidden.value = '';
+    }
 
     syncPanels();
 
-    if (oldResident && checkedType() === 'Solo Parent') restoreOldSolo();
+    if (oldResident && hidden.value && checkedType() === 'Solo Parent') {
+        restoreOldSolo();
+    }
 
     paintPurpose();
     updateSummary();

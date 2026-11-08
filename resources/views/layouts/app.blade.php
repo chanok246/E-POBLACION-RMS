@@ -208,7 +208,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#e5505c">
+    <meta name="theme-color" content="#e23b49">
 
     <link rel="icon" type="image/png" href="{{ $logo }}">
     <link rel="shortcut icon" type="image/png" href="{{ $logo }}">
@@ -235,7 +235,7 @@
             --input-bg: #fff; --input-text: #3a2a2e; --table-bg: #fff8f9; --table-hover: #fae7eb;
             --shadow-color: rgba(120,40,55,.12);
             --shadow: 0 2px 4px rgba(120,40,55,.06), 0 10px 24px rgba(120,40,55,.08);
-            --sb1: #6bbb69; --sb2: #4fae4e; --sb3: #3b8a40; --tb1: #e5505c; --tb2: #f2808a;
+            --sb1: #6bbb69; --sb2: #4fae4e; --sb3: #3b8a40; --tb1: #e23b49; --tb2: #f0616c;
             --font: ui-rounded, 'Nunito', 'Quicksand', 'Varela Round', 'Trebuchet MS', system-ui, -apple-system, 'Segoe UI', sans-serif;
             --bs-body-font-family: var(--font);
             --bs-link-color-rgb: 229,80,92; --bs-link-hover-color-rgb: 190,45,60;
@@ -622,6 +622,204 @@
             .gs-foot { display: none; }
         }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+        /* =====================================================================
+           WATERMELON THEME (matches the 3D watermelon slice image)
+           - Sidebar: bright green striped RIND, with a pale "inner rind" edge
+           - Top bar: red FLESH with glossy shine, black teardrop SEEDS,
+                      and white + green rind layers under it
+           - Search bar: default look (white field, dark text)
+           - Brand subtitle: clearly visible
+           Keep this block near the END of this <style>.
+           ===================================================================== */
+        :root {
+            --rind-white: #fff8f0;
+            --rind-green: #3fae56;
+
+            /* Striped green rind: base green + wavy light and dark stripes */
+            --rind-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='240' viewBox='0 0 96 240'%3E%3Crect width='96' height='240' fill='%232f9e48'/%3E%3Cg fill='%2362c874'%3E%3Cpath d='M10 0h14c-3 40 4 80 0 120s3 80 0 120H10c4-40-3-80 0-120S6 40 10 0z'/%3E%3Cpath d='M58 0h14c-3 40 4 80 0 120s3 80 0 120H58c4-40-3-80 0-120S54 40 58 0z'/%3E%3C/g%3E%3Cg fill='%231f8038' opacity='.75'%3E%3Cpath d='M36 0h7c-2 40 3 80 0 120s2 80 0 120h-7c3-40-2-80 0-120S33 40 36 0z'/%3E%3Cpath d='M82 0h7c-2 40 3 80 0 120s2 80 0 120h-7c3-40-2-80 0-120S79 40 82 0z'/%3E%3C/g%3E%3C/svg%3E");
+
+            /* Black teardrop seeds with a small glossy highlight (8 seeds per 520px) */
+            --seed-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='66' viewBox='0 0 520 66'%3E%3Cdefs%3E%3Cg id='s'%3E%3Cpath d='M0-9C2-5 6-1 6 3a6 6 0 0 1-12 0C-6-1-2-5 0-9z' fill='%23140a0c'/%3E%3Cellipse cx='-1.9' cy='2' rx='1.2' ry='2.3' fill='%23ffffff' opacity='.42'/%3E%3C/g%3E%3C/defs%3E%3Cuse href='%23s' transform='translate(40 22) rotate(-20)'/%3E%3Cuse href='%23s' transform='translate(105 48) rotate(25)'/%3E%3Cuse href='%23s' transform='translate(170 20) rotate(10)'/%3E%3Cuse href='%23s' transform='translate(238 49) rotate(-30)'/%3E%3Cuse href='%23s' transform='translate(300 19) rotate(20)'/%3E%3Cuse href='%23s' transform='translate(362 47) rotate(-10)'/%3E%3Cuse href='%23s' transform='translate(428 22) rotate(32)'/%3E%3Cuse href='%23s' transform='translate(486 49) rotate(-25)'/%3E%3C/svg%3E");
+        }
+        html[data-theme="dark"] {
+            --rind-white: #d3e3d6;
+            --rind-green: #2f7a3c;
+        }
+
+        /* Sidebar: bright green striped rind + pale inner-rind edge on the right */
+        .sidebar {
+            background-color: #2f9e48;
+            background-image: linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,0) 40%, rgba(0,0,0,.08)), var(--rind-pattern);
+            background-size: auto, 96px 240px;
+            box-shadow: inset -6px 0 0 var(--rind-white), 6px 0 26px rgba(40,110,55,.25);
+        }
+        .sidebar::after { display: none; }
+        html[data-theme="dark"] .sidebar {
+            background-image: linear-gradient(180deg, rgba(0,22,8,.58), rgba(0,22,8,.68)), var(--rind-pattern);
+            background-size: auto, 96px 240px;
+        }
+        .sidebar-label { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+        .sidebar-link { text-shadow: 0 1px 2px rgba(0,0,0,.35); background: rgba(0,60,20,.24); }
+        .sidebar-link:hover { background: rgba(255,255,255,.24); }
+        .sidebar-link.active, .sidebar-link.active:hover { text-shadow: none; background: var(--surface); }
+        .sidebar-foot { background: rgba(0,60,20,.32); }
+
+        /* Brand: "Record Management System" clearly visible, never hidden */
+        .brand-name { font-size: 16px; text-shadow: 0 1px 3px rgba(0,0,0,.45); }
+        .brand-system {
+            display: inline-block !important;
+            margin-top: 6px; padding: 3px 9px; border-radius: 8px;
+            background: rgba(0,50,18,.55); color: #fff;
+            font-size: 11.5px; font-weight: 800; letter-spacing: .02em; line-height: 1.25; text-shadow: none;
+        }
+
+        /* Top bar: red flesh + glossy shine + black seeds, with white and green rind layers underneath */
+        .topbar {
+            background-color: var(--tb1);
+            background-image:
+                var(--seed-pattern),
+                linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 60%),
+                linear-gradient(90deg, var(--tb1), var(--tb2));
+            background-size: 520px 66px, auto, auto;
+            background-repeat: repeat-x, no-repeat, no-repeat;
+            box-shadow:
+                0 4px 0 var(--rind-white),
+                0 8px 0 var(--rind-green),
+                0 16px 24px rgba(226,59,73,.22);
+        }
+        html[data-theme="dark"] .topbar {
+            box-shadow:
+                0 4px 0 var(--rind-white),
+                0 8px 0 var(--rind-green),
+                0 16px 24px rgba(0,0,0,.35);
+        }
+
+        /* Search bar: default look (white field, dark text) */
+        .gsearch-field input { background: #fff; color: #3a2a2e; font: 500 14px var(--font); box-shadow: 0 2px 8px rgba(120,40,55,.18); }
+        .gsearch-field input::placeholder { color: #9a8389; font-weight: 400; }
+        .gsearch-field input:focus { background: #fff; color: #3a2a2e; box-shadow: 0 0 0 4px rgba(255,255,255,.4); }
+        .gsearch-field > .i { color: #9a8389; }
+        .gsearch-field:focus-within > .i { color: var(--primary); }
+        .gsearch-hint { background: #f6dce1; color: #8a6f75; font-weight: 700; }
+        html[data-theme="dark"] .gsearch-field input { background: #fff; color: #3a2a2e; }
+
+        /* Header buttons: NOT light/white-filled any more, so the seeds stay visible behind them.
+           They are outlined instead of filled. */
+        .topbar-toggle,
+        .user-profile-trigger {
+            background: transparent;
+            color: #fff;
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,.75);
+        }
+        .topbar-toggle:hover,
+        .user-profile-trigger:hover,
+        .user-profile-trigger[aria-expanded="true"] {
+            background: rgba(255,255,255,.12);
+            box-shadow: inset 0 0 0 2px #fff;
+        }
+
+        /* Notification bell: yellow */
+        .notification-button {
+            background: transparent;
+            color: #ffd43b;
+            box-shadow: inset 0 0 0 2px #ffd43b;
+        }
+        .notification-button:hover,
+        .notification-button[aria-expanded="true"] {
+            background: #ffd43b;
+            color: #7a4e00;
+            box-shadow: inset 0 0 0 2px #ffd43b;
+        }
+        .notification-button svg { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+        .notification-badge { background: #ffd43b; color: #7a1f00; border-color: var(--tb1); }
+
+        /* =====================================================================
+           UI/UX COLOR SYSTEM (semantic) — keep at the very END of this <style>
+           Brand decoration  : watermelon red header + green rind sidebar (decor only)
+           Primary / action  : GREEN   (buttons, links, focus, active menu, selected tabs)
+           Success           : green   (saved, active account, all caught up)
+           Info / neutral    : BLUE    (today, normal reminders, quick actions)
+           Warning           : AMBER   (important, tomorrow-level attention, offline)
+           Danger / urgent   : RED     (urgent, errors, delete/clear, sign out)
+           ===================================================================== */
+        :root {
+            --primary: #2f9e44; --primary-d: #237a35; --accent-soft: rgba(47,158,68,.13); --on-accent: #fff;
+            --danger: #c92a3b; --danger-soft: rgba(201,42,59,.12);
+            --warning: #e8a317; --warning-text: #9a6300; --warning-soft: rgba(232,163,23,.18);
+            --info: #1c7ed6; --info-soft: rgba(28,126,214,.13);
+            --bs-link-color-rgb: 35,122,53; --bs-link-hover-color-rgb: 27,97,42;
+        }
+        html[data-theme="dark"] {
+            --primary: #5fc062; --primary-d: #8fe29a; --accent-soft: rgba(95,192,98,.16); --on-accent: #0b2314;
+            --danger: #ff7b87; --danger-soft: rgba(255,123,135,.15);
+            --warning: #f2c45f; --warning-text: #f2c45f; --warning-soft: rgba(242,196,95,.15);
+            --info: #6cb2ff; --info-soft: rgba(108,178,255,.15);
+            --bs-link-color-rgb: 143,226,154; --bs-link-hover-color-rgb: 190,242,198;
+        }
+
+        /* Primary = green: active menu item */
+        .sidebar-link.active .i { color: var(--primary); }
+        .sidebar-link.active::after { border-left-color: var(--primary); }
+        .sidebar-link.active, .sidebar-link.active:hover { color: var(--primary-d); }
+
+        /* Quick actions in search = blue (differs from green "pages") */
+        .gs-item.is-action .gs-ico { background: var(--info-soft); color: var(--info); }
+        html[data-theme="dark"] .gs-item.is-action .gs-ico { color: var(--info); }
+
+        /* Notification badge = attention (red text on white) */
+        .notification-badge { color: #7a1f00; }
+        .notification-count-label { background: var(--danger-soft); color: var(--danger); }
+
+        /* Notification sections: Today = info blue, Tomorrow = neutral */
+        .notification-section-today, html[data-theme="dark"] .notification-section-today { color: var(--info); }
+        .notification-section-tomorrow, html[data-theme="dark"] .notification-section-tomorrow { color: var(--muted-text); }
+
+        /* Notification cards: normal = info, important = amber, urgent = red */
+        .notification-item::before { background: var(--info); }
+        .notification-item-high::before { background: var(--danger); }
+        .notification-item-medium::before { background: var(--warning); }
+        .notification-item-icon { background: var(--info-soft); color: var(--info); }
+        .notification-item-high .notification-item-icon, html[data-theme="dark"] .notification-item-high .notification-item-icon { background: var(--danger-soft); color: var(--danger); }
+        .notification-item-medium .notification-item-icon, html[data-theme="dark"] .notification-item-medium .notification-item-icon { background: var(--warning-soft); color: var(--warning-text); }
+        .nb-tag-high, html[data-theme="dark"] .nb-tag-high { background: var(--danger-soft); color: var(--danger); }
+        .nb-tag-medium, html[data-theme="dark"] .nb-tag-medium { background: var(--warning-soft); color: var(--warning-text); }
+        .notification-clear-button:hover { background: var(--danger-soft); color: var(--danger); }
+        .notification-clear-all:hover { background: var(--danger-soft); color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
+        .notification-manage-link { color: var(--primary-d); }
+        .notification-manage-link:hover { background: var(--primary); color: var(--on-accent); }
+
+        /* Reminder popup */
+        .global-reminder-icon { background: var(--info-soft); color: var(--info); }
+        .global-reminder-label { color: var(--info); }
+        .global-reminder-alert.priority-urgent { border-color: var(--danger); }
+        .global-reminder-alert.priority-important { border-color: var(--warning); }
+        .priority-urgent .global-reminder-icon { background: var(--danger-soft); color: var(--danger); }
+        .priority-important .global-reminder-icon { background: var(--warning-soft); color: var(--warning-text); }
+        .global-reminder-queue { background: var(--danger); }
+        .global-reminder-btn-view { background: var(--primary); border-color: var(--primary); color: var(--on-accent); }
+        .global-reminder-btn-view:hover { color: var(--on-accent); }
+
+        /* Offline = warning, not brand red */
+        .net-pill { color: var(--warning-text); }
+        .net-pill::before { background: var(--warning); }
+
+        /* Account menu: role = info, status = success, sign out = danger */
+        .user-role-badge { background: var(--info-soft); color: var(--info); }
+        .user-dropdown-item.text-danger { color: var(--danger); }
+        .user-dropdown-item.text-danger .user-dropdown-item-icon { background: var(--danger-soft); color: var(--danger); }
+
+        /* Flash messages */
+        .flash-error { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+        html[data-theme="dark"] .flash-error { color: var(--danger); }
+
+        /* Bootstrap bits that should follow the semantic colours */
+        .btn-danger { --bs-btn-bg: var(--danger); --bs-btn-border-color: var(--danger); --bs-btn-hover-bg: var(--danger); --bs-btn-hover-border-color: var(--danger); --bs-btn-color: #fff; font-weight: 700; }
+        .btn-outline-danger { --bs-btn-color: var(--danger); --bs-btn-border-color: var(--danger); --bs-btn-hover-bg: var(--danger); --bs-btn-hover-border-color: var(--danger); --bs-btn-hover-color: #fff; font-weight: 700; }
+        .text-danger { color: var(--danger) !important; }
+        .text-success { color: var(--primary-d) !important; }
+        .text-warning { color: var(--warning-text) !important; }
+        .text-info { color: var(--info) !important; }
     </style>
 
     @stack('styles')

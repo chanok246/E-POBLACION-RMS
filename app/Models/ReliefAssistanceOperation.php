@@ -34,8 +34,6 @@ class ReliefAssistanceOperation extends Model
         'beneficiary_filter',
         'purok_filter',
 
-        'disaster_event_id',
-
         'source_name',
         'source_reference',
 
@@ -72,14 +70,6 @@ class ReliefAssistanceOperation extends Model
     | RELATIONSHIPS
     |--------------------------------------------------------------------------
     */
-
-    public function disasterEvent(): BelongsTo
-    {
-        return $this->belongsTo(
-            DisasterEvent::class,
-            'disaster_event_id'
-        );
-    }
 
     public function creator(): BelongsTo
     {

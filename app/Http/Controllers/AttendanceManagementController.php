@@ -157,7 +157,7 @@ class AttendanceManagementController extends Controller
     }
 
     /**
-     * Register personnel and assign an initial PIN.
+     * Register personnel and assign an initial attendance PIN.
      */
     public function storePersonnel(Request $request): RedirectResponse
     {
@@ -290,6 +290,9 @@ class AttendanceManagementController extends Controller
 
     /**
      * Update personnel profile.
+     *
+     * Attendance personnel registration and Field Collection
+     * account management are independent processes.
      */
     public function updatePersonnel(
         Request $request,
@@ -385,12 +388,18 @@ class AttendanceManagementController extends Controller
     }
 
     /**
-     * Deactivate personnel instead of deleting the record.
+     * Deactivate attendance personnel instead of deleting the record.
+     *
+     * This does not modify a separate Field Personnel account.
+     * Any active attendance QR token is revoked.
      */
     public function deactivatePersonnel(Personnel $personnel): RedirectResponse
     {
         if ($personnel->status !== 'active') {
-            return back()->with('error', 'This personnel record is already inactive.');
+            return back()->with(
+                'error',
+                'This personnel record is already inactive.'
+            );
         }
 
         DB::transaction(function () use ($personnel) {
@@ -410,14 +419,20 @@ class AttendanceManagementController extends Controller
                 'attendance_personnel',
                 $personnel,
                 ['status' => $oldStatus],
-                ['status' => 'inactive'],
-                'Deactivated personnel. Any active QR token was revoked.'
+                [
+                    'status' => 'inactive',
+                    'qr_token_revoked' => $hadQrToken,
+                ],
+                'Deactivated attendance personnel. Any active attendance QR token was revoked. Independent Field Collection accounts were not changed.'
             );
         });
 
         return redirect()
             ->route('attendance.personnel.index')
-            ->with('success', 'Personnel deactivated. Their attendance history has been preserved.');
+            ->with(
+                'success',
+                'Personnel deactivated. Attendance history was preserved and any active attendance QR token was revoked. Separate Field Collection accounts were not changed.'
+            );
     }
 
     /**
@@ -470,7 +485,7 @@ class AttendanceManagementController extends Controller
     }
 
     /**
-     * Captain-only PIN reset.
+     * Captain-only attendance PIN reset.
      */
     public function resetPin(
         Request $request,

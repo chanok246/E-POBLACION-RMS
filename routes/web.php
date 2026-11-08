@@ -5,13 +5,17 @@ use App\Http\Controllers\AttendanceKioskController;
 use App\Http\Controllers\AttendanceManagementController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DisasterAssessmentController;
-use App\Http\Controllers\DisasterEventController;
 use App\Http\Controllers\DocumentRequestController;
 use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\EmergencyHotlineController;
+use App\Http\Controllers\FieldPersonnelAccountController;
+use App\Http\Controllers\FieldPersonnelAuthController;
+use App\Http\Controllers\FieldPersonnelController;
+use App\Http\Controllers\FieldPersonnelHouseholdSubmissionController;
+use App\Http\Controllers\FieldPersonnelPolicyConsentController;
 use App\Http\Controllers\HouseholdController;
 use App\Http\Controllers\NotificationClearController;
+use App\Http\Controllers\PolicyConsentController;
 use App\Http\Controllers\ReliefVoucherController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportComplaintController;
@@ -27,17 +31,6 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Public Landing Page and Attendance Kiosk
 |--------------------------------------------------------------------------
-|
-| The RMS Login Carousel is the default landing page.
-| The public Attendance Kiosk remains accessible separately and does not
-| require an RMS account.
-|
-| Attendance recording still requires:
-| 1. Registered and active personnel.
-| 2. Personnel ID or QR identification.
-| 3. Valid six-digit personnel PIN.
-| 4. Explicit Time In or Time Out selection.
-|
 */
 
 Route::redirect('/', '/login')->name('home');
@@ -67,20 +60,103 @@ Route::post(
 
 /*
 |--------------------------------------------------------------------------
-| Guest Routes
+| Field Personnel Authentication and Field Collection
 |--------------------------------------------------------------------------
 |
-| Local username/password login remains available offline.
+| Uses the dedicated field_personnel guard.
+| Separate from the Captain/Secretary web guard.
 |
 */
 
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLogin'])
-        ->name('login');
+Route::prefix('field-personnel')
+    ->name('field-personnel.')
+    ->group(function () {
 
-    Route::post('/login', [AuthController::class, 'authenticate'])
-        ->middleware('throttle:20,1')
-        ->name('login.authenticate');
+        Route::get(
+            '/login',
+            [FieldPersonnelAuthController::class, 'showLogin']
+        )->name('login');
+
+        Route::post(
+            '/login',
+            [FieldPersonnelAuthController::class, 'login']
+        )->name('login.authenticate');
+
+        Route::middleware('auth:field_personnel')->group(function () {
+
+            Route::post(
+                '/logout',
+                [FieldPersonnelAuthController::class, 'logout']
+            )->name('logout');
+
+            Route::middleware('fieldpersonnel.active')->group(function () {
+
+                Route::get(
+                    '/consent',
+                    [FieldPersonnelPolicyConsentController::class, 'show']
+                )->name('consent');
+
+                Route::post(
+                    '/consent',
+                    [FieldPersonnelPolicyConsentController::class, 'accept']
+                )->middleware('throttle:5,1')
+                  ->name('consent.accept');
+
+                Route::middleware('fieldpersonnel.policy')->group(function () {
+
+                    Route::get(
+                        '/',
+                        [FieldPersonnelController::class, 'index']
+                    )->name('home');
+
+                    Route::get(
+                        '/households/create',
+                        [FieldPersonnelController::class, 'createHousehold']
+                    )->name('households.create');
+
+                    Route::post(
+                        '/households',
+                        [FieldPersonnelController::class, 'storeHousehold']
+                    )->middleware('throttle:10,1')
+                      ->name('households.store');
+
+                    Route::get(
+                        '/vouchers/verify',
+                        [FieldPersonnelController::class, 'verifyVoucher']
+                    )->name('vouchers.verify');
+
+                    Route::get(
+                        '/submissions',
+                        [FieldPersonnelController::class, 'submissions']
+                    )->name('submissions.index');
+
+                    Route::get(
+                        '/tasks',
+                        [FieldPersonnelController::class, 'tasks']
+                    )->name('tasks.index');
+                });
+            });
+        });
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Guest Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('guest')->group(function () {
+
+    Route::get(
+        '/login',
+        [AuthController::class, 'showLogin']
+    )->name('login');
+
+    Route::post(
+        '/login',
+        [AuthController::class, 'authenticate']
+    )->middleware('throttle:20,1')
+      ->name('login.authenticate');
 
     /*
     |--------------------------------------------------------------------------
@@ -202,9 +278,6 @@ Route::middleware('guest')->group(function () {
 |--------------------------------------------------------------------------
 | Google OAuth Callback
 |--------------------------------------------------------------------------
-|
-| Google Sign-In must not bypass the authenticator challenge.
-|
 */
 
 Route::get(
@@ -216,18 +289,17 @@ Route::get(
 |--------------------------------------------------------------------------
 | Logged In, But 2FA Not Necessarily Completed
 |--------------------------------------------------------------------------
-|
-| These routes must not require the 'twofactor' middleware because the
-| user may still be completing the authenticator challenge or a
-| restricted authenticator-recovery process.
-|
 */
 
 Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])
-        ->name('logout');
+
+    Route::post(
+        '/logout',
+        [AuthController::class, 'logout']
+    )->name('logout');
 
     Route::middleware('active')->group(function () {
+
         /*
         |--------------------------------------------------------------------------
         | Authenticator Replacement / Restricted Recovery
@@ -260,6 +332,7 @@ Route::middleware('auth')->group(function () {
         Route::prefix('two-factor')
             ->name('two-factor.')
             ->group(function () {
+
                 Route::get(
                     '/setup',
                     [TwoFactorController::class, 'showSetup']
@@ -326,23 +399,38 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Required Policy Consent
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/policy-consent',
+        [PolicyConsentController::class, 'show']
+    )->name('policy-consent.show');
+
+    Route::post(
+        '/policy-consent',
+        [PolicyConsentController::class, 'accept']
+    )->middleware('throttle:5,1')
+      ->name('policy-consent.accept');
+
+    /*
+    |--------------------------------------------------------------------------
     | Captain and Secretary Operational Access
     |--------------------------------------------------------------------------
     */
 
     Route::middleware('role:captain,secretary')->group(function () {
 
-        Route::get('/dashboard', [DashboardController::class, 'index'])
-            ->name('dashboard');
+        Route::get(
+            '/dashboard',
+            [DashboardController::class, 'index']
+        )->name('dashboard');
 
         /*
         |--------------------------------------------------------------------------
         | Attendance Monitoring
         |--------------------------------------------------------------------------
-        |
-        | Available only to authenticated, active Captain and Secretary
-        | accounts that have completed two-factor authentication.
-        |
         */
 
         Route::prefix('attendance')
@@ -373,6 +461,49 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
                     '/personnel',
                     [AttendanceManagementController::class, 'storePersonnel']
                 )->name('personnel.store');
+
+                /*
+                |--------------------------------------------------------------------------
+                | Separate Field Personnel Account Management
+                |--------------------------------------------------------------------------
+                */
+
+                Route::prefix('personnel-accounts')
+                    ->name('personnel-accounts.')
+                    ->middleware('role:secretary')
+                    ->controller(FieldPersonnelAccountController::class)
+                    ->group(function () {
+
+                        Route::get('/', 'index')->name('index');
+
+                        Route::post('/', 'store')->name('store');
+
+                        Route::put(
+                            '/{account}/username',
+                            'updateUsername'
+                        )->name('username');
+
+                        Route::post(
+                            '/{account}/passcode',
+                            'regeneratePasscode'
+                        )->name('passcode');
+
+                        Route::patch(
+                            '/{account}/deactivate',
+                            'deactivate'
+                        )->name('deactivate');
+
+                        Route::patch(
+                            '/{account}/activate',
+                            'activate'
+                        )->name('activate');
+                    });
+
+                /*
+                |--------------------------------------------------------------------------
+                | Attendance Personnel Profile Routes
+                |--------------------------------------------------------------------------
+                */
 
                 Route::get(
                     '/personnel/{personnel}/edit',
@@ -423,10 +554,16 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
         )->middleware('throttle:5,10')
           ->name('settings.email-verification.verify');
 
-        /* Reminders and notification bell */
+        /*
+        |--------------------------------------------------------------------------
+        | Reminders and Notification Bell
+        |--------------------------------------------------------------------------
+        */
 
-        Route::get('/reminders/due', [ReminderController::class, 'due'])
-            ->name('reminders.due');
+        Route::get(
+            '/reminders/due',
+            [ReminderController::class, 'due']
+        )->name('reminders.due');
 
         Route::post(
             '/notifications/clear',
@@ -456,18 +593,43 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
             [ReminderController::class, 'cancel']
         )->name('reminders.cancel');
 
-        /* Reports and analytics */
+        /*
+        |--------------------------------------------------------------------------
+        | Reports and Analytics
+        |--------------------------------------------------------------------------
+        */
 
         Route::get(
             '/reports-analytics',
             [ReportsAnalyticsController::class, 'index']
         )->name('reports-analytics.index');
 
-        /* Emergency hotline directory */
+        /*
+        |--------------------------------------------------------------------------
+        | Summary Reports
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/summary-reports',
+            [SummaryReportController::class, 'index']
+        )->name('summary-reports.index');
+
+        Route::get(
+            '/summary-reports/print',
+            [SummaryReportController::class, 'print']
+        )->name('summary-reports.print');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Emergency Hotline Directory
+        |--------------------------------------------------------------------------
+        */
 
         Route::prefix('emergency-hotlines')
             ->name('emergency-hotlines.')
             ->group(function () {
+
                 Route::get(
                     '/',
                     [EmergencyHotlineController::class, 'index']
@@ -514,11 +676,19 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
                 )->name('destroy');
             });
 
-        /* Residents */
+        /*
+        |--------------------------------------------------------------------------
+        | Residents
+        |--------------------------------------------------------------------------
+        */
 
         Route::resource('residents', ResidentController::class);
 
-        /* Household routes: fixed routes before resource routes */
+        /*
+        |--------------------------------------------------------------------------
+        | Household Routes
+        |--------------------------------------------------------------------------
+        */
 
         Route::get(
             '/households/masterlist',
@@ -557,7 +727,49 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
 
         Route::resource('households', HouseholdController::class);
 
-        /* Barangay documents */
+        /*
+        |--------------------------------------------------------------------------
+        | Field Personnel Submission Review
+        |--------------------------------------------------------------------------
+        |
+        | Only authenticated, active, 2FA-verified Captain and Secretary
+        | accounts can access these review and approval actions.
+        |
+        */
+
+        Route::prefix('field-personnel-submissions')
+            ->name('admin.field-personnel-submissions.')
+            ->controller(FieldPersonnelHouseholdSubmissionController::class)
+            ->group(function () {
+
+                Route::get(
+                    '/',
+                    'index'
+                )->name('index');
+
+                Route::get(
+                    '/{submission}',
+                    'show'
+                )->name('show');
+
+                Route::post(
+                    '/{submission}/approve',
+                    'approve'
+                )->middleware('throttle:10,1')
+                  ->name('approve');
+
+                Route::post(
+                    '/{submission}/reject',
+                    'reject'
+                )->middleware('throttle:10,1')
+                  ->name('reject');
+            });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Barangay Documents
+        |--------------------------------------------------------------------------
+        */
 
         Route::resource('documents', DocumentRequestController::class);
 
@@ -576,7 +788,11 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
             [DocumentRequestController::class, 'print']
         )->name('documents.print');
 
-        /* Official document templates */
+        /*
+        |--------------------------------------------------------------------------
+        | Official Document Templates
+        |--------------------------------------------------------------------------
+        */
 
         Route::get(
             '/document-templates',
@@ -598,7 +814,11 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
             [DocumentTemplateController::class, 'deactivate']
         )->name('document-templates.deactivate');
 
-        /* Reports and complaints */
+        /*
+        |--------------------------------------------------------------------------
+        | Reports and Complaints
+        |--------------------------------------------------------------------------
+        */
 
         Route::resource('reports-complaints', ReportComplaintController::class)
             ->except(['destroy']);
@@ -618,21 +838,11 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
             [ReportComplaintController::class, 'printSubpoena']
         )->name('reports-complaints.subpoena.print');
 
-        /* Disaster events and assessments */
-
-        Route::resource('disaster-events', DisasterEventController::class);
-
-        Route::resource(
-            'disaster-assessments',
-            DisasterAssessmentController::class
-        );
-
-        Route::patch(
-            '/disaster-assessments/{disaster_assessment}/verify',
-            [DisasterAssessmentController::class, 'verify']
-        )->name('disaster-assessments.verify');
-
-        /* Relief assistance operations */
+        /*
+        |--------------------------------------------------------------------------
+        | Relief Assistance Operations
+        |--------------------------------------------------------------------------
+        */
 
         Route::get(
             '/relief-vouchers',
@@ -759,10 +969,16 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
             [ReliefVoucherController::class, 'claim']
         )->name('relief-vouchers.claim');
 
-        /* Personal settings */
+        /*
+        |--------------------------------------------------------------------------
+        | Personal Settings
+        |--------------------------------------------------------------------------
+        */
 
-        Route::get('/settings', [SettingsController::class, 'index'])
-            ->name('settings.index');
+        Route::get(
+            '/settings',
+            [SettingsController::class, 'index']
+        )->name('settings.index');
 
         Route::post(
             '/settings/google/link',
@@ -814,20 +1030,16 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
             [AttendanceManagementController::class, 'authorizeDeparture']
         )->name('attendance.records.authorize-departure');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Audit Logs
+        |--------------------------------------------------------------------------
+        */
+
         Route::get(
             '/audit-logs',
             [AuditLogController::class, 'index']
         )->name('audit-logs.index');
-
-        Route::get(
-            '/summary-reports',
-            [SummaryReportController::class, 'index']
-        )->name('summary-reports.index');
-
-        Route::get(
-            '/summary-reports/print',
-            [SummaryReportController::class, 'print']
-        )->name('summary-reports.print');
 
         /*
         |--------------------------------------------------------------------------
@@ -841,23 +1053,41 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
         )->middleware('throttle:5,1')
           ->name('settings.captain-recovery.generate');
 
-        Route::get('/users', [UserManagementController::class, 'index'])
-            ->name('users.index');
+        /*
+        |--------------------------------------------------------------------------
+        | User Management
+        |--------------------------------------------------------------------------
+        */
 
-        Route::get('/users/create', [UserManagementController::class, 'create'])
-            ->name('users.create');
+        Route::get(
+            '/users',
+            [UserManagementController::class, 'index']
+        )->name('users.index');
 
-        Route::post('/users', [UserManagementController::class, 'store'])
-            ->name('users.store');
+        Route::get(
+            '/users/create',
+            [UserManagementController::class, 'create']
+        )->name('users.create');
 
-        Route::get('/users/{user}', [UserManagementController::class, 'show'])
-            ->name('users.show');
+        Route::post(
+            '/users',
+            [UserManagementController::class, 'store']
+        )->name('users.store');
 
-        Route::get('/users/{user}/edit', [UserManagementController::class, 'edit'])
-            ->name('users.edit');
+        Route::get(
+            '/users/{user}',
+            [UserManagementController::class, 'show']
+        )->name('users.show');
 
-        Route::put('/users/{user}', [UserManagementController::class, 'update'])
-            ->name('users.update');
+        Route::get(
+            '/users/{user}/edit',
+            [UserManagementController::class, 'edit']
+        )->name('users.edit');
+
+        Route::put(
+            '/users/{user}',
+            [UserManagementController::class, 'update']
+        )->name('users.update');
 
         /*
         |--------------------------------------------------------------------------

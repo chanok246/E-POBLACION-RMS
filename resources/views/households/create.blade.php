@@ -334,6 +334,27 @@
         font-size: .75rem;
     }
 
+    /* Philippine contact number: fixed +63 prefix + 10 digits */
+    .contact-prefix {
+        min-width: 56px;
+        justify-content: center;
+        font-weight: 800;
+        letter-spacing: .02em;
+        color: #1f2937;
+        background: #f1f5f9;
+    }
+
+    .contact-group > .form-control {
+        font-variant-numeric: tabular-nums;
+        letter-spacing: .06em;
+    }
+
+    html[data-theme="dark"] .contact-prefix {
+        color: #e5e7eb;
+        background: #1f2937;
+        border-color: rgba(148, 163, 184, .18);
+    }
+
     .empty-members {
         border: 1px dashed #cbd5e1;
         border-radius: 14px;
@@ -377,6 +398,304 @@
 
     .student-level-wrap.show {
         display: block;
+    }
+
+    /* ============================================================
+       GPS CAPTURE + MAP PICKER
+    ============================================================ */
+
+    .geo-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .geo-actions .btn {
+        min-height: 44px;
+        border-radius: 10px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .geo-feedback {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-top: 14px;
+        padding: 12px 14px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        font-size: .82rem;
+        line-height: 1.5;
+    }
+
+    .geo-feedback > i,
+    .geo-feedback > .spinner-border {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .geo-feedback.is-info {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1e3a8a;
+    }
+
+    .geo-feedback.is-success {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+        color: #166534;
+    }
+
+    .geo-feedback.is-warn {
+        background: #fffbeb;
+        border-color: #fde68a;
+        color: #92400e;
+    }
+
+    .geo-feedback.is-error {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #991b1b;
+    }
+
+    .geo-inline-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .geo-summary {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-top: 16px;
+        padding: 14px 16px;
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        background: #ffffff;
+    }
+
+    .geo-summary-icon {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        background: #e2e8f0;
+        color: #475569;
+        font-size: 1.1rem;
+    }
+
+    .geo-summary[data-state="ok"] {
+        border-style: solid;
+        border-color: #86efac;
+        background: #f0fdf4;
+    }
+
+    .geo-summary[data-state="ok"] .geo-summary-icon {
+        background: #16a34a;
+        color: #ffffff;
+    }
+
+    .geo-summary[data-state="warn"] {
+        border-style: solid;
+        border-color: #fcd34d;
+        background: #fffbeb;
+    }
+
+    .geo-summary[data-state="warn"] .geo-summary-icon {
+        background: #d97706;
+        color: #ffffff;
+    }
+
+    .geo-summary[data-state="invalid"] {
+        border-style: solid;
+        border-color: #fca5a5;
+        background: #fef2f2;
+    }
+
+    .geo-summary[data-state="invalid"] .geo-summary-icon {
+        background: #dc2626;
+        color: #ffffff;
+    }
+
+    .geo-summary-title {
+        font-weight: 800;
+        font-size: .86rem;
+        color: #1f2937;
+    }
+
+    .geo-summary-coords {
+        margin-top: 2px;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #111827;
+        overflow-wrap: anywhere;
+    }
+
+    .geo-summary-meta {
+        margin-top: 4px;
+        font-size: .78rem;
+        line-height: 1.5;
+        color: #64748b;
+    }
+
+    .geo-input {
+        font-family: Consolas, "Courier New", monospace;
+    }
+
+    .picker-wrap {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+    }
+
+    .picker-map {
+        height: min(62vh, 560px);
+        min-height: 380px;
+        background: #dfe5ea;
+    }
+
+    .picker-tools {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 1100;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .picker-tools button {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #cbd5e1;
+        border-radius: 11px;
+        background: #ffffff;
+        color: #1f2937;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, .25);
+        cursor: pointer;
+        transition: background .15s, border-color .15s, color .15s, transform .15s;
+    }
+
+    .picker-tools button:hover {
+        background: #eff6ff;
+        border-color: #2563eb;
+        color: #2563eb;
+        transform: translateY(-1px);
+    }
+
+    .picker-tools button:disabled {
+        opacity: .45;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .picker-hint {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        z-index: 1100;
+        max-width: calc(100% - 90px);
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, .85);
+        color: #ffffff;
+        font-size: .76rem;
+        font-weight: 600;
+        pointer-events: none;
+    }
+
+    .picker-error {
+        padding: 40px 20px;
+        text-align: center;
+        color: #991b1b;
+    }
+
+    .picker-readout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 28px;
+        margin-top: 14px;
+        padding: 12px 16px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #f8fafc;
+    }
+
+    .picker-readout span {
+        display: block;
+        color: #64748b;
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .picker-readout b {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: .95rem;
+        color: #111827;
+    }
+
+    .picker-status {
+        flex: 1 1 100%;
+        font-size: .78rem;
+        color: #64748b;
+    }
+
+    .geo-pin-wrap {
+        background: none;
+        border: 0;
+    }
+
+    .geo-pin {
+        position: relative;
+        display: block;
+        width: 30px;
+        height: 30px;
+        border: 3px solid #ffffff;
+        border-radius: 50% 50% 50% 0;
+        background: #dc2626;
+        transform: rotate(-45deg);
+        box-shadow: 0 2px 9px rgba(0, 0, 0, .55), 0 0 0 2px #dc2626;
+    }
+
+    .geo-pin::after {
+        content: "";
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        left: 8px;
+        top: 8px;
+        border-radius: 50%;
+        background: #ffffff;
+    }
+
+    .picker-label {
+        display: inline-block;
+        transform: translate(-50%, -50%);
+        white-space: nowrap;
+        padding: 3px 10px;
+        border: 1.5px solid #dc2626;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, .92);
+        color: #b91c1c;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .1em;
+        text-transform: uppercase;
     }
 
     [data-theme="dark"] .breadcrumb-text {
@@ -450,6 +769,109 @@
         color: #cbd5e1;
     }
 
+    /* dark: GPS capture + map picker */
+
+    [data-theme="dark"] .geo-feedback.is-info {
+        background: rgba(59, 130, 246, .14);
+        border-color: rgba(96, 165, 250, .4);
+        color: #bfdbfe;
+    }
+
+    [data-theme="dark"] .geo-feedback.is-success {
+        background: rgba(34, 197, 94, .14);
+        border-color: rgba(74, 222, 128, .4);
+        color: #bbf7d0;
+    }
+
+    [data-theme="dark"] .geo-feedback.is-warn {
+        background: rgba(245, 158, 11, .14);
+        border-color: rgba(251, 191, 36, .4);
+        color: #fde68a;
+    }
+
+    [data-theme="dark"] .geo-feedback.is-error {
+        background: rgba(239, 68, 68, .14);
+        border-color: rgba(248, 113, 113, .4);
+        color: #fecaca;
+    }
+
+    [data-theme="dark"] .geo-summary {
+        background: #111827;
+        border-color: rgba(148, 163, 184, .3);
+    }
+
+    [data-theme="dark"] .geo-summary-icon {
+        background: #1f2937;
+        color: #cbd5e1;
+    }
+
+    [data-theme="dark"] .geo-summary[data-state="ok"] {
+        background: rgba(34, 197, 94, .12);
+        border-color: rgba(74, 222, 128, .5);
+    }
+
+    [data-theme="dark"] .geo-summary[data-state="warn"] {
+        background: rgba(245, 158, 11, .12);
+        border-color: rgba(251, 191, 36, .5);
+    }
+
+    [data-theme="dark"] .geo-summary[data-state="invalid"] {
+        background: rgba(239, 68, 68, .12);
+        border-color: rgba(248, 113, 113, .5);
+    }
+
+    [data-theme="dark"] .geo-summary[data-state="ok"] .geo-summary-icon {
+        background: #22c55e;
+        color: #052e16;
+    }
+
+    [data-theme="dark"] .geo-summary[data-state="warn"] .geo-summary-icon {
+        background: #f59e0b;
+        color: #451a03;
+    }
+
+    [data-theme="dark"] .geo-summary[data-state="invalid"] .geo-summary-icon {
+        background: #f87171;
+        color: #450a0a;
+    }
+
+    [data-theme="dark"] .geo-summary-title,
+    [data-theme="dark"] .geo-summary-coords,
+    [data-theme="dark"] .picker-readout b {
+        color: #f1f5f9;
+    }
+
+    [data-theme="dark"] .geo-summary-meta,
+    [data-theme="dark"] .picker-readout span,
+    [data-theme="dark"] .picker-status {
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .picker-wrap {
+        border-color: rgba(148, 163, 184, .2);
+    }
+
+    [data-theme="dark"] .picker-readout {
+        background: #0f172a;
+        border-color: rgba(148, 163, 184, .2);
+    }
+
+    [data-theme="dark"] .picker-tools button {
+        background: #1f2937;
+        border-color: rgba(148, 163, 184, .35);
+        color: #f1f5f9;
+    }
+
+    [data-theme="dark"] .picker-tools button:hover {
+        background: #1e3a8a;
+        border-color: #60a5fa;
+        color: #ffffff;
+    }
+
+    [data-theme="dark"] .picker-error {
+        color: #fecaca;
+    }
+
     @media(max-width: 768px) {
 
         .page-title {
@@ -470,6 +892,14 @@
 
         .member-table {
             min-width: 1100px;
+        }
+
+        .geo-actions .btn {
+            width: 100%;
+        }
+
+        .picker-map {
+            min-height: 320px;
         }
     }
 </style>
@@ -893,7 +1323,8 @@
 
 
             {{-- GPS --}}
-            <div class="gps-box">
+            <div class="gps-box"
+                 id="gpsLocationBox">
 
                 <div class="mb-3">
 
@@ -903,12 +1334,75 @@
 
                     <div class="text-muted small mt-1">
                         Record the coordinates collected during the
-                        house-to-house visit.
+                        house-to-house visit. Stand at the house and use
+                        your laptop's location, or pick the exact spot on
+                        the map.
                     </div>
 
                 </div>
 
-                <div class="row g-3">
+
+                <div class="geo-actions">
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            id="locateCurrentButton">
+
+                        <i class="bi bi-crosshair me-2"></i>
+
+                        <span>Locate Current Position</span>
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-primary"
+                            id="pickOnMapButton">
+
+                        <i class="bi bi-map me-2"></i>
+
+                        Pick Location on Map
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            id="clearCoordinatesButton">
+
+                        <i class="bi bi-x-circle me-2"></i>
+
+                        Clear
+
+                    </button>
+
+                </div>
+
+
+                <div id="geoSecureNotice"
+                     class="geo-feedback is-warn d-none">
+
+                    <i class="bi bi-shield-exclamation"></i>
+
+                    <div>
+                        <strong>Secure connection needed for GPS.</strong>
+                        Browsers only allow location access on HTTPS or
+                        localhost. This page is opened over an insecure
+                        address, so <em>Locate Current Position</em> may be
+                        blocked. You can still use
+                        <em>Pick Location on Map</em> or type the
+                        coordinates manually.
+                    </div>
+
+                </div>
+
+
+                <div id="geoFeedback"
+                     class="geo-feedback d-none"
+                     role="status"
+                     aria-live="polite">
+                </div>
+
+
+                <div class="row g-3 mt-1">
 
                     <div class="col-md-6">
 
@@ -920,9 +1414,15 @@
                         <input type="text"
                                name="latitude"
                                id="latitude"
-                               class="form-control"
+                               class="form-control geo-input @error('latitude') is-invalid @enderror"
                                value="{{ old('latitude') }}"
+                               inputmode="decimal"
+                               autocomplete="off"
                                placeholder="e.g. 16.123456">
+
+                        @error('latitude')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
 
                     </div>
 
@@ -936,30 +1436,69 @@
                         <input type="text"
                                name="longitude"
                                id="longitude"
-                               class="form-control"
+                               class="form-control geo-input @error('longitude') is-invalid @enderror"
                                value="{{ old('longitude') }}"
+                               inputmode="decimal"
+                               autocomplete="off"
                                placeholder="e.g. 120.123456">
+
+                        @error('longitude')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
 
                     </div>
 
-                    <div class="col-12">
+                </div>
 
-                        <div class="notice-box">
 
-                            <i class="bi bi-info-circle-fill"></i>
+                <div class="geo-summary"
+                     id="geoSummary"
+                     data-state="empty">
 
-                            <div>
+                    <div class="geo-summary-icon">
+                        <i class="bi bi-geo-alt"
+                           id="geoSummaryIcon"></i>
+                    </div>
 
-                                <strong>Human-collected location.</strong>
+                    <div>
 
-                                GPS coordinates identify the household
-                                location for the barangay map.
-                                They do not automatically determine
-                                eligibility or any disaster/relief decision.
-
-                            </div>
-
+                        <div class="geo-summary-title"
+                             id="geoSummaryTitle">
+                            No coordinates captured yet
                         </div>
+
+                        <div class="geo-summary-coords"
+                             id="geoSummaryCoords">
+                            &mdash;
+                        </div>
+
+                        <div class="geo-summary-meta"
+                             id="geoSummaryMeta">
+                            Use one of the buttons above, or type the
+                            coordinates manually.
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="notice-box mt-3">
+
+                    <i class="bi bi-info-circle-fill"></i>
+
+                    <div>
+
+                        <strong>Human-collected location.</strong>
+
+                        GPS coordinates identify the household
+                        location for the barangay map.
+                        They do not automatically determine
+                        eligibility or any disaster/relief decision.
+                        A laptop location is only an estimate, so verify the
+                        pin on the map before registering. Nothing is
+                        submitted until you press
+                        <strong>Register Household</strong>.
 
                     </div>
 
@@ -1403,17 +1942,40 @@
 
                     </div>
 
-                    {{-- CONTACT --}}
+                    {{-- CONTACT (Philippine mobile: fixed +63 + 10 digits, first digit 9) --}}
                     <div class="col-md-6">
 
-                        <label class="form-label">Contact Number</label>
+                        <label class="form-label"
+                               for="resident_contact_number">
+                            Contact Number
+                        </label>
 
-                        <input id="resident_contact_number"
-                               class="form-control"
-                               placeholder="Optional">
+                        <div class="input-group contact-group">
 
-                        <div class="required-note mt-1">
-                            Leave blank if the resident has no contact number.
+                            <span class="input-group-text contact-prefix"
+                                  id="resident_contact_prefix">+63</span>
+
+                            <input id="resident_contact_number"
+                                   type="tel"
+                                   class="form-control"
+                                   inputmode="numeric"
+                                   pattern="9[0-9]{9}"
+                                   maxlength="10"
+                                   autocomplete="off"
+                                   placeholder="9XXXXXXXXX"
+                                   aria-describedby="resident_contact_prefix resident_contact_help resident_contact_error">
+
+                        </div>
+
+                        <div class="invalid-feedback d-none"
+                             id="resident_contact_error"
+                             role="alert"></div>
+
+                        <div class="required-note mt-1"
+                             id="resident_contact_help">
+                            Format: <strong>+63 9XXXXXXXXX</strong>
+                            (10 digits after +63, starting with 9).
+                            Optional &mdash; leave blank if there is no contact number.
                         </div>
 
                     </div>
@@ -1596,6 +2158,133 @@
 </div>
 
 
+{{-- LOCATION PICKER MODAL (embedded Leaflet map) --}}
+<div class="modal fade"
+     id="locationPickerModal"
+     tabindex="-1"
+     aria-labelledby="locationPickerTitle"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <div>
+
+                    <h5 class="modal-title fw-bold"
+                        id="locationPickerTitle">
+                        Pick Household Location
+                    </h5>
+
+                    <div class="text-muted small">
+                        Click the map or drag the pin onto the exact house.
+                        The Latitude and Longitude fields update as you go.
+                    </div>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+                <div class="picker-wrap">
+
+                    <div id="locationPickerMap"
+                         class="picker-map"
+                         aria-label="Map for picking the household location"></div>
+
+                    <div class="picker-tools">
+
+                        <button type="button"
+                                id="pickerLayerButton"
+                                title="Switch to street map"
+                                aria-label="Switch base map">
+                            <i class="bi bi-layers"></i>
+                        </button>
+
+                        <button type="button"
+                                id="pickerBorderButton"
+                                title="Zoom to Barangay Poblacion border"
+                                aria-label="Zoom to Barangay Poblacion border">
+                            <i class="bi bi-pentagon"></i>
+                        </button>
+
+                        <button type="button"
+                                id="pickerCenterPinButton"
+                                title="Center on the pin"
+                                aria-label="Center on the pin"
+                                disabled>
+                            <i class="bi bi-geo-alt-fill"></i>
+                        </button>
+
+                    </div>
+
+                    <div class="picker-hint">
+                        Click anywhere to place the pin
+                    </div>
+
+                </div>
+
+
+                <div class="picker-readout">
+
+                    <div>
+                        <span>Latitude</span>
+                        <b id="pickerLatitude">&mdash;</b>
+                    </div>
+
+                    <div>
+                        <span>Longitude</span>
+                        <b id="pickerLongitude">&mdash;</b>
+                    </div>
+
+                    <div class="picker-status"
+                         id="pickerStatus">
+                        No pin placed yet.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        id="pickerCancelButton">
+                    Cancel
+                </button>
+
+                <button type="button"
+                        class="btn btn-primary"
+                        id="pickerDoneButton"
+                        disabled>
+
+                    <i class="bi bi-check2 me-1"></i>
+
+                    Use This Location
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -1681,6 +2370,200 @@ document.addEventListener('DOMContentLoaded', function () {
         is_student: document.getElementById('resident_is_student'),
         student_education_level: document.getElementById('resident_student_education_level')
     };
+
+    /* =========================================================
+       PHILIPPINE CONTACT NUMBER  (+63 9XXXXXXXXX)
+
+       The modal input holds ONLY the 10 digits after the fixed +63
+       prefix, so the country code can never be duplicated. The value
+       kept in state and submitted to the server is the full
+       +639XXXXXXXXX, or '' when the number is left blank.
+
+       The same single modal input is used for the household head and
+       for every member, so these listeners are attached exactly once.
+    ========================================================== */
+
+    const PH_CONTACT_FULL = /^\+639\d{9}$/;
+    const PH_CONTACT_LOCAL = /^9\d{9}$/;
+
+    const CONTACT_MESSAGE =
+        'Enter a valid Philippine mobile number: +63 followed by 10 digits starting with 9 (e.g. +63 9171234567).';
+
+    const contactInput = fields.contact_number;
+    const contactError = document.getElementById('resident_contact_error');
+
+    // Any supported representation -> the 10 local digits, or '' if blank/invalid.
+    function contactToLocalDigits(value) {
+
+        let digits = String(value ?? '').replace(/\D/g, '');
+
+        if (digits.length === 12 && digits.startsWith('63')) {
+            digits = digits.slice(2);
+        } else if (digits.length === 11 && digits.startsWith('0')) {
+            digits = digits.slice(1);
+        }
+
+        return PH_CONTACT_LOCAL.test(digits) ? digits : '';
+
+    }
+
+    // Any supported representation -> +639XXXXXXXXX, or '' if blank/invalid.
+    function contactToFull(value) {
+
+        const local = contactToLocalDigits(value);
+
+        return local ? '+63' + local : '';
+
+    }
+
+    // Value currently typed in the modal -> +63 + typed digits, or ''.
+    function contactFromInput() {
+
+        const typed = contactInput ? contactInput.value.trim() : '';
+
+        return typed === '' ? '' : '+63' + typed;
+
+    }
+
+    // Lenient cleaner for typed / pasted text (partial numbers allowed).
+    function sanitizeContactDigits(raw) {
+
+        let digits = String(raw ?? '').replace(/\D/g, '');
+
+        if (digits.startsWith('63')) {
+            digits = digits.slice(2);
+        } else if (digits.startsWith('0')) {
+            digits = digits.slice(1);
+        }
+
+        if (digits !== '' && digits[0] !== '9') {
+            digits = '';
+        }
+
+        return digits.slice(0, 10);
+
+    }
+
+    function showContactError(message) {
+
+        if (!contactInput || !contactError) {
+            return;
+        }
+
+        contactInput.classList.add('is-invalid');
+        contactError.textContent = message;
+        contactError.classList.remove('d-none');
+        contactError.classList.add('d-block');
+
+    }
+
+    function hideContactError() {
+
+        if (!contactInput || !contactError) {
+            return;
+        }
+
+        contactInput.classList.remove('is-invalid');
+        contactError.textContent = '';
+        contactError.classList.add('d-none');
+        contactError.classList.remove('d-block');
+
+    }
+
+    if (contactInput) {
+
+        // Typing: digits only, first digit must be 9, never more than 10.
+        contactInput.addEventListener('beforeinput', function (event) {
+
+            const type = event.inputType || '';
+
+            if (
+                !type.startsWith('insert') ||
+                type === 'insertFromPaste' ||
+                type === 'insertFromDrop' ||
+                event.data === null ||
+                event.data === undefined
+            ) {
+                return;
+            }
+
+            const data = String(event.data);
+
+            if (!/^\d+$/.test(data)) {
+                event.preventDefault();
+                return;
+            }
+
+            const start = contactInput.selectionStart ?? 0;
+            const end = contactInput.selectionEnd ?? start;
+
+            if (start === 0 && data[0] !== '9') {
+                event.preventDefault();
+                return;
+            }
+
+            if (contactInput.value.length - (end - start) + data.length > 10) {
+                event.preventDefault();
+            }
+
+        });
+
+        // Safety net (autofill, IME, drag/drop): clean whatever got in.
+        contactInput.addEventListener('input', function () {
+
+            const cleaned = sanitizeContactDigits(contactInput.value);
+
+            if (cleaned !== contactInput.value) {
+                contactInput.value = cleaned;
+            }
+
+            if (cleaned === '' || PH_CONTACT_LOCAL.test(cleaned)) {
+                hideContactError();
+            }
+
+        });
+
+        // Paste: accepts 9XXXXXXXXX, 09XXXXXXXXX, 639XXXXXXXXX or +639XXXXXXXXX.
+        contactInput.addEventListener('paste', function (event) {
+
+            event.preventDefault();
+
+            const text =
+                (event.clipboardData || window.clipboardData).getData('text');
+
+            const cleaned = sanitizeContactDigits(text);
+
+            if (cleaned === '' && String(text).replace(/\D/g, '') !== '') {
+                showContactError(CONTACT_MESSAGE);
+                return;
+            }
+
+            contactInput.value = cleaned;
+            contactInput.setSelectionRange(cleaned.length, cleaned.length);
+
+            if (cleaned === '' || PH_CONTACT_LOCAL.test(cleaned)) {
+                hideContactError();
+            }
+
+        });
+
+        contactInput.addEventListener('drop', function (event) {
+            event.preventDefault();
+        });
+
+        // Incomplete numbers are flagged when the user leaves the field.
+        contactInput.addEventListener('blur', function () {
+
+            const typed = contactInput.value;
+
+            if (typed !== '' && !PH_CONTACT_LOCAL.test(typed)) {
+                showContactError(CONTACT_MESSAGE);
+            }
+
+        });
+
+    }
+
 
 
     /* =========================================================
@@ -2186,6 +3069,8 @@ document.addEventListener('DOMContentLoaded', function () {
         modalError.classList.add('d-none');
         modalError.textContent = '';
 
+        hideContactError();
+
         modalExistingNotice.classList.add('d-none');
         modalExistingNotice.innerHTML = '';
 
@@ -2290,7 +3175,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fields.residency_year_estimated.checked =
             toBool(person.residency_year_estimated);
 
-        fields.contact_number.value = person.contact_number || '';
+        fields.contact_number.value = contactToLocalDigits(person.contact_number);
         fields.email.value = person.email || '';
 
         const occupationData = normalizeOccupation(person);
@@ -2843,6 +3728,14 @@ document.addEventListener('DOMContentLoaded', function () {
             errors.push('Residency start year must be a valid year.');
         }
 
+        if (
+            person.contact_number &&
+            !PH_CONTACT_FULL.test(String(person.contact_number))
+        ) {
+            errors.push(CONTACT_MESSAGE);
+            showContactError(CONTACT_MESSAGE);
+        }
+
         const age = ageOf(person.birth_date);
 
         if (
@@ -2909,7 +3802,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             residency_start_year: fields.residency_start_year.value,
             residency_year_estimated: fields.residency_year_estimated.checked,
-            contact_number: fields.contact_number.value.trim(),
+            contact_number: contactFromInput(),
             email: fields.email.value.trim(),
 
             occupation: occupationData.occupation,
@@ -3209,7 +4102,7 @@ document.addEventListener('DOMContentLoaded', function () {
             person.residency_year_estimated ? '1' : '0'
         );
 
-        appendHidden(container, `${prefix}[contact_number]`, person.contact_number);
+        appendHidden(container, `${prefix}[contact_number]`, contactToFull(person.contact_number));
         appendHidden(container, `${prefix}[email]`, person.email);
         appendHidden(container, `${prefix}[occupation]`, person.occupation);
         appendHidden(container, `${prefix}[occupation_other]`, person.occupation_other);
@@ -3806,6 +4699,1036 @@ document.addEventListener('DOMContentLoaded', function () {
     renderHead();
     renderMembers();
     updateWorkflow();
+
+});
+</script>
+
+
+{{-- ============================================================
+     HOUSEHOLD LOCATION: GPS CAPTURE + MAP PICKER
+     (separate block so the household/member logic above is untouched)
+============================================================= --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const latInput = document.getElementById('latitude');
+    const lngInput = document.getElementById('longitude');
+
+    if (!latInput || !lngInput) {
+        return;
+    }
+
+    /* =========================================================
+       CONSTANTS
+    ========================================================== */
+
+    const BANI_CENTER = [16.187656924442535, 119.84779277322872];
+
+    /* rough Bani area, used only to warn about typos / swapped values */
+    const AREA = { south: 15.95, west: 119.6, north: 16.45, east: 120.1 };
+
+    /* Barangay Poblacion border (same outline as the Household Map) */
+    const BOUNDARY = [
+        [16.19481, 119.83521],
+        [16.19942, 119.84490],
+        [16.19875, 119.85327],
+        [16.20142, 119.85488],
+        [16.19742, 119.85788],
+        [16.19419, 119.86123],
+        [16.19381, 119.87144],
+        [16.19375, 119.87421],
+        [16.19147, 119.87664],
+        [16.19030, 119.87964],
+        [16.18547, 119.87952],
+        [16.18508, 119.87866],
+        [16.18369, 119.87808],
+        [16.18224, 119.87721],
+        [16.18046, 119.87675],
+        [16.17907, 119.87733],
+        [16.17646, 119.87738],
+        [16.17735, 119.86336],
+        [16.18241, 119.83867],
+        [16.18880, 119.83682]
+    ];
+
+    const BOUNDARY_LABEL_AT = [16.18975, 119.85315];
+
+    const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
+    const LEAFLET_JS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+
+    /* =========================================================
+       ELEMENTS
+    ========================================================== */
+
+    const locateButton = document.getElementById('locateCurrentButton');
+    const pickButton = document.getElementById('pickOnMapButton');
+    const clearButton = document.getElementById('clearCoordinatesButton');
+    const feedback = document.getElementById('geoFeedback');
+    const secureNotice = document.getElementById('geoSecureNotice');
+
+    const summary = document.getElementById('geoSummary');
+    const summaryIcon = document.getElementById('geoSummaryIcon');
+    const summaryTitle = document.getElementById('geoSummaryTitle');
+    const summaryCoords = document.getElementById('geoSummaryCoords');
+    const summaryMeta = document.getElementById('geoSummaryMeta');
+
+    const pickerElement = document.getElementById('locationPickerModal');
+    const pickerModal = new bootstrap.Modal(pickerElement);
+    const pickerMapElement = document.getElementById('locationPickerMap');
+    const pickerLatitude = document.getElementById('pickerLatitude');
+    const pickerLongitude = document.getElementById('pickerLongitude');
+    const pickerStatus = document.getElementById('pickerStatus');
+    const pickerDone = document.getElementById('pickerDoneButton');
+    const pickerCancel = document.getElementById('pickerCancelButton');
+    const pickerLayerButton = document.getElementById('pickerLayerButton');
+    const pickerBorderButton = document.getElementById('pickerBorderButton');
+    const pickerCenterPinButton = document.getElementById('pickerCenterPinButton');
+
+    /* =========================================================
+       STATE
+    ========================================================== */
+
+    let source = null;          // 'gps' | 'map' | 'manual' | null
+    let accuracy = null;        // meters (GPS only)
+    let programmatic = false;   // true while the script itself fills the inputs
+    let locating = false;
+
+    /* =========================================================
+       COORDINATE HELPERS
+    ========================================================== */
+
+    function readPair() {
+
+        const a = latInput.value.trim();
+        const b = lngInput.value.trim();
+
+        if (a === '' && b === '') {
+            return { state: 'empty' };
+        }
+
+        if (a === '' || b === '') {
+            return { state: 'incomplete' };
+        }
+
+        const lat = Number(a);
+        const lng = Number(b);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            return { state: 'invalid' };
+        }
+
+        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+            return { state: 'range' };
+        }
+
+        return { state: 'ok', lat: lat, lng: lng };
+
+    }
+
+
+    function formatCoord(value) {
+        return Number(value).toFixed(7);
+    }
+
+
+    function inBani(lat, lng) {
+
+        return (
+            lat >= AREA.south &&
+            lat <= AREA.north &&
+            lng >= AREA.west &&
+            lng <= AREA.east
+        );
+
+    }
+
+
+    /* ray casting: is the point inside the Poblacion outline? */
+    function inPoblacion(lat, lng) {
+
+        let inside = false;
+
+        for (let i = 0, j = BOUNDARY.length - 1; i < BOUNDARY.length; j = i++) {
+
+            const yi = BOUNDARY[i][0];
+            const xi = BOUNDARY[i][1];
+            const yj = BOUNDARY[j][0];
+            const xj = BOUNDARY[j][1];
+
+            const crosses =
+                ((yi > lat) !== (yj > lat)) &&
+                (lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi);
+
+            if (crosses) {
+                inside = !inside;
+            }
+
+        }
+
+        return inside;
+
+    }
+
+
+    function setCoords(lat, lng, newSource, newAccuracy) {
+
+        programmatic = true;
+
+        latInput.value = formatCoord(lat);
+        lngInput.value = formatCoord(lng);
+
+        programmatic = false;
+
+        source = newSource;
+        accuracy = (typeof newAccuracy === 'number') ? newAccuracy : null;
+
+        refreshSummary();
+
+    }
+
+
+    /* =========================================================
+       SUMMARY (always shows what will be submitted)
+    ========================================================== */
+
+    function setSummary(state, icon, title, coords, meta) {
+
+        summary.dataset.state = state;
+        summaryIcon.className = 'bi ' + icon;
+        summaryTitle.textContent = title;
+        summaryCoords.textContent = coords;
+        summaryMeta.textContent = meta;
+
+    }
+
+
+    function refreshSummary() {
+
+        const pair = readPair();
+
+        if (pair.state === 'empty') {
+
+            setSummary(
+                'empty',
+                'bi-geo-alt',
+                'No coordinates captured yet',
+                '\u2014',
+                'Use one of the buttons above, or type the coordinates manually.'
+            );
+
+            return;
+
+        }
+
+        if (pair.state === 'incomplete') {
+
+            setSummary(
+                'invalid',
+                'bi-exclamation-triangle-fill',
+                'Incomplete coordinates',
+                (latInput.value.trim() || '?') + ', ' + (lngInput.value.trim() || '?'),
+                'Fill in both Latitude and Longitude, or clear both.'
+            );
+
+            return;
+
+        }
+
+        if (pair.state === 'invalid') {
+
+            setSummary(
+                'invalid',
+                'bi-exclamation-triangle-fill',
+                'Coordinates are not valid numbers',
+                latInput.value.trim() + ', ' + lngInput.value.trim(),
+                'Use decimal numbers only, for example 16.187657 and 119.847793.'
+            );
+
+            return;
+
+        }
+
+        if (pair.state === 'range') {
+
+            setSummary(
+                'invalid',
+                'bi-exclamation-triangle-fill',
+                'Coordinates are out of range',
+                latInput.value.trim() + ', ' + lngInput.value.trim(),
+                'Latitude must be between -90 and 90, and Longitude between -180 and 180.'
+            );
+
+            return;
+
+        }
+
+        const coords = latInput.value.trim() + ', ' + lngInput.value.trim();
+
+        let title = 'Coordinates ready';
+        let meta = '';
+
+        if (source === 'gps') {
+
+            title = 'Captured from this laptop\u2019s location';
+
+            meta = 'Estimated accuracy about ' + Math.round(accuracy) + ' m.';
+
+        } else if (source === 'map') {
+
+            title = 'Selected on the map';
+
+            meta = 'Pin placed manually on the map.';
+
+        } else if (source === 'manual') {
+
+            title = 'Entered manually';
+
+            meta = 'Typed in by the user.';
+
+        } else {
+
+            title = 'Coordinates in the form';
+
+            meta = 'Review them on the map before registering.';
+
+        }
+
+        let warn = false;
+
+        if (!inBani(pair.lat, pair.lng)) {
+
+            warn = true;
+
+            meta += ' These coordinates are outside Bani. Check for a typo or swapped latitude and longitude.';
+
+        } else if (!inPoblacion(pair.lat, pair.lng)) {
+
+            warn = true;
+
+            meta += ' This point is outside the Barangay Poblacion border. Make sure it is the correct house.';
+
+        }
+
+        if (source === 'gps' && accuracy > 100) {
+
+            warn = true;
+
+            meta += ' Accuracy is low, so please verify the pin on the map.';
+
+        }
+
+        setSummary(
+            warn ? 'warn' : 'ok',
+            warn ? 'bi-exclamation-triangle-fill' : 'bi-check-lg',
+            title,
+            coords,
+            meta
+        );
+
+    }
+
+
+    /* typing in the fields = manual entry */
+    [latInput, lngInput].forEach(function (input) {
+
+        input.addEventListener('input', function () {
+
+            if (programmatic) {
+                return;
+            }
+
+            source = 'manual';
+            accuracy = null;
+
+            refreshSummary();
+
+        });
+
+    });
+
+
+    clearButton.addEventListener('click', function () {
+
+        programmatic = true;
+
+        latInput.value = '';
+        lngInput.value = '';
+
+        programmatic = false;
+
+        source = null;
+        accuracy = null;
+
+        hideFeedback();
+        refreshSummary();
+
+    });
+
+
+    /* =========================================================
+       FEEDBACK
+    ========================================================== */
+
+    const ACTION_RETRY =
+        '<button type="button" class="btn btn-sm btn-outline-primary" data-geo-action="retry">' +
+        '<i class="bi bi-arrow-repeat me-1"></i>Try again</button>';
+
+    const ACTION_MAP =
+        '<button type="button" class="btn btn-sm btn-outline-secondary" data-geo-action="map">' +
+        '<i class="bi bi-map me-1"></i>Pick on map instead</button>';
+
+    const ACTION_VERIFY =
+        '<button type="button" class="btn btn-sm btn-outline-secondary" data-geo-action="map">' +
+        '<i class="bi bi-map me-1"></i>Verify on map</button>';
+
+
+    function showFeedback(type, message, actions) {
+
+        const icons = {
+            success: 'bi-check-circle-fill',
+            warn: 'bi-exclamation-triangle-fill',
+            error: 'bi-x-octagon-fill',
+            info: 'bi-info-circle-fill'
+        };
+
+        const lead = (type === 'loading')
+            ? '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>'
+            : '<i class="bi ' + icons[type] + '"></i>';
+
+        feedback.className = 'geo-feedback is-' + (type === 'loading' ? 'info' : type);
+
+        feedback.innerHTML =
+            lead +
+            '<div><div>' + message + '</div>' +
+            (actions ? '<div class="geo-inline-actions">' + actions + '</div>' : '') +
+            '</div>';
+
+    }
+
+
+    function hideFeedback() {
+
+        feedback.className = 'geo-feedback d-none';
+        feedback.innerHTML = '';
+
+    }
+
+
+    feedback.addEventListener('click', function (event) {
+
+        const button = event.target.closest('[data-geo-action]');
+
+        if (!button) {
+            return;
+        }
+
+        if (button.dataset.geoAction === 'retry') {
+            locateCurrentPosition();
+        }
+
+        if (button.dataset.geoAction === 'map') {
+            pickerModal.show();
+        }
+
+    });
+
+
+    /* =========================================================
+       GEOLOCATION (one-time request, no continuous tracking)
+    ========================================================== */
+
+    function setLocating(state) {
+
+        locating = state;
+
+        locateButton.disabled = state;
+
+        locateButton.querySelector('span').textContent =
+            state ? 'Locating\u2026' : 'Locate Current Position';
+
+        locateButton.querySelector('i').className =
+            state ? 'bi bi-hourglass-split me-2' : 'bi bi-crosshair me-2';
+
+    }
+
+
+    function onLocateSuccess(position) {
+
+        setLocating(false);
+
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const acc = position.coords.accuracy;
+
+        if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lng) ||
+            !Number.isFinite(acc)
+        ) {
+
+            showFeedback(
+                'error',
+                'The browser returned invalid location data. Please try again.',
+                ACTION_RETRY + ACTION_MAP
+            );
+
+            return;
+
+        }
+
+        setCoords(lat, lng, 'gps', acc);
+
+        const meters = Math.round(acc);
+
+        if (acc <= 20) {
+
+            showFeedback(
+                'success',
+                '<strong>Location captured.</strong> Accuracy is about ' + meters +
+                ' m (good). The Latitude and Longitude fields were filled in. ' +
+                'Please confirm the point is the actual house.',
+                ACTION_VERIFY
+            );
+
+        } else if (acc <= 50) {
+
+            showFeedback(
+                'success',
+                '<strong>Location captured.</strong> Accuracy is about ' + meters +
+                ' m (fair). Verify the pin on the map before registering.',
+                ACTION_VERIFY
+            );
+
+        } else if (acc <= 100) {
+
+            showFeedback(
+                'warn',
+                '<strong>Moderate accuracy (about ' + meters + ' m).</strong> ' +
+                'The coordinates were filled in, but the pin may be a few houses away. ' +
+                'Verify or adjust it on the map.',
+                ACTION_VERIFY + ACTION_RETRY
+            );
+
+        } else {
+
+            showFeedback(
+                'warn',
+                '<strong>Poor accuracy (about ' + meters + ' m).</strong> ' +
+                'Laptops often estimate location from Wi-Fi or the network, which can be far off. ' +
+                'The coordinates were filled in, but please move the pin to the actual house on the map, or try again.',
+                ACTION_VERIFY + ACTION_RETRY
+            );
+
+        }
+
+    }
+
+
+    function onLocateError(error) {
+
+        setLocating(false);
+
+        if (error && error.code === 1) {
+
+            let message =
+                '<strong>Location permission denied.</strong> ' +
+                'Allow location access for this site in your browser (the lock icon beside the address bar), then try again.';
+
+            if (!window.isSecureContext) {
+
+                message +=
+                    ' This page is not on HTTPS or localhost, and browsers block location access on insecure addresses.';
+
+            }
+
+            showFeedback('error', message, ACTION_RETRY + ACTION_MAP);
+
+            return;
+
+        }
+
+        if (error && error.code === 2) {
+
+            showFeedback(
+                'error',
+                '<strong>Location unavailable.</strong> ' +
+                'Your device could not determine its position. Check that Windows or macOS location services are on, then try again.',
+                ACTION_RETRY + ACTION_MAP
+            );
+
+            return;
+
+        }
+
+        if (error && error.code === 3) {
+
+            showFeedback(
+                'error',
+                '<strong>The location request timed out.</strong> ' +
+                'It took too long to get a position. Please try again.',
+                ACTION_RETRY + ACTION_MAP
+            );
+
+            return;
+
+        }
+
+        showFeedback(
+            'error',
+            '<strong>Unable to get your location.</strong> Please try again or use the map.',
+            ACTION_RETRY + ACTION_MAP
+        );
+
+    }
+
+
+    function locateCurrentPosition() {
+
+        if (locating) {
+            return;
+        }
+
+        if (!('geolocation' in navigator)) {
+
+            showFeedback(
+                'error',
+                '<strong>Geolocation is not supported</strong> by this browser. Use <em>Pick Location on Map</em> or type the coordinates.',
+                ACTION_MAP
+            );
+
+            return;
+
+        }
+
+        setLocating(true);
+
+        showFeedback(
+            'loading',
+            'Requesting your location\u2026 If the browser asks, choose <strong>Allow</strong>. This can take up to 20 seconds.'
+        );
+
+        navigator.geolocation.getCurrentPosition(
+            onLocateSuccess,
+            onLocateError,
+            {
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 0
+            }
+        );
+
+    }
+
+
+    locateButton.addEventListener('click', locateCurrentPosition);
+
+    if (!window.isSecureContext) {
+        secureNotice.classList.remove('d-none');
+    }
+
+    /* =========================================================
+       LEAFLET LOADER (only when the picker is first opened)
+    ========================================================== */
+
+    let leafletPromise = null;
+
+    function loadLeaflet() {
+
+        if (window.L && typeof L.map === 'function') {
+            return Promise.resolve();
+        }
+
+        if (leafletPromise) {
+            return leafletPromise;
+        }
+
+        leafletPromise = new Promise(function (resolve, reject) {
+
+            if (!document.querySelector('link[data-geo-leaflet]')) {
+
+                const css = document.createElement('link');
+
+                css.rel = 'stylesheet';
+                css.href = LEAFLET_CSS;
+                css.setAttribute('data-geo-leaflet', '1');
+
+                document.head.appendChild(css);
+
+            }
+
+            const script = document.createElement('script');
+
+            script.src = LEAFLET_JS;
+
+            script.onload = function () {
+                resolve();
+            };
+
+            script.onerror = function () {
+                leafletPromise = null;
+                reject(new Error('Leaflet failed to load'));
+            };
+
+            document.head.appendChild(script);
+
+        });
+
+        return leafletPromise;
+
+    }
+
+    /* =========================================================
+       MAP PICKER
+    ========================================================== */
+
+    let map = null;
+    let marker = null;
+    let street = null;
+    let satellite = null;
+    let satelliteOn = true;
+    let boundaryBounds = null;
+
+    let snapshot = null;      // field values when the picker opened
+    let confirmed = false;    // true only when "Use This Location" is pressed
+
+
+    function pinIcon() {
+
+        return L.divIcon({
+            className: 'geo-pin-wrap',
+            html: '<span class="geo-pin"></span>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30]
+        });
+
+    }
+
+
+    function updateReadout() {
+
+        const pair = readPair();
+
+        if (pair.state !== 'ok' || !marker) {
+
+            pickerLatitude.textContent = '\u2014';
+            pickerLongitude.textContent = '\u2014';
+            pickerStatus.textContent = 'No pin placed yet. Click the map to place one.';
+
+            pickerDone.disabled = true;
+            pickerCenterPinButton.disabled = true;
+
+            return;
+
+        }
+
+        pickerLatitude.textContent = formatCoord(pair.lat);
+        pickerLongitude.textContent = formatCoord(pair.lng);
+
+        if (!inBani(pair.lat, pair.lng)) {
+
+            pickerStatus.textContent = 'This point is outside Bani. Check the pin.';
+
+        } else if (!inPoblacion(pair.lat, pair.lng)) {
+
+            pickerStatus.textContent = 'This point is outside the Barangay Poblacion border (red dashed line).';
+
+        } else {
+
+            pickerStatus.textContent = 'Inside the Barangay Poblacion border. Drag the pin to fine-tune it.';
+
+        }
+
+        pickerDone.disabled = false;
+        pickerCenterPinButton.disabled = false;
+
+    }
+
+
+    function onPick(latlng) {
+
+        setCoords(latlng.lat, latlng.lng, 'map', null);
+
+        updateReadout();
+
+    }
+
+
+    function placeMarker(latlng) {
+
+        if (!marker) {
+
+            marker = L.marker(latlng, {
+                draggable: true,
+                keyboard: true,
+                icon: pinIcon()
+            }).addTo(map);
+
+            marker.on('drag', function () {
+                onPick(marker.getLatLng());
+            });
+
+            marker.on('dragend', function () {
+                onPick(marker.getLatLng());
+            });
+
+        } else {
+
+            marker.setLatLng(latlng);
+
+        }
+
+    }
+
+
+    function initMap() {
+
+        if (map) {
+            return;
+        }
+
+        map = L.map(pickerMapElement, {
+            center: BANI_CENTER,
+            zoom: 16,
+            maxZoom: 20,
+            zoomControl: false
+        });
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+        const tileOptions = {
+            detectRetina: true,
+            keepBuffer: 4,
+            updateWhenZooming: false,
+            minZoom: 10,
+            maxZoom: 21
+        };
+
+        street = L.tileLayer(
+            'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            Object.assign({}, tileOptions, {
+                maxNativeZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            })
+        );
+
+        satellite = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            Object.assign({}, tileOptions, {
+                maxNativeZoom: 18,
+                attribution: 'Tiles &copy; Esri'
+            })
+        );
+
+        satellite.addTo(map);
+
+        /* Barangay Poblacion border (visual guide only) */
+        L.polygon(BOUNDARY, {
+            interactive: false,
+            color: '#ffffff',
+            weight: 6,
+            opacity: .95,
+            fill: false,
+            lineJoin: 'round'
+        }).addTo(map);
+
+        const border = L.polygon(BOUNDARY, {
+            interactive: false,
+            color: '#dc2626',
+            weight: 3,
+            opacity: 1,
+            dashArray: '8 6',
+            lineJoin: 'round',
+            fillColor: '#dc2626',
+            fillOpacity: .06
+        }).addTo(map);
+
+        L.marker(BOUNDARY_LABEL_AT, {
+            interactive: false,
+            keyboard: false,
+            icon: L.divIcon({
+                className: 'geo-pin-wrap',
+                html: '<span class="picker-label">Poblacion</span>',
+                iconSize: [0, 0]
+            })
+        }).addTo(map);
+
+        boundaryBounds = border.getBounds();
+
+        map.on('click', function (event) {
+
+            placeMarker(event.latlng);
+            onPick(event.latlng);
+
+        });
+
+    }
+
+
+    /* shows the pin from the current field values, or the barangay overview */
+    function syncMapWithFields() {
+
+        map.invalidateSize();
+
+        const pair = readPair();
+
+        if (pair.state === 'ok') {
+
+            placeMarker([pair.lat, pair.lng]);
+
+            map.setView([pair.lat, pair.lng], 18);
+
+        } else {
+
+            if (marker) {
+                map.removeLayer(marker);
+                marker = null;
+            }
+
+            map.fitBounds(boundaryBounds, { padding: [24, 24] });
+
+        }
+
+        updateReadout();
+
+    }
+
+
+    pickButton.addEventListener('click', function () {
+        pickerModal.show();
+    });
+
+
+    pickerElement.addEventListener('show.bs.modal', function () {
+
+        snapshot = {
+            lat: latInput.value,
+            lng: lngInput.value,
+            source: source,
+            accuracy: accuracy
+        };
+
+        confirmed = false;
+
+    });
+
+
+    pickerElement.addEventListener('shown.bs.modal', function () {
+
+        loadLeaflet()
+            .then(function () {
+
+                initMap();
+                syncMapWithFields();
+
+            })
+            .catch(function () {
+
+                pickerMapElement.innerHTML =
+                    '<div class="picker-error">' +
+                    '<i class="bi bi-wifi-off fs-1 d-block mb-2"></i>' +
+                    '<strong>The map could not load.</strong><br>' +
+                    'The map library comes from the internet. Check your connection, then close this window and try again. ' +
+                    'You can also type the coordinates manually.' +
+                    '</div>';
+
+            });
+
+    });
+
+
+    /* anything other than "Use This Location" restores the previous values */
+    pickerElement.addEventListener('hidden.bs.modal', function () {
+
+        if (!confirmed && snapshot) {
+
+            programmatic = true;
+
+            latInput.value = snapshot.lat;
+            lngInput.value = snapshot.lng;
+
+            programmatic = false;
+
+            source = snapshot.source;
+            accuracy = snapshot.accuracy;
+
+            refreshSummary();
+
+        }
+
+    });
+
+
+    pickerCancel.addEventListener('click', function () {
+        pickerModal.hide();
+    });
+
+
+    pickerDone.addEventListener('click', function () {
+
+        confirmed = true;
+
+        pickerModal.hide();
+
+        showFeedback(
+            'success',
+            '<strong>Location selected on the map.</strong> ' +
+            'Review the coordinates below. Nothing is saved until you press Register Household.'
+        );
+
+    });
+
+
+    pickerLayerButton.addEventListener('click', function () {
+
+        if (!map) {
+            return;
+        }
+
+        satelliteOn = !satelliteOn;
+
+        if (satelliteOn) {
+
+            map.removeLayer(street);
+            satellite.addTo(map);
+
+        } else {
+
+            map.removeLayer(satellite);
+            street.addTo(map);
+
+        }
+
+        pickerLayerButton.title = satelliteOn
+            ? 'Switch to street map'
+            : 'Switch to satellite map';
+
+    });
+
+
+    pickerBorderButton.addEventListener('click', function () {
+
+        if (map && boundaryBounds) {
+            map.fitBounds(boundaryBounds, { padding: [24, 24] });
+        }
+
+    });
+
+
+    pickerCenterPinButton.addEventListener('click', function () {
+
+        if (map && marker) {
+            map.setView(marker.getLatLng(), Math.max(map.getZoom(), 18));
+        }
+
+    });
+
+
+    /* =========================================================
+       INITIAL STATE
+    ========================================================== */
+
+    refreshSummary();
 
 });
 </script>

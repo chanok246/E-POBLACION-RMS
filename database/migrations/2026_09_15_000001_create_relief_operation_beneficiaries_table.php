@@ -2,177 +2,103 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('relief_operation_beneficiaries', function (Blueprint $table) {
-            $table->id();
+        if (!Schema::hasTable('relief_operation_beneficiaries')) {
+            Schema::create('relief_operation_beneficiaries', function (Blueprint $table) {
+                $table->id();
 
-            /*
-            |--------------------------------------------------------------------------
-            | RELATIONSHIPS
-            |--------------------------------------------------------------------------
-            */
+                $table->foreignId('operation_id')
+                    ->constrained('relief_assistance_operations')
+                    ->cascadeOnDelete();
 
-            $table->foreignId('operation_id')
-                ->constrained('relief_assistance_operations')
-                ->cascadeOnDelete();
+                $table->foreignId('household_id')
+                    ->constrained('households')
+                    ->cascadeOnDelete();
 
-            $table->foreignId('household_id')
-                ->constrained('households')
-                ->cascadeOnDelete();
+                $table->string('beneficiary_status')
+                    ->default('field_verified');
 
-            /*
-            |--------------------------------------------------------------------------
-            | BENEFICIARY VERIFICATION
-            |--------------------------------------------------------------------------
-            |
-            | field_verified
-            | encoder_validated
-            | confirmed
-            | removed
-            |
-            */
+                $table->string('field_reference')->nullable();
+                $table->text('verification_notes')->nullable();
 
-            $table->string('beneficiary_status')
-                ->default('field_verified');
+                $table->foreignId('validated_by')
+                    ->nullable()
+                    ->constrained('users')
+                    ->nullOnDelete();
 
-            /*
-            |--------------------------------------------------------------------------
-            | BHW / PAPER REFERENCE
-            |--------------------------------------------------------------------------
-            */
+                $table->timestamp('validated_at')->nullable();
 
-            $table->string('field_reference')
-                ->nullable();
+                $table->string('assistance_status')
+                    ->default('awaiting_assistance');
 
-            $table->text('verification_notes')
-                ->nullable();
+                $table->unsignedInteger('allocated_quantity')
+                    ->default(0);
 
-            /*
-            |--------------------------------------------------------------------------
-            | ENCODER VALIDATION
-            |--------------------------------------------------------------------------
-            */
+                $table->text('allocation_notes')->nullable();
 
-            $table->foreignId('validated_by')
-                ->nullable()
-                ->constrained('users')
-                ->nullOnDelete();
+                $table->foreignId('allocated_by')
+                    ->nullable()
+                    ->constrained('users')
+                    ->nullOnDelete();
 
-            $table->timestamp('validated_at')
-                ->nullable();
+                $table->timestamp('allocated_at')->nullable();
+                $table->timestamp('distributed_at')->nullable();
+                $table->timestamp('claimed_at')->nullable();
 
-            /*
-            |--------------------------------------------------------------------------
-            | ASSISTANCE STATUS
-            |--------------------------------------------------------------------------
-            |
-            | awaiting_assistance
-            | allocated
-            | voucher_generated
-            | distributed
-            | claimed
-            |
-            */
+                $table->foreignId('created_by')
+                    ->nullable()
+                    ->constrained('users')
+                    ->nullOnDelete();
 
-            $table->string('assistance_status')
-                ->default('awaiting_assistance');
+                $table->foreignId('updated_by')
+                    ->nullable()
+                    ->constrained('users')
+                    ->nullOnDelete();
 
-            /*
-            |--------------------------------------------------------------------------
-            | CAPTAIN / AUTHORIZED ALLOCATION
-            |--------------------------------------------------------------------------
-            */
+                $table->timestamps();
+            });
+        }
 
-            $table->unsignedInteger('allocated_quantity')
-                ->default(0);
+        // Inspect existing indexes before adding anything.
+        $existingIndexes = array_map(
+            fn ($row) => $row->Key_name,
+            DB::select('SHOW INDEX FROM relief_operation_beneficiaries')
+        );
 
-            $table->text('allocation_notes')
-                ->nullable();
+        Schema::table('relief_operation_beneficiaries', function (Blueprint $table) use ($existingIndexes) {
+            if (!in_array('rob_operation_status_idx', $existingIndexes, true)) {
+                $table->index(
+                    ['operation_id', 'beneficiary_status'],
+                    'rob_operation_status_idx'
+                );
+            }
 
-            $table->foreignId('allocated_by')
-                ->nullable()
-                ->constrained('users')
-                ->nullOnDelete();
+            if (!in_array('rob_operation_assistance_idx', $existingIndexes, true)) {
+                $table->index(
+                    ['operation_id', 'assistance_status'],
+                    'rob_operation_assistance_idx'
+                );
+            }
 
-            $table->timestamp('allocated_at')
-                ->nullable();
+            if (!in_array('rob_household_idx', $existingIndexes, true)) {
+                $table->index('household_id', 'rob_household_idx');
+            }
 
-            /*
-            |--------------------------------------------------------------------------
-            | DISTRIBUTION / CLAIM RECORD
-            |--------------------------------------------------------------------------
-            */
-
-            $table->timestamp('distributed_at')
-                ->nullable();
-
-            $table->timestamp('claimed_at')
-                ->nullable();
-
-            /*
-            |--------------------------------------------------------------------------
-            | AUDIT USERS
-            |--------------------------------------------------------------------------
-            */
-
-            $table->foreignId('created_by')
-                ->nullable()
-                ->constrained('users')
-                ->nullOnDelete();
-
-            $table->foreignId('updated_by')
-                ->nullable()
-                ->constrained('users')
-                ->nullOnDelete();
-
-            $table->timestamps();
-
-            /*
-            |--------------------------------------------------------------------------
-            | INDEXES
-            |--------------------------------------------------------------------------
-            */
-
-            $table->index([
-                'operation_id',
-                'beneficiary_status',
-            ]);
-
-            $table->index([
-                'operation_id',
-                'assistance_status',
-            ]);
-
-            $table->index('household_id');
-
-            /*
-            |--------------------------------------------------------------------------
-            | DUPLICATE PROTECTION
-            |--------------------------------------------------------------------------
-            |
-            | A household should only appear once in the same
-            | Relief Assistance Operation.
-            |
-            */
-
-            $table->unique([
-                'operation_id',
-                'household_id',
-            ]);
+            if (!in_array('rob_operation_household_uq', $existingIndexes, true)) {
+                $table->unique(
+                    ['operation_id', 'household_id'],
+                    'rob_operation_household_uq'
+                );
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('relief_operation_beneficiaries');

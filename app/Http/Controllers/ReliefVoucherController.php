@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DisasterEvent;
 use App\Models\Household;
 use App\Models\HouseholdMember;
 use App\Models\ReliefAssistanceOperation;
@@ -254,7 +253,6 @@ class ReliefVoucherController extends Controller
     {
         $operations =
             ReliefAssistanceOperation::query()
-                ->with('disasterEvent')
                 ->withCount([
                     'vouchers',
                 ])
@@ -290,18 +288,12 @@ class ReliefVoucherController extends Controller
 
     public function createOperation(): View
     {
-        $disasterEvents =
-            DisasterEvent::query()
-                ->latest()
-                ->get();
-
         $assistanceTypes =
             $this->assistanceTypes();
 
         return view(
             'assistance-campaigns.create',
             compact(
-                'disasterEvents',
                 'assistanceTypes'
             )
         );
@@ -440,13 +432,7 @@ class ReliefVoucherController extends Controller
                     'nullable',
                     'string',
                     'max:2000',
-                ],
-
-                'disaster_event_id' => [
-                    'nullable',
-                    'exists:disaster_events,id',
-                ],
-            ]);
+                ],            ]);
 
         $quantityReceived =
             (float) (
@@ -470,10 +456,6 @@ class ReliefVoucherController extends Controller
 
                 'assistance_description' =>
                     null,
-
-                'disaster_event_id' =>
-                    $validated['disaster_event_id']
-                    ?? null,
 
                 'source_name' =>
                     $validated['source_name']
@@ -563,9 +545,6 @@ class ReliefVoucherController extends Controller
                 'assistance_type' =>
                     $operation->assistance_type,
 
-                'disaster_event_id' =>
-                    $operation->disaster_event_id,
-
                 'source_name' =>
                     $operation->source_name,
 
@@ -648,7 +627,6 @@ class ReliefVoucherController extends Controller
         ReliefAssistanceOperation $operation
     ): View {
         $operation->load([
-            'disasterEvent',
             'vouchers.household.householdHead',
             'vouchers.beneficiary.resident',
         ]);
@@ -794,11 +772,6 @@ class ReliefVoucherController extends Controller
     public function operationEdit(
         ReliefAssistanceOperation $operation
     ): View {
-        $disasterEvents =
-            DisasterEvent::query()
-                ->latest()
-                ->get();
-
         /*
          * Current options are supplied to the new workflow.
          *
@@ -814,7 +787,6 @@ class ReliefVoucherController extends Controller
             'assistance-campaigns.edit',
             compact(
                 'operation',
-                'disasterEvents',
                 'assistanceTypes'
             )
         );
@@ -981,13 +953,7 @@ class ReliefVoucherController extends Controller
                     'nullable',
                     'string',
                     'max:2000',
-                ],
-
-                'disaster_event_id' => [
-                    'nullable',
-                    'exists:disaster_events,id',
-                ],
-            ]);
+                ],            ]);
 
         $newQuantityReceived =
             (float) (
@@ -1077,10 +1043,6 @@ class ReliefVoucherController extends Controller
 
             'assistance_description' =>
                 $validated['assistance_description']
-                ?? null,
-
-            'disaster_event_id' =>
-                $validated['disaster_event_id']
                 ?? null,
 
             'source_name' =>

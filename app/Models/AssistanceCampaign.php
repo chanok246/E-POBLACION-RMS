@@ -18,7 +18,6 @@ class AssistanceCampaign extends Model
         'assistance_amount',
         'assistance_package',
         'status',
-        'disaster_event_id',
         'barangay',
         'municipality',
         'province',
@@ -37,19 +36,6 @@ class AssistanceCampaign extends Model
     | Relationships
     |--------------------------------------------------------------------------
     */
-
-    /**
-     * Optional disaster event connected to this campaign.
-     *
-     * A campaign does not have to be disaster-related.
-     */
-    public function disasterEvent(): BelongsTo
-    {
-        return $this->belongsTo(
-            DisasterEvent::class,
-            'disaster_event_id'
-        );
-    }
 
     /**
      * User who created the campaign.
@@ -190,13 +176,5 @@ class AssistanceCampaign extends Model
         }
 
         return true;
-    }
-
-    /**
-     * Determine whether this campaign is disaster-related.
-     */
-    public function isDisasterCampaign(): bool
-    {
-        return $this->disaster_event_id !== null;
     }
 }

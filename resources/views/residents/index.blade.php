@@ -6,8 +6,12 @@
 <style>
     /* =========================================================
        Residents list — modern, theme-balanced, live search
-       All text/background pairs are chosen for strong contrast
-       in BOTH light and dark mode.
+       SEMANTIC COLORS
+         Green  = primary action / success / selected
+         Blue   = info
+         Red    = danger / destructive only
+         Gray   = archived / inactive
+       Pink + green hero = brand decoration only.
        ========================================================= */
     .residents-page {
         --rp-bg:#ffffff;
@@ -16,15 +20,17 @@
         --rp-text:#2b2023;
         --rp-muted:#5f4f54;
         --rp-border:#e3d6d9;
-        --rp-accent:#d63e4c;
-        --rp-accent-2:#ef6b78;
+        --rp-accent:#237a35;
+        --rp-accent-2:#2f9e44;
         --rp-on-accent:#ffffff;
-        --rp-accent-soft:#fdeaec;
-        --rp-green:#2f8a3a;
+        --rp-accent-soft:#e6f4e4;
+        --rp-green:#237a35;
         --rp-green-soft:#e6f4e4;
+        --rp-info:#1c7ed6;
+        --rp-info-soft:#e3effb;
         --rp-off:#5f4f54;
         --rp-off-soft:#ece4e6;
-        --rp-danger:#b4232f;
+        --rp-danger:#c92a3b;
         --rp-danger-soft:#fdeaec;
         --rp-shadow:0 1px 2px rgba(60,20,30,.05),0 14px 30px rgba(60,20,30,.07);
         --rp-select-arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232b2023' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
@@ -37,24 +43,26 @@
         --rp-text:#f6eff1;
         --rp-muted:#c3d0c7;
         --rp-border:#34503d;
-        --rp-accent:#ff8793;
-        --rp-accent-2:#ffa9b1;
-        --rp-on-accent:#2a0c12;
-        --rp-accent-soft:#3a1f26;
+        --rp-accent:#5fc062;
+        --rp-accent-2:#8fe29a;
+        --rp-on-accent:#0b2314;
+        --rp-accent-soft:#1f3a26;
         --rp-green:#7fdc8a;
         --rp-green-soft:#1f3a26;
+        --rp-info:#6cb2ff;
+        --rp-info-soft:#1b2f45;
         --rp-off:#c3d0c7;
         --rp-off-soft:#223529;
-        --rp-danger:#ffb3ba;
+        --rp-danger:#ff7b87;
         --rp-danger-soft:#43202a;
         --rp-shadow:none;
         --rp-select-arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f6eff1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     }
     .residents-page, .residents-page * { box-sizing:border-box; }
-    .residents-page :focus-visible { outline:3px solid var(--rp-green); outline-offset:2px; }
+    .residents-page :focus-visible { outline:3px solid var(--rp-info); outline-offset:2px; }
     .residents-page .text-muted { color:var(--rp-muted) !important; }
 
-    /* ---------- Hero ---------- */
+    /* ---------- Hero (brand decoration) ---------- */
     .rp-hero {
         position:relative; overflow:hidden; border-radius:24px; padding:26px 28px; margin-bottom:22px; color:#fff;
         background:linear-gradient(120deg,#d63e4c 0%,#ef6b78 60%,#f59aa2 100%);
@@ -68,13 +76,14 @@
     .rp-crumb { font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#fff; opacity:.92; margin-bottom:6px; }
     .rp-hero h1 { margin:0; font-size:clamp(1.6rem,3vw,2.1rem); font-weight:800; letter-spacing:-.02em; color:#fff; }
     .rp-hero p { margin:6px 0 0; font-size:.95rem; color:#fff; opacity:.96; }
+    /* Add button = primary action = green text (red is reserved for danger) */
     .rp-addbtn {
         display:inline-flex; align-items:center; gap:8px; min-height:46px; padding:.6rem 1.3rem; border-radius:14px;
-        background:#fff; color:#b4232f !important; font-weight:800; text-decoration:none; border:0;
+        background:#fff; color:#1d6a2d !important; font-weight:800; text-decoration:none; border:0;
         box-shadow:0 8px 18px rgba(60,10,20,.2); transition:transform .15s, box-shadow .15s;
     }
     .rp-addbtn:hover { transform:translateY(-2px); box-shadow:0 12px 22px rgba(60,10,20,.26); }
-    html[data-theme="dark"] .rp-addbtn { background:#fff4f5; }
+    html[data-theme="dark"] .rp-addbtn { background:#f1fbf2; }
 
     /* ---------- Card ---------- */
     .residents-page .card {
@@ -82,7 +91,7 @@
         border:1px solid var(--rp-border) !important; border-radius:22px; box-shadow:var(--rp-shadow); overflow:hidden;
     }
     .rp-loadbar { position:absolute; left:0; top:0; height:3px; width:100%; z-index:6; overflow:hidden; opacity:0; transition:opacity .15s; pointer-events:none; }
-    .rp-loadbar::after { content:''; position:absolute; inset:0; width:40%; background:linear-gradient(90deg,var(--rp-accent),var(--rp-green)); animation:rpslide 1s infinite ease-in-out; }
+    .rp-loadbar::after { content:''; position:absolute; inset:0; width:40%; background:linear-gradient(90deg,var(--rp-accent),var(--rp-info)); animation:rpslide 1s infinite ease-in-out; }
     .card.is-loading .rp-loadbar { opacity:1; }
     @keyframes rpslide { 0% { transform:translateX(-100%); } 100% { transform:translateX(260%); } }
 
@@ -98,7 +107,7 @@
     .rp-tab:hover { color:var(--rp-text); border-color:var(--rp-accent-2); }
     .rp-tab.is-active { background:var(--rp-accent); border-color:var(--rp-accent); color:var(--rp-on-accent); }
     .rp-tab.is-active b { background:rgba(255,255,255,.28); color:var(--rp-on-accent); }
-    html[data-theme="dark"] .rp-tab.is-active b { background:rgba(42,12,18,.22); }
+    html[data-theme="dark"] .rp-tab.is-active b { background:rgba(11,35,20,.22); }
 
     /* ---------- Toolbar ---------- */
     .rp-tools { display:flex; gap:10px; flex-wrap:wrap; padding:0 18px 16px; align-items:center; border-bottom:1px solid var(--rp-border); }
@@ -108,7 +117,7 @@
     .rp-search.has-text kbd { display:none; }
     .rp-x { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; display:none; place-items:center; border:0; border-radius:8px; background:var(--rp-soft-2); color:var(--rp-text); cursor:pointer; }
     .rp-search.has-text .rp-x { display:grid; }
-    .rp-x:hover { background:var(--rp-danger-soft); color:var(--rp-danger); }
+    .rp-x:hover { background:var(--rp-soft); color:var(--rp-accent); }
 
     .residents-page .form-control, .residents-page .form-select {
         min-height:46px; background-color:var(--rp-soft); color:var(--rp-text);
@@ -128,9 +137,10 @@
     .residents-page .form-select option { background:var(--rp-bg); color:var(--rp-text); }
     .residents-page input[type="search"]::-webkit-search-cancel-button { display:none; }
 
+    /* "Clear filters" is a neutral reset, not a destructive action */
     .rp-clear { display:none; align-items:center; gap:6px; min-height:46px; padding:0 14px; border:1.5px dashed var(--rp-border); border-radius:14px; background:transparent; color:var(--rp-muted); font-size:.875rem; font-weight:700; cursor:pointer; }
     .rp-clear.show { display:inline-flex; }
-    .rp-clear:hover { color:var(--rp-danger); border-color:var(--rp-danger); background:var(--rp-danger-soft); }
+    .rp-clear:hover { color:var(--rp-accent); border-color:var(--rp-accent); background:var(--rp-accent-soft); }
     .rp-toggle { display:inline-flex; gap:3px; border:1.5px solid var(--rp-border); border-radius:14px; padding:3px; background:var(--rp-soft); margin-left:auto; }
     .rp-toggle button { border:0; background:transparent; color:var(--rp-muted); width:38px; height:36px; border-radius:10px; }
     .rp-toggle button:hover { color:var(--rp-text); }
@@ -166,6 +176,7 @@
 
     .rp-person { display:flex; align-items:center; gap:13px; min-width:0; }
     .rp-avatar { width:44px; height:44px; flex:0 0 44px; border-radius:14px; display:grid; place-items:center; background:var(--av-bg); color:var(--av-fg); font-weight:800; font-size:.85rem; }
+    /* avatar tints are decorative identity colors, not status colors */
     .av-0{--av-bg:#fdeaec;--av-fg:#b4232f} .av-1{--av-bg:#e6f4e4;--av-fg:#256f2f} .av-2{--av-bg:#fff1d6;--av-fg:#8a5200}
     .av-3{--av-bg:#fde6f0;--av-fg:#a3124f} .av-4{--av-bg:#e3f1f3;--av-fg:#0b6a79} .av-5{--av-bg:#efe8fb;--av-fg:#5a34b3}
     html[data-theme="dark"] .av-0{--av-bg:#43202a;--av-fg:#ffb3ba} html[data-theme="dark"] .av-1{--av-bg:#1f3a26;--av-fg:#8fe39a}
@@ -176,7 +187,8 @@
     .rp-name mark { background:var(--rp-accent-soft); color:var(--rp-accent); padding:0 2px; border-radius:4px; font-weight:800; }
     .rp-id { font-size:.8rem; color:var(--rp-muted); font-variant-numeric:tabular-nums; font-weight:600; }
     .rp-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
-    .rp-tag { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.7rem; font-weight:800; line-height:1.4; background:var(--rp-soft-2); color:var(--rp-text); border:1px solid var(--rp-border); }
+    /* sector tags (PWD, Senior…) = info */
+    .rp-tag { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.7rem; font-weight:800; line-height:1.4; background:var(--rp-info-soft); color:var(--rp-info); border:1px solid transparent; }
 
     .rp-pill { display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:999px; font-size:.8rem; font-weight:800; }
     .rp-pill::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
@@ -210,7 +222,7 @@
     .rp-empty h5 { margin:12px 0 4px; font-weight:800; color:var(--rp-text); }
     .residents-page .btn { min-height:44px; padding:.5rem 1.15rem; border-radius:12px; font-weight:800; }
     .residents-page .btn-primary { background:var(--rp-accent); border:1.5px solid var(--rp-accent); color:var(--rp-on-accent); }
-    .residents-page .btn-primary:hover { background:var(--rp-accent-2); border-color:var(--rp-accent-2); color:var(--rp-on-accent); }
+    .residents-page .btn-primary:hover { background:var(--rp-accent); border-color:var(--rp-accent); color:var(--rp-on-accent); filter:brightness(1.12); }
     .residents-page .btn-outline-secondary { color:var(--rp-text); border:1.5px solid var(--rp-border); background:var(--rp-bg); }
     .residents-page .btn-outline-secondary:hover { background:var(--rp-soft-2); color:var(--rp-text); border-color:var(--rp-accent-2); }
     .rp-foot { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:16px 20px; border-top:1px solid var(--rp-border); font-size:.875rem; font-weight:600; color:var(--rp-muted); }
@@ -248,10 +260,18 @@
     ];
 
     $currentStatus = (string) request('status', '');
-    $hasFilters    = request()->filled('search') || request()->filled('sex') || $currentStatus !== '';
+    $currentClassification = (string) request('classification', '');
+    $currentPurok = (string) request('purok', '');
+    $currentSort = (string) request('sort', 'newest');
+
+    $hasFilters = request()->filled('search')
+        || request()->filled('classification')
+        || request()->filled('purok')
+        || request()->filled('sex')
+        || $currentStatus !== ''
+        || ($currentSort !== '' && $currentSort !== 'newest');
 
     $quickFilters = ['PWD', 'Senior Citizen', 'Solo Parent', 'Student'];
-    $currentSearch = strtolower(trim((string) request('search', '')));
 @endphp
 
 <div class="container-fluid residents-page">
@@ -295,13 +315,22 @@
                 <input type="hidden" name="status" id="rp-status-input" value="" disabled>
             @endif
 
+            <input type="hidden" name="classification" id="rp-classification-input" value="{{ $currentClassification }}">
+
             <div class="rp-search {{ request('search') ? 'has-text' : '' }}" id="rp-search-box">
                 <i class="bi bi-search lead"></i>
                 <input type="search" id="rp-search" name="search" class="form-control"
-                       placeholder="Search by name or status (PWD, Senior, Solo Parent, Student)…" value="{{ request('search') }}" aria-label="Search residents by name or status">
+                       placeholder="Search resident name…" value="{{ request('search') }}" aria-label="Search residents by name only">
                 <kbd>/</kbd>
                 <button type="button" class="rp-x" id="rp-x" aria-label="Clear search"><i class="bi bi-x-lg"></i></button>
             </div>
+
+            <select name="purok" id="rp-purok" class="form-select" aria-label="Filter by Purok">
+                <option value="">All Puroks</option>
+                @foreach($puroks as $purok)
+                    <option value="{{ $purok }}" {{ $currentPurok === (string) $purok ? 'selected' : '' }}>{{ $purok }}</option>
+                @endforeach
+            </select>
 
             <select name="sex" id="rp-sex" class="form-select" aria-label="Filter by sex">
                 <option value="">Any sex</option>
@@ -309,9 +338,12 @@
                 <option value="Female" {{ request('sex') === 'Female' ? 'selected' : '' }}>Female</option>
             </select>
 
-            <button type="button" class="rp-clear {{ $hasFilters ? 'show' : '' }}" id="rp-clear">
-                <i class="bi bi-x-circle"></i> Clear filters
-            </button>
+            <select name="sort" id="rp-sort" class="form-select" aria-label="Sort residents">
+                <option value="newest" {{ $currentSort === 'newest' ? 'selected' : '' }}>Newest first</option>
+                <option value="oldest" {{ $currentSort === 'oldest' ? 'selected' : '' }}>Oldest first</option>
+                <option value="name_asc" {{ $currentSort === 'name_asc' ? 'selected' : '' }}>Name A–Z</option>
+                <option value="name_desc" {{ $currentSort === 'name_desc' ? 'selected' : '' }}>Name Z–A</option>
+            </select>
 
             {{-- Only shown if JavaScript is turned off --}}
             <noscript><button type="submit" class="btn btn-primary">Filter</button></noscript>
@@ -326,7 +358,7 @@
         <div class="rp-chips" id="rp-chips" role="group" aria-label="Quick status filters">
             <span class="rp-chips-label">Quick filter:</span>
             @foreach($quickFilters as $chip)
-                <button type="button" class="rp-chip {{ $currentSearch === strtolower($chip) ? 'is-active' : '' }}" data-q="{{ $chip }}">{{ $chip }}</button>
+                <button type="button" class="rp-chip {{ strtolower($currentClassification) === strtolower($chip) ? 'is-active' : '' }}" data-q="{{ $chip }}">{{ $chip }}</button>
             @endforeach
         </div>
 
@@ -370,7 +402,7 @@
                                 <div class="rp-person">
                                     <div class="rp-avatar av-{{ $resident->id % 6 }}" aria-hidden="true">{{ $initials }}</div>
                                     <div class="text-truncate">
-                                        <a href="{{ route('residents.show', $resident->id) }}" class="rp-name">{{ $fullName }}</a>
+                                        <span class="rp-name">{{ $fullName }}</span>
                                         <div class="rp-id">ID {{ str_pad($resident->id, 5, '0', STR_PAD_LEFT) }}</div>
                                         @if(count($rowTags))
                                             <div class="rp-tags">
@@ -429,11 +461,9 @@
                                     <i class="bi bi-people"></i>
                                     <h5>{{ $hasFilters ? 'No residents match your search' : 'No residents yet' }}</h5>
                                     <p class="text-muted mb-3">
-                                        {{ $hasFilters ? 'Try a different name or status, or clear the filters.' : 'Add the first resident record to get started.' }}
+                                        {{ $hasFilters ? 'Try a different name or adjust the filters above.' : 'Add the first resident record to get started.' }}
                                     </p>
-                                    @if($hasFilters)
-                                        <a href="{{ route('residents.index') }}" class="btn btn-outline-secondary js-clear">Clear filters</a>
-                                    @else
+                                    @if(!$hasFilters)
                                         <a href="{{ route('residents.create') }}" class="btn btn-primary">
                                             <i class="bi bi-person-plus-fill me-1"></i> Add Resident
                                         </a>
@@ -469,8 +499,10 @@
     var box      = document.getElementById('rp-search-box');
     var xbtn     = document.getElementById('rp-x');
     var sex      = document.getElementById('rp-sex');
+    var purok    = document.getElementById('rp-purok');
+    var sort     = document.getElementById('rp-sort');
+    var classIn  = document.getElementById('rp-classification-input');
     var statusIn = document.getElementById('rp-status-input');
-    var clearBtn = document.getElementById('rp-clear');
     var tabsWrap = document.getElementById('rp-tabs-wrap');
     var results  = document.getElementById('rp-results');
     var live     = document.getElementById('rp-live');
@@ -499,12 +531,16 @@
 
     /* ---------- helpers ---------- */
     function hasFilters() {
-        return search.value.trim() !== '' || sex.value !== '' || (statusIn && !statusIn.disabled && statusIn.value !== '');
+        return search.value.trim() !== ''
+            || sex.value !== ''
+            || purok.value !== ''
+            || (sort.value !== '' && sort.value !== 'newest')
+            || (classIn && classIn.value !== '')
+            || (statusIn && !statusIn.disabled && statusIn.value !== '');
     }
     function syncUi() {
         box.classList.toggle('has-text', search.value !== '');
-        clearBtn.classList.toggle('show', hasFilters());
-        var current = search.value.trim().toLowerCase();
+        var current = classIn ? classIn.value.trim().toLowerCase() : '';
         chips.forEach(function (c) {
             c.classList.toggle('is-active', current !== '' && c.dataset.q.toLowerCase() === current);
         });
@@ -512,7 +548,10 @@
     function buildUrl() {
         var p = new URLSearchParams();
         if (search.value.trim() !== '') p.set('search', search.value.trim());
+        if (classIn && classIn.value !== '') p.set('classification', classIn.value);
+        if (purok.value !== '') p.set('purok', purok.value);
         if (sex.value !== '') p.set('sex', sex.value);
+        if (sort.value !== '') p.set('sort', sort.value);
         if (statusIn && !statusIn.disabled && statusIn.value !== '') p.set('status', statusIn.value);
         if (page) p.set('page', page);
         var qs = p.toString();
@@ -606,32 +645,37 @@
     search.addEventListener('input', function () { page = ''; run(300); });
     /* choosing a dropdown value → filters immediately */
     sex.addEventListener('change', function () { page = ''; run(0); });
+    purok.addEventListener('change', function () { page = ''; run(0); });
+    sort.addEventListener('change', function () { page = ''; run(0); });
     /* Enter key never reloads the page */
     form.addEventListener('submit', function (e) { e.preventDefault(); page = ''; run(0); });
 
     function clearAll() {
-        search.value = ''; sex.value = ''; setStatus(''); page = '';
-        syncUi(); run(0); search.focus();
+        search.value = '';
+        sex.value = '';
+        purok.value = '';
+        sort.value = 'newest';
+        if (classIn) classIn.value = '';
+        setStatus('');
+        page = '';
+        syncUi();
+        run(0);
+        search.focus();
     }
     xbtn.addEventListener('click', function () { search.value = ''; page = ''; run(0); search.focus(); });
-    clearBtn.addEventListener('click', clearAll);
 
-    /* quick status chips: click to filter, click again to remove */
+    /* Quick classification chips remain separate from the name search. */
     chips.forEach(function (chip) {
         chip.addEventListener('click', function () {
-            var same = search.value.trim().toLowerCase() === chip.dataset.q.toLowerCase();
-            search.value = same ? '' : chip.dataset.q;
+            var same = classIn.value.trim().toLowerCase() === chip.dataset.q.toLowerCase();
+            classIn.value = same ? '' : chip.dataset.q;
             page = '';
             run(0);
-            search.focus();
         });
     });
 
-    /* status tabs, pagination and "clear filters" inside the results: no full reload */
+    /* status tabs and pagination update results without a full reload */
     document.addEventListener('click', function (e) {
-        var clearLink = e.target.closest('.js-clear');
-        if (clearLink && results.contains(clearLink)) { e.preventDefault(); clearAll(); return; }
-
         var tab = e.target.closest('.rp-tab');
         if (tab && tabsWrap.contains(tab)) {
             e.preventDefault();

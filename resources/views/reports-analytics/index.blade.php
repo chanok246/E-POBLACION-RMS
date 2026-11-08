@@ -1656,16 +1656,9 @@
                     </a>
                 @endif
 
-                @if (Route::has('audit-logs.index'))
+                @if (Route::has('audit-logs.index') &&
+                    strtolower(trim((string) auth()->user()->role)) === 'captain')
                     <a href="{{ route('audit-logs.index') }}" class="ax-module">
-                        <i class="bi bi-shield-check"></i>
-                        Audit Trail
-                    </a>
-                @else
-                    <a href="#"
-                       class="ax-module is-disabled"
-                       onclick="return false;"
-                       title="Audit Trail route is currently being configured.">
                         <i class="bi bi-shield-check"></i>
                         Audit Trail
                     </a>

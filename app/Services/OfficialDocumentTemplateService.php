@@ -1192,19 +1192,19 @@ class OfficialDocumentTemplateService
         $this->setParagraphAlignmentContaining(
             $xpath,
             'This is to certify that,',
-            'center'
+            'both'
         );
 
         $this->setParagraphAlignmentContaining(
             $xpath,
             'This certification is issued upon request',
-            'center'
+            'both'
         );
 
         $this->setParagraphAlignmentContaining(
             $xpath,
             'Given this',
-            'center'
+            'both'
         );
     }
 

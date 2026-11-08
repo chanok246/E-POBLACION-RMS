@@ -349,10 +349,7 @@
         color: var(--community);
     }
 
-    /*
-     * Subpoena information box.
-     * This class is only rendered for person complaints.
-     */
+    /* Subpoena information box (person complaints only). */
     .subp {
         display: flex;
         gap: .8rem;
@@ -465,6 +462,7 @@
         margin: 0;
     }
 
+    /* Sidebar buttons: full width (colors come from the shared _ui styles). */
     .act {
         display: flex;
         width: 100%;
@@ -543,7 +541,125 @@
             transition: none !important;
         }
     }
+
+    /* =====================================================================
+       UI/UX COLOR SYSTEM  (one color = one meaning, same in all 4 pages)
+       INDIGO = main action | GREEN = resolve | SLATE = close
+       GRAY = secondary/safe | RED = destructive | TEAL/ROSE = record type
+       ===================================================================== */
+    .rc {
+        --ui-primary: #4338ca; --ui-primary-hover: #3730a3; --ui-primary-soft: #eeecfd; --ui-on-primary: #ffffff;
+        --ui-success: #15803d; --ui-success-hover: #166534; --ui-success-soft: #e0f6ea;
+        --ui-close: #475569;   --ui-close-soft: #eef0f4;
+        --ui-danger: #dc2626;  --ui-danger-soft: #fdecec;
+        --ui-neutral-text: #475569; --ui-neutral-line: #cbd2de; --ui-neutral-hover: #f1f4f9;
+        --ui-field-bg: #ffffff; --ui-field-text: #111827; --ui-field-line: #d5dae5;
+        --ui-placeholder: #a4abbb; --ui-field-locked: #f1f3f8;
+    }
+    html[data-theme="dark"] .rc, html[data-bs-theme="dark"] .rc, body[data-theme="dark"] .rc, body.dark-mode .rc {
+        --ui-primary: #8b81f0; --ui-primary-hover: #a29af5; --ui-primary-soft: rgba(139,129,240,.16); --ui-on-primary: #12122a;
+        --ui-success: #4ade80; --ui-success-hover: #6ee7a0; --ui-success-soft: rgba(74,222,128,.14);
+        --ui-close: #94a3b8;   --ui-close-soft: rgba(148,163,184,.14);
+        --ui-danger: #f87171;  --ui-danger-soft: rgba(248,113,113,.14);
+        --ui-neutral-text: #c3cbda; --ui-neutral-line: #4a5570; --ui-neutral-hover: rgba(255,255,255,.06);
+        --ui-field-bg: #141a25; --ui-field-text: #f3f6fc; --ui-field-line: #36405a;
+        --ui-placeholder: #667089; --ui-field-locked: #1b2332;
+    }
+
+    /* ---- Buttons: shared shape ---- */
+    .rc .btn, .rc .cta, .rc .view-btn, .rc .resolve-btn, .rc .close-btn, .rc .reset, .rc .act, .rc .rcp-btn-primary, .rc .rcp-btn-ghost {
+        font-weight: 700;
+        transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+
+    /* INDIGO: main / constructive action */
+    .rc .btn-primary,
+    .rc .rcp-btn-primary,
+    .rc .cta,
+    .rc .act-brand {
+        background: var(--ui-primary); border: 1.5px solid var(--ui-primary); color: var(--ui-on-primary); filter: none;
+    }
+    .rc .btn-primary:hover,
+    .rc .rcp-btn-primary:hover,
+    .rc .cta:hover,
+    .rc .act-brand:hover {
+        background: var(--ui-primary-hover); border-color: var(--ui-primary-hover); color: var(--ui-on-primary); filter: none;
+    }
+
+    /* GRAY GHOST: secondary / safe (Cancel, Back, View, Print, Reset) */
+    .rc .btn-outline-secondary,
+    .rc .rcp-btn-ghost,
+    .rc .view-btn,
+    .rc .act-line,
+    .rc .reset {
+        background: transparent; border: 1.5px solid var(--ui-neutral-line); color: var(--ui-neutral-text);
+    }
+    .rc .btn-outline-secondary:hover,
+    .rc .rcp-btn-ghost:hover,
+    .rc .view-btn:hover,
+    .rc .act-line:hover,
+    .rc .reset:hover {
+        background: var(--ui-neutral-hover); border-color: var(--ui-neutral-text); color: var(--ui-neutral-text);
+    }
+
+    /* GREEN: Resolve (positive outcome) */
+    .rc .resolve-btn { background: var(--ui-success-soft); border: 1.5px solid var(--ui-success); color: var(--ui-success); }
+    .rc .resolve-btn:hover { background: var(--ui-success); border-color: var(--ui-success); color: #fff; }
+    .rc .act-green { background: var(--ui-success); border: 1.5px solid var(--ui-success); color: #fff; filter: none; }
+    .rc .act-green:hover { background: var(--ui-success-hover); border-color: var(--ui-success-hover); color: #fff; filter: none; }
+    html[data-theme="dark"] .rc .act-green, html[data-bs-theme="dark"] .rc .act-green, body[data-theme="dark"] .rc .act-green, body.dark-mode .rc .act-green { color: #06210f; }
+
+    /* SLATE: Close case (finality, different from Resolve green) */
+    .rc .close-btn,
+    .rc .act-close { background: var(--ui-close-soft); border: 1.5px solid var(--ui-close); color: var(--ui-close); }
+    .rc .close-btn:hover,
+    .rc .act-close:hover { background: var(--ui-close); border-color: var(--ui-close); color: #fff; }
+    html[data-theme="dark"] .rc .act-close:hover, html[data-bs-theme="dark"] .rc .act-close:hover, body[data-theme="dark"] .rc .act-close:hover, body.dark-mode .rc .act-close:hover { color: #0f1620; }
+    html[data-theme="dark"] .rc .close-btn:hover, html[data-bs-theme="dark"] .rc .close-btn:hover, body[data-theme="dark"] .rc .close-btn:hover, body.dark-mode .rc .close-btn:hover { color: #0f1620; }
+
+    /* RED: destructive / disapprove */
+    .rc .btn-danger,
+    .rc .btn-outline-danger,
+    .rc .act-danger { background: var(--ui-danger-soft); border: 1.5px solid var(--ui-danger); color: var(--ui-danger); }
+    .rc .btn-danger:hover,
+    .rc .btn-outline-danger:hover,
+    .rc .act-danger:hover { background: var(--ui-danger); border-color: var(--ui-danger); color: #fff; }
+
+    /* Disabled + focus */
+    .rc .btn:disabled,
+    .rc .cta:disabled,
+    .rc .act:disabled { opacity: .5; cursor: not-allowed; }
+    .rc .btn:focus-visible,
+    .rc .cta:focus-visible,
+    .rc .act:focus-visible,
+    .rc .view-btn:focus-visible,
+    .rc .resolve-btn:focus-visible,
+    .rc .close-btn:focus-visible,
+    .rc .reset:focus-visible {
+        outline: 3px solid var(--ui-primary); outline-offset: 2px; box-shadow: none;
+    }
+
+    /* Dropdown still on "-- Select --" looks like a hint, not a value */
+    .rc .form-select:has(option[value=""]:checked) { color: var(--ui-placeholder); font-weight: 400; }
+    .rc .form-select option { color: var(--ui-field-text); font-weight: 500; background-color: var(--ui-field-bg); }
+    .rc .form-select option[value=""] { color: var(--ui-placeholder); }
+
+    /* Empty date/time: dim the mm/dd/yyyy mask (class toggled by the tiny script below) */
+    .rc input.ui-empty[type="date"]:not(:focus)::-webkit-datetime-edit,
+    .rc input.ui-empty[type="time"]:not(:focus)::-webkit-datetime-edit { color: var(--ui-placeholder); }
+
+    /* Fixed / read-only values are information, not inputs */
+    .rc .form-control[readonly] {
+        background-color: var(--ui-field-locked); border-style: dashed; color: var(--ui-field-text); font-weight: 600; cursor: default;
+    }
+    .rc .form-control.is-invalid, .rc .form-select.is-invalid { border-color: var(--ui-danger); }
+
 </style>
+
+
+{{-- Shared button + text-field styles (must come last so it wins) --}}
+
+
 @endpush
 
 @section('content')
@@ -551,11 +667,7 @@
 @php
     $r = $reportsComplaint;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Status mapping
-    |--------------------------------------------------------------------------
-    */
+    /* Status mapping */
     $statusMap = [
         'Filed' => 's-filed',
         'Under Review' => 's-review',
@@ -572,26 +684,15 @@
     $statusClass = $statusMap[$r->status] ?? 's-filed';
 
     /*
-    |--------------------------------------------------------------------------
-    | Report type
-    |--------------------------------------------------------------------------
-    | Only PERSON complaints may use subpoena functionality.
-    | COMMUNITY reports never show subpoena information/actions.
-    |--------------------------------------------------------------------------
-    */
+     * Report type. Only PERSON complaints may use subpoena functionality.
+     */
     $isPerson = strtolower((string) $r->report_type) === 'person';
 
     $isCommunity = strtolower((string) $r->report_type) === 'community';
 
     /*
-    |--------------------------------------------------------------------------
-    | Subpoena
-    |--------------------------------------------------------------------------
-    | Keep the subpoena state only for person complaints.
-    | Even if an old community record accidentally contains a subpoena flag,
-    | it will NOT be shown or printable from this page.
-    |--------------------------------------------------------------------------
-    */
+     * Subpoena state only for person complaints.
+     */
     $hasSubpoena = false;
 
     if ($isPerson) {
@@ -600,56 +701,23 @@
             : ! empty($r->subpoena_requested);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Available actions
-    |--------------------------------------------------------------------------
-    */
-    $canEdit = ! in_array($r->status, [
-        'Resolved',
-        'Closed',
-    ]);
+    /* Available actions */
+    $canEdit = ! in_array($r->status, ['Resolved', 'Closed']);
 
-    $canResolve = ! in_array($r->status, [
-        'Resolved',
-        'Closed',
-        'Disapproved',
-    ]);
+    $canResolve = ! in_array($r->status, ['Resolved', 'Closed', 'Disapproved']);
 
-    /*
-     * Printing a subpoena is ONLY possible when:
-     * 1. This is a person complaint
-     * 2. A subpoena/notice was requested
-     */
     $canPrint = $isPerson && $hasSubpoena;
 
-    /*
-    |--------------------------------------------------------------------------
-    | URLs
-    |--------------------------------------------------------------------------
-    */
-    $editUrl = route(
-        'reports-complaints.edit',
-        ['reports_complaint' => $r->id]
-    );
+    /* URLs */
+    $editUrl = route('reports-complaints.edit', ['reports_complaint' => $r->id]);
 
     $printUrl = $isPerson && $hasSubpoena
-        ? route(
-            'reports-complaints.subpoena.print',
-            ['reports_complaint' => $r->id]
-        )
+        ? route('reports-complaints.subpoena.print', ['reports_complaint' => $r->id])
         : null;
 
-    $resolveUrl = route(
-        'reports-complaints.resolve',
-        ['reports_complaint' => $r->id]
-    );
+    $resolveUrl = route('reports-complaints.resolve', ['reports_complaint' => $r->id]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Helpers
-    |--------------------------------------------------------------------------
-    */
+    /* Helpers */
     $fullName = fn ($p) => $p
         ? trim(
             collect([
@@ -673,14 +741,9 @@
     };
 
     /*
-    |--------------------------------------------------------------------------
-    | Manually entered (non-resident) participants
-    |--------------------------------------------------------------------------
-    | Non-residents are stored in the report's own columns
-    | (complainant_* / subject_*), not in the Residents table.
-    | Returns null when no manual name was saved.
-    |--------------------------------------------------------------------------
-    */
+     * Manually entered (non-resident) participants are stored in the
+     * report's own columns (complainant_* / subject_*).
+     */
     $manualParty = function (string $prefix) use ($r) {
         $name = trim((string) $r->{$prefix . '_name'});
 
@@ -725,11 +788,7 @@
 
     $relationship = trim((string) $r->relationship_to_complainant);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Timeline
-    |--------------------------------------------------------------------------
-    */
+    /* Timeline */
     $timeline = [
         ['Recorded', $r->created_at],
         ['Last updated', $r->updated_at],
@@ -763,10 +822,7 @@
             </div>
         @endif
 
-        {{-- =========================================================
-             STATUS BANNERS
-             ========================================================= --}}
-
+        {{-- STATUS BANNERS --}}
         @if ($r->status === 'Resolved')
             <div class="flash s-resolved">
                 <i class="bi bi-check-circle-fill"></i>
@@ -778,8 +834,7 @@
                         This report or complaint has already been marked as resolved.
 
                         @if ($r->resolved_at)
-                            Resolved on
-                            {{ $r->resolved_at->format('F d, Y h:i A') }}.
+                            Resolved on {{ $r->resolved_at->format('F d, Y h:i A') }}.
                         @endif
                     </span>
                 </div>
@@ -808,18 +863,13 @@
                 <div>
                     <b>Report disapproved</b>
 
-                    <span>
-                        This report or complaint has been disapproved.
-                    </span>
+                    <span>This report or complaint has been disapproved.</span>
                 </div>
             </div>
 
         @endif
 
-        {{-- =========================================================
-             HERO
-             ========================================================= --}}
-
+        {{-- HERO --}}
         <div class="hero">
 
             <div class="hero-top">
@@ -844,10 +894,7 @@
 
                 @else
 
-                    <span
-                        class="ttype"
-                        style="--c: var(--muted); --cbg: var(--wash)"
-                    >
+                    <span class="ttype" style="--c: var(--muted); --cbg: var(--wash)">
                         {{ ucfirst($r->report_type ?? 'N/A') }}
                     </span>
 
@@ -881,8 +928,7 @@
                     }}
 
                     @if ($r->incident_time)
-                        at
-                        {{ \Carbon\Carbon::parse($r->incident_time)->format('h:i A') }}
+                        at {{ \Carbon\Carbon::parse($r->incident_time)->format('h:i A') }}
                     @endif
                 </span>
 
@@ -896,27 +942,20 @@
 
         <div class="layout">
 
-            {{-- =====================================================
-                 LEFT CONTENT
-                 ===================================================== --}}
-
+            {{-- LEFT CONTENT --}}
             <div>
 
                 {{-- WHAT HAPPENED --}}
                 <section class="card2">
 
                     <div class="card2-head">
-                        <h2 class="display">
-                            What happened
-                        </h2>
+                        <h2 class="display">What happened</h2>
                     </div>
 
                     <div class="card2-body">
-
                         <div class="text {{ $r->description ? '' : 'empty' }}">
                             {{ $r->description ?: 'No description provided.' }}
                         </div>
-
                     </div>
 
                 </section>
@@ -946,16 +985,11 @@
 
                                 <div class="who">
 
-                                    <span
-                                        class="avatar"
-                                        aria-hidden="true"
-                                    >
+                                    <span class="avatar" aria-hidden="true">
                                         {{ $r->complainant ? $initials($r->complainant) : $initialsFromName($complainantName) }}
                                     </span>
 
-                                    <b>
-                                        {{ $complainantName ?: 'N/A' }}
-                                    </b>
+                                    <b>{{ $complainantName ?: 'N/A' }}</b>
 
                                 </div>
 
@@ -993,73 +1027,49 @@
 
                                         <div class="who">
 
-                                            <span
-                                                class="avatar"
-                                                aria-hidden="true"
-                                            >
+                                            <span class="avatar" aria-hidden="true">
                                                 {{ $initials($r->subjectResident) }}
                                             </span>
 
-                                            <b>
-                                                {{ $fullName($r->subjectResident) }}
-                                            </b>
+                                            <b>{{ $fullName($r->subjectResident) }}</b>
 
                                         </div>
 
                                         <div class="kv">
                                             <i class="bi bi-telephone"></i>
-
-                                            <span>
-                                                {{ $r->subjectResident->contact_number ?? 'N/A' }}
-                                            </span>
+                                            <span>{{ $r->subjectResident->contact_number ?? 'N/A' }}</span>
                                         </div>
 
                                         <div class="kv">
                                             <i class="bi bi-house"></i>
-
-                                            <span>
-                                                {{ $r->subjectResident->address ?? 'N/A' }}
-                                            </span>
+                                            <span>{{ $r->subjectResident->address ?? 'N/A' }}</span>
                                         </div>
 
                                     @elseif ($subjectManual)
 
                                         <div class="who">
 
-                                            <span
-                                                class="avatar"
-                                                aria-hidden="true"
-                                            >
+                                            <span class="avatar" aria-hidden="true">
                                                 {{ $initialsFromName($subjectManual['name']) }}
                                             </span>
 
-                                            <b>
-                                                {{ $subjectManual['name'] }}
-                                            </b>
+                                            <b>{{ $subjectManual['name'] }}</b>
 
                                         </div>
 
                                         <div class="kv">
                                             <i class="bi bi-telephone"></i>
-
-                                            <span>
-                                                {{ $subjectManual['contact'] ?? 'N/A' }}
-                                            </span>
+                                            <span>{{ $subjectManual['contact'] ?? 'N/A' }}</span>
                                         </div>
 
                                         <div class="kv">
                                             <i class="bi bi-house"></i>
-
-                                            <span>
-                                                {{ $subjectManual['address'] ?? 'N/A' }}
-                                            </span>
+                                            <span>{{ $subjectManual['address'] ?? 'N/A' }}</span>
                                         </div>
 
                                     @else
 
-                                        <div class="muted">
-                                            No respondent recorded.
-                                        </div>
+                                        <div class="muted">No respondent recorded.</div>
 
                                     @endif
 
@@ -1069,8 +1079,7 @@
                                             <i class="bi bi-people"></i>
 
                                             <span>
-                                                Relationship to complainant:
-                                                {{ $relationship }}
+                                                Relationship to complainant: {{ $relationship }}
                                             </span>
                                         </div>
 
@@ -1082,9 +1091,7 @@
 
                         </div>
 
-                        {{-- =================================================
-                             PERSON COMPLAINT ONLY — SUBPOENA INFORMATION
-                             ================================================= --}}
+                        {{-- PERSON COMPLAINT ONLY: SUBPOENA INFORMATION --}}
                         @if ($isPerson)
 
                             <div class="subp {{ $hasSubpoena ? 'on' : '' }}">
@@ -1093,18 +1100,13 @@
 
                                 <div>
 
-                                    <b>
-                                        Subpoena / notice to appear
-                                    </b>
+                                    <b>Subpoena / notice to appear</b>
 
                                     <small>
                                         @if ($hasSubpoena)
-                                            A subpoena / notice to appear
-                                            has been requested for this
-                                            personal dispute.
+                                            A subpoena / notice to appear has been requested for this personal dispute.
                                         @else
-                                            No subpoena / notice to appear
-                                            has been requested.
+                                            No subpoena / notice to appear has been requested.
                                         @endif
                                     </small>
 
@@ -1114,10 +1116,7 @@
 
                         @endif
 
-                        {{-- =================================================
-                             COMMUNITY REPORT ONLY
-                             No subpoena section is rendered here.
-                             ================================================= --}}
+                        {{-- COMMUNITY REPORT ONLY --}}
                         @if ($isCommunity)
 
                             <div class="infobox">
@@ -1126,13 +1125,10 @@
 
                                 <div>
 
-                                    <b>
-                                        Community / environment report
-                                    </b>
+                                    <b>Community / environment report</b>
 
-                                    This is a community or environmental
-                                    concern. A subject resident is not
-                                    required for this type of report.
+                                    This is a community or environmental concern. A subject
+                                    resident is not required for this type of report.
 
                                 </div>
 
@@ -1148,17 +1144,13 @@
                 <section class="card2">
 
                     <div class="card2-head">
-                        <h2 class="display">
-                            Remarks
-                        </h2>
+                        <h2 class="display">Remarks</h2>
                     </div>
 
                     <div class="card2-body">
-
                         <div class="text {{ $r->remarks ? '' : 'empty' }}">
                             {{ $r->remarks ?: 'No remarks provided.' }}
                         </div>
-
                     </div>
 
                 </section>
@@ -1167,9 +1159,7 @@
                 <section class="card2">
 
                     <div class="card2-head">
-                        <h2 class="display">
-                            Record timeline
-                        </h2>
+                        <h2 class="display">Record timeline</h2>
                     </div>
 
                     <ol class="tl">
@@ -1184,15 +1174,10 @@
 
                                 <div>
 
-                                    <b>
-                                        {{ $label }}
-                                    </b>
+                                    <b>{{ $label }}</b>
 
                                     <small>
-                                        {{
-                                            $date?->format('F d, Y h:i A')
-                                            ?? 'Not yet'
-                                        }}
+                                        {{ $date?->format('F d, Y h:i A') ?? 'Not yet' }}
                                     </small>
 
                                 </div>
@@ -1207,76 +1192,79 @@
 
             </div>
 
-            {{-- =====================================================
-                 RIGHT SIDEBAR
-                 ===================================================== --}}
-
+            {{-- RIGHT SIDEBAR --}}
             <aside class="side">
 
                 {{-- ACTIONS --}}
                 <section class="card2">
 
                     <div class="card2-head">
-                        <h2 class="display">
-                            Actions
-                        </h2>
+                        <h2 class="display">Actions</h2>
                     </div>
 
                     <div class="card2-body">
 
                         <div class="stack">
 
-                            {{-- EDIT --}}
+                            {{-- EDIT (indigo, solid = main action) --}}
                             @if ($canEdit)
 
-                                <a
-                                    href="{{ $editUrl }}"
-                                    class="act act-brand"
-                                >
+                                <a href="{{ $editUrl }}" class="act act-brand">
                                     <i class="bi bi-pencil-square"></i>
                                     Edit report
                                 </a>
 
                             @endif
 
-                            {{-- =================================================
-                                 PRINT SUBPOENA
-                                 PERSON COMPLAINT ONLY
-                                 ================================================= --}}
-                            @if ($isPerson && $canPrint && $printUrl)
-
-                                <a
-                                    href="{{ $printUrl }}"
-                                    target="_blank"
-                                    class="act act-line"
-                                >
-                                    <i class="bi bi-printer"></i>
-                                    Print subpoena
-                                </a>
-
-                            @endif
-
-                            {{-- RESOLVE --}}
+                            {{-- RESOLVE (green = positive outcome) --}}
                             @if ($canResolve)
 
                                 <form
                                     action="{{ $resolveUrl }}"
                                     method="POST"
-                                    onsubmit="return confirm('Are you sure you want to mark this report or complaint as resolved?');"
+                                    onsubmit="return confirm('Mark this report or complaint as Resolved?');"
                                 >
 
                                     @csrf
                                     @method('PATCH')
 
-                                    <button
-                                        type="submit"
-                                        class="act act-green"
-                                    >
+                                    <button type="submit" class="act act-green">
                                         <i class="bi bi-check-circle"></i>
-                                        Save Case
+                                        Resolve case
                                     </button>
 
                                 </form>
+
+                            @endif
+
+                            {{-- CLOSE (slate = finality, only after Resolved) --}}
+                            @if ($r->status === 'Resolved')
+
+                                <form
+                                    action="{{ route('reports-complaints.close', ['reports_complaint' => $r->id]) }}"
+                                    method="POST"
+                                    onsubmit="return confirm('Close this case? This will mark it as completed.');"
+                                >
+
+                                    @csrf
+                                    @method('PATCH')
+
+                                    <button type="submit" class="act act-close">
+                                        <i class="bi bi-lock-fill"></i>
+                                        Close case
+                                    </button>
+
+                                </form>
+
+                            @endif
+
+                            {{-- PRINT SUBPOENA (gray ghost = secondary) --}}
+                            @if ($isPerson && $canPrint && $printUrl)
+
+                                <a href="{{ $printUrl }}" target="_blank" class="act act-line">
+                                    <i class="bi bi-printer"></i>
+                                    Print subpoena
+                                </a>
 
                             @endif
 
@@ -1284,17 +1272,15 @@
                             @if (
                                 ! $canEdit &&
                                 ! ($isPerson && $canPrint) &&
-                                ! $canResolve
+                                ! $canResolve &&
+                                $r->status !== 'Resolved'
                             )
 
                                 <div class="locked">
 
                                     <i class="bi bi-lock-fill"></i>
 
-                                    <span>
-                                        No further actions are available
-                                        for this record.
-                                    </span>
+                                    <span>No further actions are available for this record.</span>
 
                                 </div>
 
@@ -1310,9 +1296,7 @@
                 <section class="card2">
 
                     <div class="card2-head">
-                        <h2 class="display">
-                            Handling
-                        </h2>
+                        <h2 class="display">Handling</h2>
                     </div>
 
                     <div class="card2-body">
@@ -1321,40 +1305,23 @@
 
                             <div>
 
-                                <dt>
-                                    Assigned official / staff
-                                </dt>
+                                <dt>Assigned official / staff</dt>
 
                                 <dd>
-
                                     @if ($r->assignedUser)
-
                                         {{ $r->assignedUser->name }}
-
                                     @else
-
-                                        <span
-                                            class="muted"
-                                            style="font-weight:400"
-                                        >
-                                            Not assigned
-                                        </span>
-
+                                        <span class="muted" style="font-weight:400">Not assigned</span>
                                     @endif
-
                                 </dd>
 
                             </div>
 
                             <div>
 
-                                <dt>
-                                    Recorded by
-                                </dt>
+                                <dt>Recorded by</dt>
 
-                                <dd>
-                                    {{ $r->creator?->name ?? 'N/A' }}
-                                </dd>
+                                <dd>{{ $r->creator?->name ?? 'N/A' }}</dd>
 
                             </div>
 

@@ -2,13 +2,16 @@
 
 @section('title', 'File Report / Complaint | e-Poblacion')
 
+{{-- Shared button + text-field styles --}}
+@push('styles')
+
+@endpush
+
 @section('content')
 
 <div class="container-fluid py-4 rc-create">
 
-    {{-- ================================================================
-         PAGE HEADER
-         ================================================================ --}}
+    {{-- PAGE HEADER --}}
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
 
         <div>
@@ -22,8 +25,7 @@
             </p>
         </div>
 
-        <a href="{{ route('reports-complaints.index') }}"
-           class="btn btn-outline-secondary">
+        <a href="{{ route('reports-complaints.index') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i>
             Back to Reports & Complaints
         </a>
@@ -31,9 +33,7 @@
     </div>
 
 
-    {{-- ================================================================
-         VALIDATION ERRORS
-         ================================================================ --}}
+    {{-- VALIDATION ERRORS --}}
     @if ($errors->any())
         <div class="alert alert-danger shadow-sm border-0">
             <div class="fw-semibold mb-2">
@@ -50,18 +50,14 @@
     @endif
 
 
-    {{-- ================================================================
-         MAIN FORM
-         ================================================================ --}}
+    {{-- MAIN FORM --}}
     <form method="POST"
           action="{{ route('reports-complaints.store') }}"
           id="reportComplaintForm">
 
         @csrf
 
-        {{-- ============================================================
-             REPORT TYPE
-             ============================================================ --}}
+        {{-- REPORT TYPE --}}
         <div class="card border-0 shadow-sm mb-4">
 
             <div class="card-header bg-transparent border-0 pt-4 px-4">
@@ -92,10 +88,7 @@
                             {{ old('report_type', 'community') === 'community' ? 'checked' : '' }}
                         >
 
-                        <label
-                            for="reportTypeCommunity"
-                            class="report-type-option w-100"
-                        >
+                        <label for="reportTypeCommunity" class="report-type-option w-100">
                             <div class="d-flex align-items-start gap-3">
 
                                 <div class="report-type-icon">
@@ -103,9 +96,7 @@
                                 </div>
 
                                 <div>
-                                    <div class="fw-bold">
-                                        Community Report
-                                    </div>
+                                    <div class="fw-bold">Community Report</div>
 
                                     <div class="small text-muted mt-1">
                                         For concerns affecting the community,
@@ -133,10 +124,7 @@
                             {{ old('report_type') === 'person' ? 'checked' : '' }}
                         >
 
-                        <label
-                            for="reportTypePerson"
-                            class="report-type-option w-100"
-                        >
+                        <label for="reportTypePerson" class="report-type-option w-100">
                             <div class="d-flex align-items-start gap-3">
 
                                 <div class="report-type-icon">
@@ -144,9 +132,7 @@
                                 </div>
 
                                 <div>
-                                    <div class="fw-bold">
-                                        Person Complaint
-                                    </div>
+                                    <div class="fw-bold">Person Complaint</div>
 
                                     <div class="small text-muted mt-1">
                                         For complaints or disputes involving
@@ -165,9 +151,7 @@
         </div>
 
 
-        {{-- ============================================================
-             COMPLAINANT
-             ============================================================ --}}
+        {{-- COMPLAINANT --}}
         <div class="card border-0 shadow-sm mb-4">
 
             <div class="card-header bg-transparent border-0 pt-4 px-4">
@@ -179,9 +163,7 @@
                     </div>
 
                     <div>
-                        <h5 class="fw-bold mb-1">
-                            Complainant / Reporting Person
-                        </h5>
+                        <h5 class="fw-bold mb-1">Complainant / Reporting Person</h5>
 
                         <p class="text-muted small mb-0">
                             Identify the person who submitted the report or complaint.
@@ -216,10 +198,7 @@
                                 {{ old('complainant_source', old('complainant_id') ? 'resident' : 'manual') === 'resident' ? 'checked' : '' }}
                             >
 
-                            <label
-                                for="complainantResidentSource"
-                                class="participant-source-option"
-                            >
+                            <label for="complainantResidentSource" class="participant-source-option">
                                 <i class="bi bi-person-check me-2"></i>
                                 Poblacion Resident
                             </label>
@@ -238,10 +217,7 @@
                                 {{ old('complainant_source', old('complainant_id') ? 'resident' : 'manual') === 'manual' ? 'checked' : '' }}
                             >
 
-                            <label
-                                for="complainantManualSource"
-                                class="participant-source-option"
-                            >
+                            <label for="complainantManualSource" class="participant-source-option">
                                 <i class="bi bi-person-vcard me-2"></i>
                                 Non-resident / Not Found
                             </label>
@@ -261,11 +237,7 @@
                         <span class="text-danger">*</span>
                     </label>
 
-                    <select
-                        name="complainant_id"
-                        id="complainant_id"
-                        class="form-select"
-                    >
+                    <select name="complainant_id" id="complainant_id" class="form-select">
                         <option value="">-- Select Resident --</option>
 
                         @foreach ($residents as $resident)
@@ -313,124 +285,60 @@
                     <div class="row g-3">
 
                         <div class="col-md-6">
-
-                            <label
-                                for="complainant_name"
-                                class="form-label fw-semibold"
-                            >
+                            <label for="complainant_name" class="form-label fw-semibold">
                                 Full Name
                                 <span class="text-danger">*</span>
                             </label>
 
-                            <input
-                                type="text"
-                                name="complainant_name"
-                                id="complainant_name"
-                                class="form-control"
-                                value="{{ old('complainant_name') }}"
-                                placeholder="Enter full name"
-                            >
-
+                            <input type="text" name="complainant_name" id="complainant_name"
+                                   class="form-control" value="{{ old('complainant_name') }}"
+                                   placeholder="Enter full name">
                         </div>
 
                         <div class="col-md-6">
-
-                            <label
-                                for="complainant_contact_number"
-                                class="form-label fw-semibold"
-                            >
+                            <label for="complainant_contact_number" class="form-label fw-semibold">
                                 Contact Number
                             </label>
 
-                            <input
-                                type="text"
-                                name="complainant_contact_number"
-                                id="complainant_contact_number"
-                                class="form-control"
-                                value="{{ old('complainant_contact_number') }}"
-                                placeholder="09XXXXXXXXX"
-                            >
-
+                            <input type="text" name="complainant_contact_number" id="complainant_contact_number"
+                                   class="form-control" value="{{ old('complainant_contact_number') }}"
+                                   placeholder="09XXXXXXXXX">
                         </div>
 
                         <div class="col-md-12">
-
-                            <label
-                                for="complainant_address"
-                                class="form-label fw-semibold"
-                            >
+                            <label for="complainant_address" class="form-label fw-semibold">
                                 Complete Address
                             </label>
 
-                            <input
-                                type="text"
-                                name="complainant_address"
-                                id="complainant_address"
-                                class="form-control"
-                                value="{{ old('complainant_address') }}"
-                                placeholder="House/Street or complete address"
-                            >
-
+                            <input type="text" name="complainant_address" id="complainant_address"
+                                   class="form-control" value="{{ old('complainant_address') }}"
+                                   placeholder="House/Street or complete address">
                         </div>
 
                         <div class="col-md-4">
+                            <label for="complainant_barangay" class="form-label fw-semibold">Barangay</label>
 
-                            <label
-                                for="complainant_barangay"
-                                class="form-label fw-semibold"
-                            >
-                                Barangay
-                            </label>
-
-                            <input
-                                type="text"
-                                name="complainant_barangay"
-                                id="complainant_barangay"
-                                class="form-control"
-                                value="{{ old('complainant_barangay') }}"
-                                placeholder="Barangay"
-                            >
-
+                            <input type="text" name="complainant_barangay" id="complainant_barangay"
+                                   class="form-control" value="{{ old('complainant_barangay') }}"
+                                   placeholder="Barangay">
                         </div>
 
                         <div class="col-md-4">
-
-                            <label
-                                for="complainant_municipality"
-                                class="form-label fw-semibold"
-                            >
+                            <label for="complainant_municipality" class="form-label fw-semibold">
                                 Municipality / City
                             </label>
 
-                            <input
-                                type="text"
-                                name="complainant_municipality"
-                                id="complainant_municipality"
-                                class="form-control"
-                                value="{{ old('complainant_municipality') }}"
-                                placeholder="Municipality / City"
-                            >
-
+                            <input type="text" name="complainant_municipality" id="complainant_municipality"
+                                   class="form-control" value="{{ old('complainant_municipality') }}"
+                                   placeholder="Municipality / City">
                         </div>
 
                         <div class="col-md-4">
+                            <label for="complainant_province" class="form-label fw-semibold">Province</label>
 
-                            <label
-                                for="complainant_province"
-                                class="form-label fw-semibold"
-                            >
-                                Province
-                            </label>
-
-                            <input
-                                type="text"
-                                name="complainant_province"
-                                id="complainant_province"
-                                class="form-control"
-                                value="{{ old('complainant_province') }}"
-                                placeholder="Province"
-                            >
-
+                            <input type="text" name="complainant_province" id="complainant_province"
+                                   class="form-control" value="{{ old('complainant_province') }}"
+                                   placeholder="Province">
                         </div>
 
                     </div>
@@ -441,14 +349,8 @@
         </div>
 
 
-        {{-- ============================================================
-             RESPONDENT
-             Only visible for person complaints
-             ============================================================ --}}
-        <div
-            class="card border-0 shadow-sm mb-4"
-            id="respondentCard"
-        >
+        {{-- RESPONDENT (visible only for person complaints) --}}
+        <div class="card border-0 shadow-sm mb-4" id="respondentCard">
 
             <div class="card-header bg-transparent border-0 pt-4 px-4">
 
@@ -459,9 +361,7 @@
                     </div>
 
                     <div>
-                        <h5 class="fw-bold mb-1">
-                            Respondent / Subject
-                        </h5>
+                        <h5 class="fw-bold mb-1">Respondent / Subject</h5>
 
                         <p class="text-muted small mb-0">
                             Identify the person involved in the complaint.
@@ -495,10 +395,7 @@
                                 {{ old('subject_source', old('subject_resident_id') ? 'resident' : 'manual') === 'resident' ? 'checked' : '' }}
                             >
 
-                            <label
-                                for="subjectResidentSource"
-                                class="participant-source-option"
-                            >
+                            <label for="subjectResidentSource" class="participant-source-option">
                                 <i class="bi bi-person-check me-2"></i>
                                 Poblacion Resident
                             </label>
@@ -517,10 +414,7 @@
                                 {{ old('subject_source', old('subject_resident_id') ? 'resident' : 'manual') === 'manual' ? 'checked' : '' }}
                             >
 
-                            <label
-                                for="subjectManualSource"
-                                class="participant-source-option"
-                            >
+                            <label for="subjectManualSource" class="participant-source-option">
                                 <i class="bi bi-person-vcard me-2"></i>
                                 Non-resident / Not Found
                             </label>
@@ -535,19 +429,12 @@
                 {{-- Resident respondent --}}
                 <div id="subjectResidentSection">
 
-                    <label
-                        for="subject_resident_id"
-                        class="form-label fw-semibold"
-                    >
+                    <label for="subject_resident_id" class="form-label fw-semibold">
                         Select Poblacion Resident
                         <span class="text-danger">*</span>
                     </label>
 
-                    <select
-                        name="subject_resident_id"
-                        id="subject_resident_id"
-                        class="form-select"
-                    >
+                    <select name="subject_resident_id" id="subject_resident_id" class="form-select">
                         <option value="">-- Select Resident --</option>
 
                         @foreach ($residents as $resident)
@@ -595,124 +482,60 @@
                     <div class="row g-3">
 
                         <div class="col-md-6">
-
-                            <label
-                                for="subject_name"
-                                class="form-label fw-semibold"
-                            >
+                            <label for="subject_name" class="form-label fw-semibold">
                                 Full Name
                                 <span class="text-danger">*</span>
                             </label>
 
-                            <input
-                                type="text"
-                                name="subject_name"
-                                id="subject_name"
-                                class="form-control"
-                                value="{{ old('subject_name') }}"
-                                placeholder="Enter respondent's full name"
-                            >
-
+                            <input type="text" name="subject_name" id="subject_name"
+                                   class="form-control" value="{{ old('subject_name') }}"
+                                   placeholder="Enter respondent's full name">
                         </div>
 
                         <div class="col-md-6">
-
-                            <label
-                                for="subject_contact_number"
-                                class="form-label fw-semibold"
-                            >
+                            <label for="subject_contact_number" class="form-label fw-semibold">
                                 Contact Number
                             </label>
 
-                            <input
-                                type="text"
-                                name="subject_contact_number"
-                                id="subject_contact_number"
-                                class="form-control"
-                                value="{{ old('subject_contact_number') }}"
-                                placeholder="09XXXXXXXXX"
-                            >
-
+                            <input type="text" name="subject_contact_number" id="subject_contact_number"
+                                   class="form-control" value="{{ old('subject_contact_number') }}"
+                                   placeholder="09XXXXXXXXX">
                         </div>
 
                         <div class="col-md-12">
-
-                            <label
-                                for="subject_address"
-                                class="form-label fw-semibold"
-                            >
+                            <label for="subject_address" class="form-label fw-semibold">
                                 Complete Address
                             </label>
 
-                            <input
-                                type="text"
-                                name="subject_address"
-                                id="subject_address"
-                                class="form-control"
-                                value="{{ old('subject_address') }}"
-                                placeholder="House/Street or complete address"
-                            >
-
+                            <input type="text" name="subject_address" id="subject_address"
+                                   class="form-control" value="{{ old('subject_address') }}"
+                                   placeholder="House/Street or complete address">
                         </div>
 
                         <div class="col-md-4">
+                            <label for="subject_barangay" class="form-label fw-semibold">Barangay</label>
 
-                            <label
-                                for="subject_barangay"
-                                class="form-label fw-semibold"
-                            >
-                                Barangay
-                            </label>
-
-                            <input
-                                type="text"
-                                name="subject_barangay"
-                                id="subject_barangay"
-                                class="form-control"
-                                value="{{ old('subject_barangay') }}"
-                                placeholder="Barangay"
-                            >
-
+                            <input type="text" name="subject_barangay" id="subject_barangay"
+                                   class="form-control" value="{{ old('subject_barangay') }}"
+                                   placeholder="Barangay">
                         </div>
 
                         <div class="col-md-4">
-
-                            <label
-                                for="subject_municipality"
-                                class="form-label fw-semibold"
-                            >
+                            <label for="subject_municipality" class="form-label fw-semibold">
                                 Municipality / City
                             </label>
 
-                            <input
-                                type="text"
-                                name="subject_municipality"
-                                id="subject_municipality"
-                                class="form-control"
-                                value="{{ old('subject_municipality') }}"
-                                placeholder="Municipality / City"
-                            >
-
+                            <input type="text" name="subject_municipality" id="subject_municipality"
+                                   class="form-control" value="{{ old('subject_municipality') }}"
+                                   placeholder="Municipality / City">
                         </div>
 
                         <div class="col-md-4">
+                            <label for="subject_province" class="form-label fw-semibold">Province</label>
 
-                            <label
-                                for="subject_province"
-                                class="form-label fw-semibold"
-                            >
-                                Province
-                            </label>
-
-                            <input
-                                type="text"
-                                name="subject_province"
-                                id="subject_province"
-                                class="form-control"
-                                value="{{ old('subject_province') }}"
-                                placeholder="Province"
-                            >
-
+                            <input type="text" name="subject_province" id="subject_province"
+                                   class="form-control" value="{{ old('subject_province') }}"
+                                   placeholder="Province">
                         </div>
 
                     </div>
@@ -723,21 +546,13 @@
                 {{-- Relationship --}}
                 <div class="mt-4">
 
-                    <label
-                        for="relationship_to_complainant"
-                        class="form-label fw-semibold"
-                    >
+                    <label for="relationship_to_complainant" class="form-label fw-semibold">
                         Relationship to Complainant
                     </label>
 
-                    <input
-                        type="text"
-                        name="relationship_to_complainant"
-                        id="relationship_to_complainant"
-                        class="form-control"
-                        value="{{ old('relationship_to_complainant') }}"
-                        placeholder="e.g. Neighbor, Relative, Former Partner, Acquaintance"
-                    >
+                    <input type="text" name="relationship_to_complainant" id="relationship_to_complainant"
+                           class="form-control" value="{{ old('relationship_to_complainant') }}"
+                           placeholder="e.g. Neighbor, Relative, Former Partner, Acquaintance">
 
                 </div>
 
@@ -757,10 +572,7 @@
                             {{ old('summons_requested') ? 'checked' : '' }}
                         >
 
-                        <label
-                            class="form-check-label fw-semibold"
-                            for="summons_requested"
-                        >
+                        <label class="form-check-label fw-semibold" for="summons_requested">
                             Request Subpoena / Summons
                         </label>
 
@@ -775,14 +587,8 @@
                 </div>
 
 
-                {{-- ====================================================
-                     WITNESSES FOR SUBPOENA
-                     Manually entered by staff.
-                     ==================================================== --}}
-                <div
-                    class="border rounded-3 p-3 mt-3 d-none"
-                    id="witnessesSection"
-                >
+                {{-- WITNESSES FOR SUBPOENA (manually entered by staff) --}}
+                <div class="border rounded-3 p-3 mt-3 d-none" id="witnessesSection">
 
                     <div class="d-flex align-items-start gap-2 mb-3">
 
@@ -791,9 +597,7 @@
                         </div>
 
                         <div>
-                            <div class="fw-semibold">
-                                Witness/es for Subpoena
-                            </div>
+                            <div class="fw-semibold">Witness/es for Subpoena</div>
 
                             <div class="small text-muted">
                                 Enter the witness names manually. Witnesses do not
@@ -803,12 +607,7 @@
 
                     </div>
 
-                    <label
-                        for="witnesses"
-                        class="form-label fw-semibold"
-                    >
-                        Witness Name/s
-                    </label>
+                    <label for="witnesses" class="form-label fw-semibold">Witness Name/s</label>
 
                     <textarea
                         name="witnesses"
@@ -830,14 +629,8 @@
         </div>
 
 
-        {{-- ============================================================
-             HEARING / MEETING SCHEDULE
-             Only applicable to person complaints
-             ============================================================ --}}
-        <div
-            class="card border-0 shadow-sm mb-4 d-none"
-            id="hearingScheduleCard"
-        >
+        {{-- HEARING / MEETING SCHEDULE (person complaints only) --}}
+        <div class="card border-0 shadow-sm mb-4 d-none" id="hearingScheduleCard">
 
             <div class="card-header bg-transparent border-0 pt-4 px-4">
 
@@ -848,9 +641,7 @@
                     </div>
 
                     <div>
-                        <h5 class="fw-bold mb-1">
-                            Hearing / Meeting Schedule
-                        </h5>
+                        <h5 class="fw-bold mb-1">Hearing / Meeting Schedule</h5>
 
                         <p class="text-muted small mb-0">
                             Optional schedule for barangay proceedings involving a person complaint.
@@ -873,17 +664,23 @@
                 <div class="row g-3">
 
                     <div class="col-md-4">
-                        <label for="hearing_date" class="form-label fw-semibold">
-                            Hearing Date
-                        </label>
+                        <label for="hearing_date" class="form-label fw-semibold">Hearing Date</label>
                         <input type="date" name="hearing_date" id="hearing_date"
-                               class="form-control" value="{{ old('hearing_date') }}">
+                               class="form-control @error('hearing_date') is-invalid @enderror"
+                               value="{{ old('hearing_date') }}"
+                               min="{{ now()->toDateString() }}"
+                               aria-describedby="hearingDateFeedback">
+                        <div class="invalid-feedback" id="hearingDateFeedback" role="alert" aria-live="polite">
+                            @error('hearing_date')
+                                {{ $message }}
+                            @else
+                                Invalid hearing date. Choose today or a future date. Past dates are not allowed.
+                            @enderror
+                        </div>
                     </div>
 
                     <div class="col-md-4">
-                        <label for="hearing_time" class="form-label fw-semibold">
-                            Hearing Time
-                        </label>
+                        <label for="hearing_time" class="form-label fw-semibold">Hearing Time</label>
                         <input type="time" name="hearing_time" id="hearing_time"
                                class="form-control" value="{{ old('hearing_time') }}">
                     </div>
@@ -903,9 +700,7 @@
         </div>
 
 
-        {{-- ============================================================
-             INCIDENT INFORMATION
-             ============================================================ --}}
+        {{-- INCIDENT INFORMATION --}}
         <div class="card border-0 shadow-sm mb-4">
 
             <div class="card-header bg-transparent border-0 pt-4 px-4">
@@ -917,9 +712,7 @@
                     </div>
 
                     <div>
-                        <h5 class="fw-bold mb-1">
-                            Incident Information
-                        </h5>
+                        <h5 class="fw-bold mb-1">Incident Information</h5>
 
                         <p class="text-muted small mb-0">
                             Record when and where the incident occurred.
@@ -937,10 +730,7 @@
                     {{-- Category --}}
                     <div class="col-md-6">
 
-                        <label
-                            for="category"
-                            class="form-label fw-semibold"
-                        >
+                        <label for="category" class="form-label fw-semibold">
                             Category
                             <span class="text-danger">*</span>
                         </label>
@@ -967,10 +757,7 @@
                     {{-- Title --}}
                     <div class="col-md-6">
 
-                        <label
-                            for="title"
-                            class="form-label fw-semibold"
-                        >
+                        <label for="title" class="form-label fw-semibold">
                             Title
                             <span class="text-danger">*</span>
                         </label>
@@ -991,12 +778,7 @@
                     {{-- Date reported --}}
                     <div class="col-md-4">
 
-                        <label
-                            for="date_reported"
-                            class="form-label fw-semibold"
-                        >
-                            Date Reported
-                        </label>
+                        <label for="date_reported" class="form-label fw-semibold">Date Reported</label>
 
                         <input
                             type="date"
@@ -1012,12 +794,7 @@
                     {{-- Time reported --}}
                     <div class="col-md-4">
 
-                        <label
-                            for="time_reported"
-                            class="form-label fw-semibold"
-                        >
-                            Time Reported
-                        </label>
+                        <label for="time_reported" class="form-label fw-semibold">Time Reported</label>
 
                         <input
                             type="time"
@@ -1033,10 +810,7 @@
                     {{-- Incident date --}}
                     <div class="col-md-4">
 
-                        <label
-                            for="incident_date"
-                            class="form-label fw-semibold"
-                        >
+                        <label for="incident_date" class="form-label fw-semibold">
                             Incident Date
                             <span class="text-danger">*</span>
                         </label>
@@ -1056,12 +830,7 @@
                     {{-- Incident time --}}
                     <div class="col-md-4">
 
-                        <label
-                            for="incident_time"
-                            class="form-label fw-semibold"
-                        >
-                            Incident Time
-                        </label>
+                        <label for="incident_time" class="form-label fw-semibold">Incident Time</label>
 
                         <input
                             type="time"
@@ -1079,9 +848,7 @@
         </div>
 
 
-        {{-- ============================================================
-             LOCATION
-             ============================================================ --}}
+        {{-- LOCATION --}}
         <div class="card border-0 shadow-sm mb-4">
 
             <div class="card-header bg-transparent border-0 pt-4 px-4">
@@ -1093,9 +860,7 @@
                     </div>
 
                     <div>
-                        <h5 class="fw-bold mb-1">
-                            Incident Location
-                        </h5>
+                        <h5 class="fw-bold mb-1">Incident Location</h5>
 
                         <p class="text-muted small mb-0">
                             Record the barangay location where the incident occurred.
@@ -1117,8 +882,6 @@
                      *    always listed. Any purok missing from $puroks is added
                      *    using the same value format as the existing ones.
                      *  - options are listed in order: Purok 1, 2, 3 ... 7
-                     * The submitted value is still the value that comes from
-                     * $puroks (or the generated one for a missing purok).
                      */
                     $totalPuroks = 7;
 
@@ -1156,9 +919,7 @@
                         }
                     }
 
-                    /*
-                     * Make sure Purok 1 to Purok 7 all exist.
-                     */
+                    /* Make sure Purok 1 to Purok 7 all exist. */
                     $presentNumbers = collect($purokOptions)->pluck('order')->all();
 
                     $purokPrefix = 'Purok ';
@@ -1193,24 +954,14 @@
 
                     <div class="col-md-4">
 
-                        <label
-                            for="purok"
-                            class="form-label fw-semibold"
-                        >
+                        <label for="purok" class="form-label fw-semibold">
                             Purok
                             <span class="text-danger">*</span>
                         </label>
 
-                        <select
-                            name="purok"
-                            id="purok"
-                            class="form-select"
-                            required
-                        >
+                        <select name="purok" id="purok" class="form-select" required>
 
-                            <option value="">
-                                -- Select Purok --
-                            </option>
+                            <option value="">-- Select Purok --</option>
 
                             @foreach ($purokOptions as $purokOption)
 
@@ -1247,99 +998,36 @@
 
                     <div class="row g-3">
 
-                        {{-- Barangay (fixed) --}}
                         <div class="col-md-4">
+                            <label for="barangay" class="form-label fw-semibold">Barangay</label>
 
-                            <label
-                                for="barangay"
-                                class="form-label fw-semibold"
-                            >
-                                Barangay
-                            </label>
-
-                            <input
-                                type="text"
-                                name="barangay"
-                                id="barangay"
-                                class="form-control rc-fixed"
-                                value="Poblacion"
-                                readonly
-                                tabindex="-1"
-                                required
-                            >
-
+                            <input type="text" name="barangay" id="barangay"
+                                   class="form-control rc-fixed" value="Poblacion"
+                                   readonly tabindex="-1" required>
                         </div>
 
-
-                        {{-- Municipality (fixed) --}}
                         <div class="col-md-4">
+                            <label for="municipality" class="form-label fw-semibold">Municipality</label>
 
-                            <label
-                                for="municipality"
-                                class="form-label fw-semibold"
-                            >
-                                Municipality
-                            </label>
-
-                            <input
-                                type="text"
-                                name="municipality"
-                                id="municipality"
-                                class="form-control rc-fixed"
-                                value="Bani"
-                                readonly
-                                tabindex="-1"
-                                required
-                            >
-
+                            <input type="text" name="municipality" id="municipality"
+                                   class="form-control rc-fixed" value="Bani"
+                                   readonly tabindex="-1" required>
                         </div>
 
-
-                        {{-- Province (fixed) --}}
                         <div class="col-md-4">
+                            <label for="province" class="form-label fw-semibold">Province</label>
 
-                            <label
-                                for="province"
-                                class="form-label fw-semibold"
-                            >
-                                Province
-                            </label>
-
-                            <input
-                                type="text"
-                                name="province"
-                                id="province"
-                                class="form-control rc-fixed"
-                                value="Pangasinan"
-                                readonly
-                                tabindex="-1"
-                                required
-                            >
-
+                            <input type="text" name="province" id="province"
+                                   class="form-control rc-fixed" value="Pangasinan"
+                                   readonly tabindex="-1" required>
                         </div>
 
-
-                        {{-- Region (fixed) --}}
                         <div class="col-md-12">
+                            <label for="region" class="form-label fw-semibold">Region</label>
 
-                            <label
-                                for="region"
-                                class="form-label fw-semibold"
-                            >
-                                Region
-                            </label>
-
-                            <input
-                                type="text"
-                                name="region"
-                                id="region"
-                                class="form-control rc-fixed"
-                                value="Region I - Ilocos Region"
-                                readonly
-                                tabindex="-1"
-                                required
-                            >
-
+                            <input type="text" name="region" id="region"
+                                   class="form-control rc-fixed" value="Region I - Ilocos Region"
+                                   readonly tabindex="-1" required>
                         </div>
 
                     </div>
@@ -1350,9 +1038,7 @@
         </div>
 
 
-        {{-- ============================================================
-             DETAILS
-             ============================================================ --}}
+        {{-- DETAILS --}}
         <div class="card border-0 shadow-sm mb-4">
 
             <div class="card-header bg-transparent border-0 pt-4 px-4">
@@ -1364,9 +1050,7 @@
                     </div>
 
                     <div>
-                        <h5 class="fw-bold mb-1">
-                            Report Details
-                        </h5>
+                        <h5 class="fw-bold mb-1">Report Details</h5>
 
                         <p class="text-muted small mb-0">
                             Provide the details necessary for investigation and action.
@@ -1381,10 +1065,7 @@
 
                 <div class="mb-3">
 
-                    <label
-                        for="description"
-                        class="form-label fw-semibold"
-                    >
+                    <label for="description" class="form-label fw-semibold">
                         Description
                         <span class="text-danger">*</span>
                     </label>
@@ -1406,22 +1087,11 @@
                     {{-- Assigned official --}}
                     <div class="col-md-6">
 
-                        <label
-                            for="assigned_to"
-                            class="form-label fw-semibold"
-                        >
-                            Assigned To
-                        </label>
+                        <label for="assigned_to" class="form-label fw-semibold">Assigned To</label>
 
-                        <select
-                            name="assigned_to"
-                            id="assigned_to"
-                            class="form-select"
-                        >
+                        <select name="assigned_to" id="assigned_to" class="form-select">
 
-                            <option value="">
-                                -- Unassigned --
-                            </option>
+                            <option value="">-- Unassigned --</option>
 
                             @foreach ($officials as $official)
 
@@ -1445,12 +1115,7 @@
                     {{-- Remarks --}}
                     <div class="col-md-6">
 
-                        <label
-                            for="remarks"
-                            class="form-label fw-semibold"
-                        >
-                            Initial Remarks
-                        </label>
+                        <label for="remarks" class="form-label fw-semibold">Initial Remarks</label>
 
                         <textarea
                             name="remarks"
@@ -1468,24 +1133,15 @@
         </div>
 
 
-        {{-- ============================================================
-             FORM ACTIONS
-             ============================================================ --}}
+        {{-- FORM ACTIONS: Cancel = gray ghost, File = indigo solid --}}
         <div class="d-flex flex-wrap justify-content-end gap-2 mb-5">
 
-            <a
-                href="{{ route('reports-complaints.index') }}"
-                class="btn btn-outline-secondary px-4"
-            >
+            <a href="{{ route('reports-complaints.index') }}" class="btn btn-outline-secondary px-4">
                 <i class="bi bi-x-circle me-1"></i>
                 Cancel
             </a>
 
-            <button
-                type="submit"
-                class="btn btn-primary px-4"
-                id="submitButton"
-            >
+            <button type="submit" class="btn btn-primary px-4" id="submitButton">
                 <i class="bi bi-save me-1"></i>
                 File Report / Complaint
             </button>
@@ -1497,9 +1153,7 @@
 </div>
 
 
-{{-- ================================================================
-     PAGE STYLES
-     ================================================================ --}}
+{{-- PAGE STYLES --}}
 <style>
 
     .report-type-option {
@@ -1589,10 +1243,6 @@
     /* =====================================================================
        THEME-AWARE COLOURS (Light + Dark)
        Scoped to .rc-create so no other page is affected.
-       The project switches themes with html[data-theme="dark"]
-       (Bootstrap's data-bs-theme="dark" is also supported).
-       Every surface sets its OWN text colour, so text always follows the
-       background it sits on.
        ===================================================================== */
     .rc-create {
         --rc-text: #212529;
@@ -1716,7 +1366,7 @@
         color: var(--rc-accent);
     }
 
-    /* ---- Form fields ---- */
+    /* ---- Form fields (softened further by the shared _ui styles) ---- */
     .rc-create .form-control,
     .rc-create .form-select {
         background-color: var(--rc-input-bg);
@@ -1793,7 +1443,7 @@
         color: var(--rc-danger-text);
     }
 
-    /* ---- Buttons ---- */
+    /* ---- Buttons (final look comes from the shared _ui styles) ---- */
     html[data-theme="dark"] .rc-create .btn-outline-secondary,
     html[data-bs-theme="dark"] .rc-create .btn-outline-secondary {
         --bs-btn-color: #c9d2e0;
@@ -1809,8 +1459,6 @@
 
     /* =====================================================================
        SEARCHABLE RESIDENT PICKER
-       Replaces the long native dropdown. The original <select> stays in the
-       form (hidden) so submission, old() values and validation still work.
        ===================================================================== */
     .rc-create .rc-combo {
         position: relative;
@@ -1908,10 +1556,7 @@
     }
 
     /* =====================================================================
-       FIXED LOCATION FIELDS
-       Read-only, but they must NOT show the "not allowed" (block) cursor.
-       pointer-events: none removes any special cursor and click/focus
-       behaviour, so the fields simply look like plain information.
+       FIXED LOCATION FIELDS (read-only, plain information)
        ===================================================================== */
     .rc-create .rc-fixed-group {
         padding: 1rem 1rem 1.1rem;
@@ -1949,89 +1594,240 @@
         -webkit-user-select: none;
     }
 
+
+    /* =====================================================================
+       UI/UX COLOR SYSTEM  (one color = one meaning, same in all 4 pages)
+       INDIGO = main action | GREEN = resolve | SLATE = close
+       GRAY = secondary/safe | RED = destructive | TEAL/ROSE = record type
+       ===================================================================== */
+    .rc-create {
+        --ui-primary: #4338ca; --ui-primary-hover: #3730a3; --ui-primary-soft: #eeecfd; --ui-on-primary: #ffffff;
+        --ui-success: #15803d; --ui-success-hover: #166534; --ui-success-soft: #e0f6ea;
+        --ui-close: #475569;   --ui-close-soft: #eef0f4;
+        --ui-danger: #dc2626;  --ui-danger-soft: #fdecec;
+        --ui-neutral-text: #475569; --ui-neutral-line: #cbd2de; --ui-neutral-hover: #f1f4f9;
+        --ui-field-bg: #ffffff; --ui-field-text: #111827; --ui-field-line: #d5dae5;
+        --ui-placeholder: #a4abbb; --ui-field-locked: #f1f3f8;
+    }
+    html[data-theme="dark"] .rc-create, html[data-bs-theme="dark"] .rc-create, body[data-theme="dark"] .rc-create, body.dark-mode .rc-create {
+        --ui-primary: #8b81f0; --ui-primary-hover: #a29af5; --ui-primary-soft: rgba(139,129,240,.16); --ui-on-primary: #12122a;
+        --ui-success: #4ade80; --ui-success-hover: #6ee7a0; --ui-success-soft: rgba(74,222,128,.14);
+        --ui-close: #94a3b8;   --ui-close-soft: rgba(148,163,184,.14);
+        --ui-danger: #f87171;  --ui-danger-soft: rgba(248,113,113,.14);
+        --ui-neutral-text: #c3cbda; --ui-neutral-line: #4a5570; --ui-neutral-hover: rgba(255,255,255,.06);
+        --ui-field-bg: #141a25; --ui-field-text: #f3f6fc; --ui-field-line: #36405a;
+        --ui-placeholder: #667089; --ui-field-locked: #1b2332;
+    }
+
+    /* ---- Buttons: shared shape ---- */
+    .rc-create .btn, .rc-create .cta, .rc-create .view-btn, .rc-create .resolve-btn, .rc-create .close-btn, .rc-create .reset, .rc-create .act, .rc-create .rcp-btn-primary, .rc-create .rcp-btn-ghost {
+        font-weight: 700;
+        transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+
+    /* INDIGO: main / constructive action */
+    .rc-create .btn-primary,
+    .rc-create .rcp-btn-primary,
+    .rc-create .cta,
+    .rc-create .act-brand {
+        background: var(--ui-primary); border: 1.5px solid var(--ui-primary); color: var(--ui-on-primary); filter: none;
+    }
+    .rc-create .btn-primary:hover,
+    .rc-create .rcp-btn-primary:hover,
+    .rc-create .cta:hover,
+    .rc-create .act-brand:hover {
+        background: var(--ui-primary-hover); border-color: var(--ui-primary-hover); color: var(--ui-on-primary); filter: none;
+    }
+
+    /* GRAY GHOST: secondary / safe (Cancel, Back, View, Print, Reset) */
+    .rc-create .btn-outline-secondary,
+    .rc-create .rcp-btn-ghost,
+    .rc-create .view-btn,
+    .rc-create .act-line,
+    .rc-create .reset {
+        background: transparent; border: 1.5px solid var(--ui-neutral-line); color: var(--ui-neutral-text);
+    }
+    .rc-create .btn-outline-secondary:hover,
+    .rc-create .rcp-btn-ghost:hover,
+    .rc-create .view-btn:hover,
+    .rc-create .act-line:hover,
+    .rc-create .reset:hover {
+        background: var(--ui-neutral-hover); border-color: var(--ui-neutral-text); color: var(--ui-neutral-text);
+    }
+
+    /* GREEN: Resolve (positive outcome) */
+    .rc-create .resolve-btn { background: var(--ui-success-soft); border: 1.5px solid var(--ui-success); color: var(--ui-success); }
+    .rc-create .resolve-btn:hover { background: var(--ui-success); border-color: var(--ui-success); color: #fff; }
+    .rc-create .act-green { background: var(--ui-success); border: 1.5px solid var(--ui-success); color: #fff; filter: none; }
+    .rc-create .act-green:hover { background: var(--ui-success-hover); border-color: var(--ui-success-hover); color: #fff; filter: none; }
+    html[data-theme="dark"] .rc-create .act-green, html[data-bs-theme="dark"] .rc-create .act-green, body[data-theme="dark"] .rc-create .act-green, body.dark-mode .rc-create .act-green { color: #06210f; }
+
+    /* SLATE: Close case (finality, different from Resolve green) */
+    .rc-create .close-btn,
+    .rc-create .act-close { background: var(--ui-close-soft); border: 1.5px solid var(--ui-close); color: var(--ui-close); }
+    .rc-create .close-btn:hover,
+    .rc-create .act-close:hover { background: var(--ui-close); border-color: var(--ui-close); color: #fff; }
+    html[data-theme="dark"] .rc-create .act-close:hover, html[data-bs-theme="dark"] .rc-create .act-close:hover, body[data-theme="dark"] .rc-create .act-close:hover, body.dark-mode .rc-create .act-close:hover { color: #0f1620; }
+    html[data-theme="dark"] .rc-create .close-btn:hover, html[data-bs-theme="dark"] .rc-create .close-btn:hover, body[data-theme="dark"] .rc-create .close-btn:hover, body.dark-mode .rc-create .close-btn:hover { color: #0f1620; }
+
+    /* RED: destructive / disapprove */
+    .rc-create .btn-danger,
+    .rc-create .btn-outline-danger,
+    .rc-create .act-danger { background: var(--ui-danger-soft); border: 1.5px solid var(--ui-danger); color: var(--ui-danger); }
+    .rc-create .btn-danger:hover,
+    .rc-create .btn-outline-danger:hover,
+    .rc-create .act-danger:hover { background: var(--ui-danger); border-color: var(--ui-danger); color: #fff; }
+
+    /* Disabled + focus */
+    .rc-create .btn:disabled,
+    .rc-create .cta:disabled,
+    .rc-create .act:disabled { opacity: .5; cursor: not-allowed; }
+    .rc-create .btn:focus-visible,
+    .rc-create .cta:focus-visible,
+    .rc-create .act:focus-visible,
+    .rc-create .view-btn:focus-visible,
+    .rc-create .resolve-btn:focus-visible,
+    .rc-create .close-btn:focus-visible,
+    .rc-create .reset:focus-visible {
+        outline: 3px solid var(--ui-primary); outline-offset: 2px; box-shadow: none;
+    }
+
+    /* ---- Text fields: hint text must NOT look like typed text ---- */
+    .rc-create .form-control,
+    .rc-create .form-select {
+        background-color: var(--ui-field-bg); color: var(--ui-field-text); border-color: var(--ui-field-line); font-weight: 500;
+    }
+    .rc-create .form-control::placeholder,
+    .rc-create .form-control.rc-combo-input::placeholder,
+    .rc-create textarea.form-control::placeholder {
+        color: var(--ui-placeholder) !important; font-weight: 400; font-style: normal; opacity: 1 !important;
+    }
+    .rc-create .form-control:focus,
+    .rc-create .form-select:focus {
+        border-color: var(--ui-primary); background-color: var(--ui-field-bg); color: var(--ui-field-text);
+        box-shadow: 0 0 0 .2rem var(--ui-primary-soft);
+    }
+    .rc-create .form-control:focus,
+    .rc-create .form-select:focus::placeholder { opacity: .5 !important; }
+
+    /* Dropdown still on "-- Select --" looks like a hint, not a value */
+    .rc-create .form-select:has(option[value=""]:checked) { color: var(--ui-placeholder); font-weight: 400; }
+    .rc-create .form-select option { color: var(--ui-field-text); font-weight: 500; background-color: var(--ui-field-bg); }
+    .rc-create .form-select option[value=""] { color: var(--ui-placeholder); }
+
+    /* Empty date/time: dim the mm/dd/yyyy mask (class toggled by the tiny script below) */
+    .rc-create input.ui-empty[type="date"]:not(:focus)::-webkit-datetime-edit,
+    .rc-create input.ui-empty[type="time"]:not(:focus)::-webkit-datetime-edit { color: var(--ui-placeholder); }
+
+    /* Fixed / read-only values are information, not inputs */
+    .rc-create .form-control[readonly] {
+        background-color: var(--ui-field-locked); border-style: dashed; color: var(--ui-field-text); font-weight: 600; cursor: default;
+    }
+    .rc-create .form-control.is-invalid, .rc-create .form-select.is-invalid { border-color: var(--ui-danger); }
+
 </style>
 
+<script>
+/* Dim empty date/time inputs so the mm/dd/yyyy mask is not mistaken for a value. */
+(function () {
+    var q = '.rc-create input[type="date"], .rc-create input[type="time"]';
+    function mark(el) { el.classList.toggle('ui-empty', !el.value); }
+    document.querySelectorAll(q).forEach(function (el) {
+        mark(el);
+        el.addEventListener('input', function () { mark(el); });
+        el.addEventListener('change', function () { mark(el); });
+    });
+})();
+</script>
 
-{{-- ================================================================
-     PAGE SCRIPT
-     ================================================================ --}}
+
+
+{{-- PAGE SCRIPT --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Elements
-     * ---------------------------------------------------------------
+     * --------------------------------------------------------------- */
+
+    const communityRadio = document.getElementById('reportTypeCommunity');
+    const personRadio = document.getElementById('reportTypePerson');
+
+    const respondentCard = document.getElementById('respondentCard');
+    const hearingScheduleCard = document.getElementById('hearingScheduleCard');
+
+    const hearingDate = document.getElementById('hearing_date');
+    const hearingTime = document.getElementById('hearing_time');
+    const hearingLocation = document.getElementById('hearing_location');
+    const hearingDateFeedback = document.getElementById('hearingDateFeedback');
+
+    /*
+     * Hearing dates must be today or later. The minimum is rendered by
+     * Laravel from the current server date, so it adjusts automatically
+     * each day and each year.
      */
+    function validateHearingDate(showFeedback = true) {
 
-    const communityRadio =
-        document.getElementById('reportTypeCommunity');
+        if (!hearingDate || getReportType() !== 'person' || !hearingDate.value) {
+            if (hearingDate) {
+                hearingDate.setCustomValidity('');
+                hearingDate.classList.remove('is-invalid');
+            }
+            return true;
+        }
 
-    const personRadio =
-        document.getElementById('reportTypePerson');
+        const minimumDate = hearingDate.min;
+        const isPastDate = Boolean(minimumDate && hearingDate.value < minimumDate);
 
-    const respondentCard =
-        document.getElementById('respondentCard');
+        hearingDate.setCustomValidity(
+            isPastDate
+                ? 'Invalid hearing date. Choose today or a future date. Past dates are not allowed.'
+                : ''
+        );
 
-    const hearingScheduleCard =
-        document.getElementById('hearingScheduleCard');
+        hearingDate.classList.toggle('is-invalid', isPastDate);
 
-    const hearingDate =
-        document.getElementById('hearing_date');
+        if (hearingDateFeedback) {
+            hearingDateFeedback.textContent =
+                'Invalid hearing date. Choose today or a future date. Past dates are not allowed.';
+        }
 
-    const hearingTime =
-        document.getElementById('hearing_time');
+        return !isPastDate;
+    }
 
-    const hearingLocation =
-        document.getElementById('hearing_location');
+    if (hearingDate) {
+        hearingDate.addEventListener('input', function () {
+            validateHearingDate();
+        });
+        hearingDate.addEventListener('change', function () {
+            validateHearingDate();
+        });
+        hearingDate.addEventListener('blur', function () {
+            validateHearingDate();
+        });
+    }
 
-    const complainantResidentSource =
-        document.getElementById('complainantResidentSource');
+    const complainantResidentSource = document.getElementById('complainantResidentSource');
+    const complainantManualSource = document.getElementById('complainantManualSource');
+    const complainantResidentSection = document.getElementById('complainantResidentSection');
+    const complainantManualSection = document.getElementById('complainantManualSection');
 
-    const complainantManualSource =
-        document.getElementById('complainantManualSource');
+    const subjectResidentSource = document.getElementById('subjectResidentSource');
+    const subjectManualSource = document.getElementById('subjectManualSource');
+    const subjectResidentSection = document.getElementById('subjectResidentSection');
+    const subjectManualSection = document.getElementById('subjectManualSection');
 
-    const complainantResidentSection =
-        document.getElementById('complainantResidentSection');
+    const complainantId = document.getElementById('complainant_id');
+    const complainantName = document.getElementById('complainant_name');
 
-    const complainantManualSection =
-        document.getElementById('complainantManualSection');
+    const subjectResidentId = document.getElementById('subject_resident_id');
+    const subjectName = document.getElementById('subject_name');
 
-    const subjectResidentSource =
-        document.getElementById('subjectResidentSource');
+    const summonsRequested = document.getElementById('summons_requested');
+    const witnessesSection = document.getElementById('witnessesSection');
+    const witnesses = document.getElementById('witnesses');
 
-    const subjectManualSource =
-        document.getElementById('subjectManualSource');
-
-    const subjectResidentSection =
-        document.getElementById('subjectResidentSection');
-
-    const subjectManualSection =
-        document.getElementById('subjectManualSection');
-
-    const complainantId =
-        document.getElementById('complainant_id');
-
-    const complainantName =
-        document.getElementById('complainant_name');
-
-    const subjectResidentId =
-        document.getElementById('subject_resident_id');
-
-    const subjectName =
-        document.getElementById('subject_name');
-
-    const summonsRequested =
-        document.getElementById('summons_requested');
-
-    const witnessesSection =
-        document.getElementById('witnessesSection');
-
-    const witnesses =
-        document.getElementById('witnesses');
-
-    const category =
-        document.getElementById('category');
+    const category = document.getElementById('category');
 
     /*
      * Category suggestions per report type. Category is a
@@ -2070,11 +1866,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Report Type
-     * ---------------------------------------------------------------
-     */
+     * --------------------------------------------------------------- */
 
     function getReportType() {
 
@@ -2109,22 +1903,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 hearingLocation.value = '';
             }
         }
+
+        validateHearingDate();
     }
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Witness UI
-     * ---------------------------------------------------------------
      *
-     * Witnesses are applicable only when:
-     * 1. The record is a person complaint, and
-     * 2. Subpoena / summons has been requested.
-     *
-     * Witness names are manually entered and are not connected
-     * to the Residents module.
-     * ---------------------------------------------------------------
-     */
+     * Witnesses are applicable only when the record is a person
+     * complaint AND subpoena / summons has been requested.
+     * --------------------------------------------------------------- */
 
     function updateWitnessesUI() {
 
@@ -2144,10 +1933,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             witnessesSection.classList.add('d-none');
 
-            /*
-             * Do not submit witness information for community reports
-             * or when subpoena / summons is not requested.
-             */
             if (witnesses) {
                 witnesses.value = '';
             }
@@ -2159,56 +1944,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const type = getReportType();
 
-        /*
-         * Person complaint:
-         * show respondent and person categories.
-         */
         if (type === 'person') {
 
             respondentCard.classList.remove('d-none');
 
             updateSubjectSourceUI();
 
-            /*
-             * If the current category is a preset that belongs to community
-             * reports, reset it. A category the user typed is kept.
-             */
+            /* Reset the category only if it is a community preset. */
             clearCategoryIfOtherType('community');
 
         } else {
 
-            /*
-             * Community report:
-             * respondent is not applicable.
-             */
+            /* Community report: respondent is not applicable. */
             respondentCard.classList.add('d-none');
 
-            /*
-             * Disable summons.
-             */
             if (summonsRequested) {
                 summonsRequested.checked = false;
             }
 
-            /*
-             * If the current category is a preset that belongs to person
-             * complaints, reset it. A category the user typed is kept.
-             */
+            /* Reset the category only if it is a person preset. */
             clearCategoryIfOtherType('person');
         }
 
-        /*
-         * Update witness visibility after report type changes.
-         */
         updateWitnessesUI();
     }
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Complainant Source
-     * ---------------------------------------------------------------
-     */
+     * --------------------------------------------------------------- */
 
     function updateComplainantSourceUI() {
 
@@ -2220,43 +1984,21 @@ document.addEventListener('DOMContentLoaded', function () {
             complainantResidentSection.classList.remove('d-none');
             complainantManualSection.classList.add('d-none');
 
-            /*
-             * Clear manual complainant fields when resident mode
-             * is selected.
-             */
             if (complainantName) {
                 complainantName.value = '';
             }
 
-            document.getElementById(
-                'complainant_address'
-            ).value = '';
-
-            document.getElementById(
-                'complainant_contact_number'
-            ).value = '';
-
-            document.getElementById(
-                'complainant_barangay'
-            ).value = '';
-
-            document.getElementById(
-                'complainant_municipality'
-            ).value = '';
-
-            document.getElementById(
-                'complainant_province'
-            ).value = '';
+            document.getElementById('complainant_address').value = '';
+            document.getElementById('complainant_contact_number').value = '';
+            document.getElementById('complainant_barangay').value = '';
+            document.getElementById('complainant_municipality').value = '';
+            document.getElementById('complainant_province').value = '';
 
         } else {
 
             complainantResidentSection.classList.add('d-none');
             complainantManualSection.classList.remove('d-none');
 
-            /*
-             * Clear resident selection when manual mode
-             * is selected.
-             */
             if (complainantId) {
                 complainantId.value = '';
             }
@@ -2264,11 +2006,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Subject / Respondent Source
-     * ---------------------------------------------------------------
-     */
+     * --------------------------------------------------------------- */
 
     function updateSubjectSourceUI() {
 
@@ -2280,41 +2020,21 @@ document.addEventListener('DOMContentLoaded', function () {
             subjectResidentSection.classList.remove('d-none');
             subjectManualSection.classList.add('d-none');
 
-            /*
-             * Clear manual respondent fields.
-             */
             if (subjectName) {
                 subjectName.value = '';
             }
 
-            document.getElementById(
-                'subject_address'
-            ).value = '';
-
-            document.getElementById(
-                'subject_contact_number'
-            ).value = '';
-
-            document.getElementById(
-                'subject_barangay'
-            ).value = '';
-
-            document.getElementById(
-                'subject_municipality'
-            ).value = '';
-
-            document.getElementById(
-                'subject_province'
-            ).value = '';
+            document.getElementById('subject_address').value = '';
+            document.getElementById('subject_contact_number').value = '';
+            document.getElementById('subject_barangay').value = '';
+            document.getElementById('subject_municipality').value = '';
+            document.getElementById('subject_province').value = '';
 
         } else {
 
             subjectResidentSection.classList.add('d-none');
             subjectManualSection.classList.remove('d-none');
 
-            /*
-             * Clear resident selection.
-             */
             if (subjectResidentId) {
                 subjectResidentId.value = '';
             }
@@ -2322,91 +2042,48 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Report Type Listeners
-     * ---------------------------------------------------------------
-     */
+     * --------------------------------------------------------------- */
 
     if (communityRadio) {
-        communityRadio.addEventListener(
-            'change',
-            updateReportTypeUI
-        );
-
-        communityRadio.addEventListener(
-            'change',
-            updateHearingScheduleUI
-        );
+        communityRadio.addEventListener('change', updateReportTypeUI);
+        communityRadio.addEventListener('change', updateHearingScheduleUI);
     }
 
     if (personRadio) {
-        personRadio.addEventListener(
-            'change',
-            updateReportTypeUI
-        );
-
-        personRadio.addEventListener(
-            'change',
-            updateHearingScheduleUI
-        );
+        personRadio.addEventListener('change', updateReportTypeUI);
+        personRadio.addEventListener('change', updateHearingScheduleUI);
     }
 
 
-    /*
-     * ---------------------------------------------------------------
-     * Summons Listener
-     * ---------------------------------------------------------------
-     */
-
+    /* Summons Listener */
     if (summonsRequested) {
-        summonsRequested.addEventListener(
-            'change',
-            updateWitnessesUI
-        );
+        summonsRequested.addEventListener('change', updateWitnessesUI);
     }
 
 
-    /*
-     * ---------------------------------------------------------------
-     * Participant Source Listeners
-     * ---------------------------------------------------------------
-     */
-
+    /* Participant Source Listeners */
     if (complainantResidentSource) {
-        complainantResidentSource.addEventListener(
-            'change',
-            updateComplainantSourceUI
-        );
+        complainantResidentSource.addEventListener('change', updateComplainantSourceUI);
     }
 
     if (complainantManualSource) {
-        complainantManualSource.addEventListener(
-            'change',
-            updateComplainantSourceUI
-        );
+        complainantManualSource.addEventListener('change', updateComplainantSourceUI);
     }
 
     if (subjectResidentSource) {
-        subjectResidentSource.addEventListener(
-            'change',
-            updateSubjectSourceUI
-        );
+        subjectResidentSource.addEventListener('change', updateSubjectSourceUI);
     }
 
     if (subjectManualSource) {
-        subjectManualSource.addEventListener(
-            'change',
-            updateSubjectSourceUI
-        );
+        subjectManualSource.addEventListener('change', updateSubjectSourceUI);
     }
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Prevent same resident
-     * ---------------------------------------------------------------
-     */
+     * --------------------------------------------------------------- */
 
     function validateDifferentResidents() {
 
@@ -2426,9 +2103,7 @@ document.addEventListener('DOMContentLoaded', function () {
             && complainantId.value === subjectResidentId.value
         ) {
 
-            alert(
-                'The complainant and respondent cannot be the same resident.'
-            );
+            alert('The complainant and respondent cannot be the same resident.');
 
             subjectResidentId.value = '';
 
@@ -2440,28 +2115,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     if (complainantId) {
-        complainantId.addEventListener(
-            'change',
-            validateDifferentResidents
-        );
+        complainantId.addEventListener('change', validateDifferentResidents);
     }
 
     if (subjectResidentId) {
-        subjectResidentId.addEventListener(
-            'change',
-            validateDifferentResidents
-        );
+        subjectResidentId.addEventListener('change', validateDifferentResidents);
     }
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Form Submit
-     * ---------------------------------------------------------------
-     */
+     * --------------------------------------------------------------- */
 
-    const form =
-        document.getElementById('reportComplaintForm');
+    const form = document.getElementById('reportComplaintForm');
 
     if (form) {
 
@@ -2469,10 +2135,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const type = getReportType();
 
-            /*
-             * Category is a type-or-choose field, so make sure it is
-             * not empty or only spaces.
-             */
+            /* Category must not be empty or only spaces. */
             if (category) {
 
                 category.value = category.value.trim();
@@ -2489,9 +2152,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
 
-            /*
-             * Validate complainant.
-             */
+            /* Validate complainant. */
             if (
                 complainantResidentSource.checked
                 && !complainantId.value
@@ -2499,9 +2160,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 event.preventDefault();
 
-                alert(
-                    'Please select the complainant from the Poblacion resident records.'
-                );
+                alert('Please select the complainant from the Poblacion resident records.');
 
                 complainantId.focus();
 
@@ -2515,9 +2174,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 event.preventDefault();
 
-                alert(
-                    'Please enter the complainant\'s full name.'
-                );
+                alert('Please enter the complainant\'s full name.');
 
                 complainantName.focus();
 
@@ -2525,9 +2182,19 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
 
-            /*
-             * Person complaint requires a respondent.
-             */
+            /* Person complaint hearing date must be today or a future date. */
+            if (type === 'person' && !validateHearingDate()) {
+
+                event.preventDefault();
+
+                alert('Invalid hearing date. Choose today or a future date. Past dates are not allowed.');
+
+                hearingDate.focus();
+
+                return;
+            }
+
+            /* Person complaint requires a respondent. */
             if (type === 'person') {
 
                 if (
@@ -2537,9 +2204,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     event.preventDefault();
 
-                    alert(
-                        'Please select the respondent from the Poblacion resident records.'
-                    );
+                    alert('Please select the respondent from the Poblacion resident records.');
 
                     subjectResidentId.focus();
 
@@ -2553,18 +2218,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     event.preventDefault();
 
-                    alert(
-                        'Please enter the respondent\'s full name.'
-                    );
+                    alert('Please enter the respondent\'s full name.');
 
                     subjectName.focus();
 
                     return;
                 }
 
-                /*
-                 * Prevent same resident.
-                 */
                 if (!validateDifferentResidents()) {
                     event.preventDefault();
                     return;
@@ -2572,10 +2232,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             } else {
 
-                /*
-                 * Community reports must never submit
-                 * respondent information.
-                 */
+                /* Community reports must never submit respondent or witness data. */
                 if (subjectResidentId) {
                     subjectResidentId.value = '';
                 }
@@ -2584,30 +2241,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     subjectName.value = '';
                 }
 
-                document.getElementById(
-                    'subject_address'
-                ).value = '';
+                document.getElementById('subject_address').value = '';
+                document.getElementById('subject_contact_number').value = '';
+                document.getElementById('subject_barangay').value = '';
+                document.getElementById('subject_municipality').value = '';
+                document.getElementById('subject_province').value = '';
 
-                document.getElementById(
-                    'subject_contact_number'
-                ).value = '';
-
-                document.getElementById(
-                    'subject_barangay'
-                ).value = '';
-
-                document.getElementById(
-                    'subject_municipality'
-                ).value = '';
-
-                document.getElementById(
-                    'subject_province'
-                ).value = '';
-
-                /*
-                 * Community reports must never submit
-                 * witness information.
-                 */
                 if (witnesses) {
                     witnesses.value = '';
                 }
@@ -2617,25 +2256,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Searchable resident picker
-     * ---------------------------------------------------------------
      *
      * Turns a long resident <select> into a type-to-search field.
      * The original <select> is kept (hidden) and remains the field that
-     * is submitted, so the controller, old() values, and the existing
-     * validation code keep working. Any code that sets select.value
-     * (for example when switching to "Non-resident") also refreshes
-     * the visible search box.
-     * ---------------------------------------------------------------
-     */
+     * is submitted, so the controller, old() values and the existing
+     * validation code keep working.
+     * --------------------------------------------------------------- */
 
     function normalizeText(text) {
         return (text || '')
             .toString()
             .normalize('NFD')
-            .replace(/[̀-ͯ]/g, '')
+            .replace(/[\u0300-\u036f]/g, '')
             .toLowerCase();
     }
 
@@ -2652,8 +2286,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return option.value !== '';
             })
             .map(function (option) {
-                const label =
-                    option.textContent.replace(/\s+/g, ' ').trim();
+                const label = option.textContent.replace(/\s+/g, ' ').trim();
 
                 const parts = label.split(' — ');
 
@@ -2705,9 +2338,7 @@ document.addEventListener('DOMContentLoaded', function () {
         select.tabIndex = -1;
 
         /* Clicking the <label> should focus the search box. */
-        const label = document.querySelector(
-            'label[for="' + select.id + '"]'
-        );
+        const label = document.querySelector('label[for="' + select.id + '"]');
 
         if (label) {
             label.setAttribute('for', input.id);
@@ -2943,16 +2574,13 @@ document.addEventListener('DOMContentLoaded', function () {
     );
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Category: choose a suggestion OR type your own
-     * ---------------------------------------------------------------
      *
      * Suggestions follow the selected report type (community / person).
      * Whatever is in the box is what gets submitted, so staff can type
      * a category that is not on the list.
-     * ---------------------------------------------------------------
-     */
+     * --------------------------------------------------------------- */
 
     function makeCategoryCombo(input) {
 
@@ -3169,16 +2797,15 @@ document.addEventListener('DOMContentLoaded', function () {
     makeCategoryCombo(category);
 
 
-    /*
-     * ---------------------------------------------------------------
+    /* ---------------------------------------------------------------
      * Initial UI state
-     * ---------------------------------------------------------------
-     */
+     * --------------------------------------------------------------- */
 
     updateComplainantSourceUI();
     updateSubjectSourceUI();
     updateReportTypeUI();
     updateHearingScheduleUI();
+    validateHearingDate();
     updateWitnessesUI();
 
 });

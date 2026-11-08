@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssistanceCampaign;
-use App\Models\DisasterEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +17,6 @@ class AssistanceCampaignController extends Controller
     public function index(Request $request): View
     {
         $query = AssistanceCampaign::with([
-            'disasterEvent',
             'creator',
             'updater',
         ])->withCount('reliefVouchers');
@@ -125,15 +123,7 @@ class AssistanceCampaignController extends Controller
      */
     public function create(): View
     {
-        $disasterEvents = DisasterEvent::query()
-            ->whereNotIn('status', ['cancelled', 'closed'])
-            ->latest('start_date')
-            ->get();
-
-        return view(
-            'assistance-campaigns.create',
-            compact('disasterEvents')
-        );
+        return view('assistance-campaigns.create');
     }
 
     /**
@@ -186,12 +176,6 @@ class AssistanceCampaignController extends Controller
                 'required',
                 'in:draft,active',
             ],
-
-            'disaster_event_id' => [
-                'nullable',
-                'integer',
-                'exists:disaster_events,id',
-            ],
         ]);
 
         /*
@@ -239,9 +223,6 @@ class AssistanceCampaignController extends Controller
 
             'status' => $validated['status'],
 
-            'disaster_event_id' =>
-                $validated['disaster_event_id'] ?? null,
-
             'barangay' => 'Barangay Poblacion',
 
             'municipality' => 'Bani',
@@ -271,7 +252,6 @@ class AssistanceCampaignController extends Controller
         AssistanceCampaign $assistanceCampaign
     ): View {
         $assistanceCampaign->load([
-            'disasterEvent',
             'creator',
             'updater',
         ]);
@@ -313,17 +293,9 @@ class AssistanceCampaignController extends Controller
     public function edit(
         AssistanceCampaign $assistanceCampaign
     ): View {
-        $disasterEvents = DisasterEvent::query()
-            ->whereNotIn('status', ['cancelled', 'closed'])
-            ->latest('start_date')
-            ->get();
-
         return view(
             'assistance-campaigns.edit',
-            compact(
-                'assistanceCampaign',
-                'disasterEvents'
-            )
+            compact('assistanceCampaign')
         );
     }
 
@@ -399,12 +371,6 @@ class AssistanceCampaignController extends Controller
                 'required',
                 'in:draft,active,closed,cancelled',
             ],
-
-            'disaster_event_id' => [
-                'nullable',
-                'integer',
-                'exists:disaster_events,id',
-            ],
         ]);
 
         /*
@@ -466,9 +432,6 @@ class AssistanceCampaignController extends Controller
 
             'status' =>
                 $validated['status'],
-
-            'disaster_event_id' =>
-                $validated['disaster_event_id'] ?? null,
 
             'updated_by' =>
                 Auth::id(),

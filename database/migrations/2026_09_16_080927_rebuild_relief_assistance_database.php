@@ -16,14 +16,6 @@ return new class extends Migration
         |--------------------------------------------------------------------------
         | RELIEF ASSISTANCE OPERATIONS
         |--------------------------------------------------------------------------
-        |
-        | Add the unit of measurement for received assistance.
-        |
-        | Examples:
-        | 100 Family Packs
-        | 50 Sacks
-        | 200 Kits
-        |
         */
 
         if (
@@ -47,13 +39,6 @@ return new class extends Migration
         |--------------------------------------------------------------------------
         | RELIEF VOUCHERS
         |--------------------------------------------------------------------------
-        |
-        | The previous voucher table was designed around
-        | DisasterAssessment.
-        |
-        | The new design makes the voucher part of a general
-        | Relief Assistance Operation.
-        |
         */
 
         if (! Schema::hasTable('relief_vouchers')) {
@@ -62,11 +47,8 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | Remove Old Foreign Keys
+        | REMOVE OLD FOREIGN KEYS
         |--------------------------------------------------------------------------
-        |
-        | These belonged to the previous voucher workflow.
-        |
         */
 
         $oldForeignKeys = [
@@ -80,10 +62,7 @@ return new class extends Migration
 
         foreach ($oldForeignKeys as $column) {
             if (
-                Schema::hasColumn(
-                    'relief_vouchers',
-                    $column
-                )
+                Schema::hasColumn('relief_vouchers', $column)
             ) {
                 try {
                     Schema::table(
@@ -93,31 +72,25 @@ return new class extends Migration
                         }
                     );
                 } catch (\Throwable $exception) {
-                    /*
-                    |--------------------------------------------------------------------------
-                    | The foreign key may not exist in an older database
-                    | version. The column will still be removed below.
-                    |--------------------------------------------------------------------------
-                    */
+                    // Continue if the legacy foreign key does not exist.
                 }
             }
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Remove Old Voucher Columns
+        | REMOVE OBSOLETE VOUCHER COLUMNS
         |--------------------------------------------------------------------------
         |
-        | These fields belong to the previous DisasterAssessment-based
-        | voucher workflow and are no longer used.
+        | IMPORTANT:
+        | Keep purok_name and requirements_verified.
+        | Both are still used by the current application.
         |
         */
 
         $oldColumns = [
             'disaster_assessment_id',
             'program_id',
-            'purok_name',
-            'requirements_verified',
             'is_id_verified',
             'is_proof_verified',
             'physical_file_ref',
@@ -135,10 +108,7 @@ return new class extends Migration
 
         foreach ($oldColumns as $column) {
             if (
-                Schema::hasColumn(
-                    'relief_vouchers',
-                    $column
-                )
+                Schema::hasColumn('relief_vouchers', $column)
             ) {
                 $columnsToDrop[] = $column;
             }
@@ -155,12 +125,8 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | Add Beneficiary Reference
+        | BENEFICIARY REFERENCE
         |--------------------------------------------------------------------------
-        |
-        | Every voucher belongs to a specific beneficiary record
-        | from the current Relief Assistance Operation.
-        |
         */
 
         if (
@@ -169,6 +135,27 @@ return new class extends Migration
                 'beneficiary_id'
             )
         ) {
+            if (
+                ! Schema::hasColumn(
+                    'relief_vouchers',
+                    'operation_id'
+                )
+            ) {
+                throw new \RuntimeException(
+                    'Cannot add beneficiary_id: operation_id is missing.'
+                );
+            }
+
+            if (
+                ! Schema::hasTable(
+                    'relief_operation_beneficiaries'
+                )
+            ) {
+                throw new \RuntimeException(
+                    'Cannot add beneficiary_id: relief_operation_beneficiaries table is missing.'
+                );
+            }
+
             Schema::table(
                 'relief_vouchers',
                 function (Blueprint $table) {
@@ -185,15 +172,8 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | Voucher Assistance Quantity
+        | ALLOCATED QUANTITY
         |--------------------------------------------------------------------------
-        |
-        | Example:
-        |
-        | Voucher = RV-P1-0001
-        | Assistance = Rice
-        | Quantity = 1
-        |
         */
 
         if (
@@ -214,12 +194,8 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | Release / Distribution Fields
+        | RELEASE / DISTRIBUTION FIELDS
         |--------------------------------------------------------------------------
-        |
-        | Keep these fields because the voucher needs to record
-        | where and when the authorized assistance is distributed.
-        |
         */
 
         if (
@@ -228,6 +204,17 @@ return new class extends Migration
                 'release_date'
             )
         ) {
+            if (
+                ! Schema::hasColumn(
+                    'relief_vouchers',
+                    'distribution_schedule'
+                )
+            ) {
+                throw new \RuntimeException(
+                    'Cannot add release_date: distribution_schedule is missing.'
+                );
+            }
+
             Schema::table(
                 'relief_vouchers',
                 function (Blueprint $table) {
@@ -263,7 +250,7 @@ return new class extends Migration
             Schema::table(
                 'relief_vouchers',
                 function (Blueprint $table) {
-                    $table->string('release_location')
+                    $table->string('release_location', 255)
                         ->nullable()
                         ->after('release_time');
                 }
@@ -272,7 +259,7 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | QR / Distribution User References
+        | QR / DISTRIBUTION USER REFERENCES
         |--------------------------------------------------------------------------
         */
 
@@ -282,6 +269,17 @@ return new class extends Migration
                 'qr_verified_by'
             )
         ) {
+            if (
+                ! Schema::hasColumn(
+                    'relief_vouchers',
+                    'qr_verified_at'
+                )
+            ) {
+                throw new \RuntimeException(
+                    'Cannot add qr_verified_by: qr_verified_at is missing.'
+                );
+            }
+
             Schema::table(
                 'relief_vouchers',
                 function (Blueprint $table) {
@@ -300,6 +298,17 @@ return new class extends Migration
                 'released_by'
             )
         ) {
+            if (
+                ! Schema::hasColumn(
+                    'relief_vouchers',
+                    'released_at'
+                )
+            ) {
+                throw new \RuntimeException(
+                    'Cannot add released_by: released_at is missing.'
+                );
+            }
+
             Schema::table(
                 'relief_vouchers',
                 function (Blueprint $table) {
@@ -314,18 +323,8 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | Voucher Status
+        | VOUCHER STATUS
         |--------------------------------------------------------------------------
-        |
-        | New workflow:
-        |
-        | pending
-        | generated
-        | issued
-        | distributed
-        | claimed
-        | cancelled
-        |
         */
 
         DB::statement(
@@ -342,7 +341,7 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | Helpful Index
+        | BENEFICIARY INDEX
         |--------------------------------------------------------------------------
         */
 
@@ -357,106 +356,21 @@ return new class extends Migration
                 }
             );
         } catch (\Throwable $exception) {
-            /*
-            |--------------------------------------------------------------------------
-            | Index may already exist.
-            |--------------------------------------------------------------------------
-            */
+            // Index may already exist.
         }
     }
 
     /**
      * Reverse the migrations.
+     *
+     * This migration is not fully reversible because its up()
+     * operation removes legacy columns and changes the status ENUM.
      */
     public function down(): void
     {
-        /*
-        |--------------------------------------------------------------------------
-        | Remove Added Columns
-        |--------------------------------------------------------------------------
-        */
-
-        if (Schema::hasTable('relief_vouchers')) {
-            /*
-            | Drop foreign keys first.
-            */
-
-            foreach ([
-                'beneficiary_id',
-                'qr_verified_by',
-                'released_by',
-            ] as $column) {
-                if (
-                    Schema::hasColumn(
-                        'relief_vouchers',
-                        $column
-                    )
-                ) {
-                    try {
-                        Schema::table(
-                            'relief_vouchers',
-                            function (Blueprint $table) use ($column) {
-                                $table->dropForeign([$column]);
-                            }
-                        );
-                    } catch (\Throwable $exception) {
-                        //
-                    }
-                }
-            }
-
-            $columns = [
-                'beneficiary_id',
-                'allocated_quantity',
-                'release_date',
-                'release_time',
-                'release_location',
-                'qr_verified_by',
-                'released_by',
-            ];
-
-            $columnsToDrop = [];
-
-            foreach ($columns as $column) {
-                if (
-                    Schema::hasColumn(
-                        'relief_vouchers',
-                        $column
-                    )
-                ) {
-                    $columnsToDrop[] = $column;
-                }
-            }
-
-            if (! empty($columnsToDrop)) {
-                Schema::table(
-                    'relief_vouchers',
-                    function (Blueprint $table) use ($columnsToDrop) {
-                        $table->dropColumn($columnsToDrop);
-                    }
-                );
-            }
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Remove Quantity Unit
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            Schema::hasTable('relief_assistance_operations')
-            && Schema::hasColumn(
-                'relief_assistance_operations',
-                'quantity_unit'
-            )
-        ) {
-            Schema::table(
-                'relief_assistance_operations',
-                function (Blueprint $table) {
-                    $table->dropColumn('quantity_unit');
-                }
-            );
-        }
+        throw new \LogicException(
+            'This migration cannot be safely rolled back automatically. '
+            . 'Restore the database from a verified backup instead.'
+        );
     }
 };

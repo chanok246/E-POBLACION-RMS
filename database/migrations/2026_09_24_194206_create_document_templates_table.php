@@ -1,23 +1,34 @@
 <?php
 
-namespace App\Models;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-use Illuminate\Database\Eloquent\Model;
-
-class DocumentTemplate extends Model
+return new class extends Migration
 {
-    protected $fillable = [
-        'document_type',
-        'template_name',
-        'file_path',
-        'file_type',
-        'is_active',
-    ];
-
-    protected function casts(): array
+    public function up(): void
     {
-        return [
-            'is_active' => 'boolean',
-        ];
+        Schema::create('document_templates', function (Blueprint $table) {
+            $table->id();
+
+            $table->string('document_type');
+            $table->string('template_name');
+            $table->string('file_path');
+            $table->string('file_type', 20);
+
+            $table->boolean('is_active')->default(true);
+
+            $table->timestamps();
+
+            $table->index(
+                ['document_type', 'is_active'],
+                'document_templates_type_active_idx'
+            );
+        });
     }
-}
+
+    public function down(): void
+    {
+        Schema::dropIfExists('document_templates');
+    }
+};

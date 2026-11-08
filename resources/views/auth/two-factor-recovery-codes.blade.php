@@ -4,20 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Save Recovery Codes | e-Poblacion</title>
+    <meta name="robots" content="noindex, nofollow">
+    <title>Required Policy Consent | e-Poblacion</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('icon.png') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Unbounded:wght@700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Public+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 
     <script>
-        /* Apply the saved e-Poblacion theme before first paint (falls back to the OS setting). */
         (function () {
             try {
-                var saved = localStorage.getItem('theme') || localStorage.getItem('epoblacion-theme') || localStorage.getItem('e-poblacion-theme');
+                var saved = localStorage.getItem('theme')
+                    || localStorage.getItem('epoblacion-theme')
+                    || localStorage.getItem('e-poblacion-theme');
+
                 var theme = (saved === 'dark' || saved === 'light')
                     ? saved
                     : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
                 if (!document.documentElement.getAttribute('data-theme')) {
                     document.documentElement.setAttribute('data-theme', theme);
                 }
@@ -30,616 +37,1168 @@
     </script>
 
     <style>
+        /*
+         * Same green theme as the Two-Factor Verification page.
+         *  - Green (brand)  = primary action / current step
+         *  - Leaf green     = completed steps + selected / verified states
+         *  - Crimson + icon = errors only (never used for buttons or decoration)
+         */
         :root {
             color-scheme: light;
-            --bg: #fdf1f3;
-            --bg-2: #fbe3e7;
+
+            --page: #f4f8f6;
             --card: #ffffff;
-            --field: #ffffff;
-            --ink: #3a2a2e;
-            --ink-2: #6f565c;
-            --faint: #a58f95;
-            --line: #f0d0d6;
-            --line-strong: #e3b8c0;
-            --wash: #fdf1f3;
-            --ube: #d63f4c;
-            --ube-soft: rgba(229, 80, 92, .11);
-            --on-brand: #ffffff;
-            --mango: #ffc933;
-            --mango-soft: #fff1d6;
-            --mango-line: #ecd08a;
-            --mango-ink: #7a5000;
-            --red: #c9302c;
-            --red-soft: #fde3e3;
-            --green: #3b8a40;
-            --green-soft: #e6f4e4;
-            --shadow: 0 2px 4px rgba(120, 40, 55, .05), 0 22px 50px rgba(120, 40, 55, .12);
+            --aside: #fbfdfc;
+            --text: #12201a;
+            --muted: #566a60;
+            --faint: #8a9d92;
+            --border: #dce5df;
+            --input: #ffffff;
+
+            --brand: #0a911a;
+            --brand-dark: #087514;
+            --brand-soft: #e1f5e3;
+
+            --leaf: #2f9e5b;
+            --leaf-dark: #1f7a43;
+            --leaf-soft: #e3f4ea;
+
+            --sun: #ffc933;
+
+            --error: #b42318;
+            --error-soft: #fce7e6;
+
+            --ring: rgba(10, 145, 26, .20);
+
+            --font-head: 'Space Grotesk', 'Public Sans', system-ui, sans-serif;
+            --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
         }
 
         html[data-theme="dark"] {
             color-scheme: dark;
-            --bg: #171216;
-            --bg-2: #211a20;
-            --card: #211a20;
-            --field: #191419;
-            --ink: #f6eff1;
-            --ink-2: #c2b3b8;
-            --faint: #a18b92;
-            --line: #49343b;
-            --line-strong: #62444d;
-            --wash: #292027;
-            --ube: #ff8b96;
-            --ube-soft: rgba(255, 127, 139, .14);
-            --on-brand: #2b0c12;
-            --mango-soft: #3a2c10;
-            --mango-line: #6b5420;
-            --mango-ink: #ffc15c;
-            --red: #ff8a95;
-            --red-soft: #401a1d;
-            --green: #8fe29a;
-            --green-soft: #1f3a27;
-            --shadow: none;
+
+            --page: #08140f;
+            --card: #10201a;
+            --aside: #0c1914;
+            --text: #eef6f1;
+            --muted: #a9bdb3;
+            --faint: #7f958a;
+            --border: #274034;
+            --input: #0a1812;
+
+            --brand: #1fae30;
+            --brand-dark: #7fe68a;
+            --brand-soft: #12301a;
+            --leaf-soft: #12301f;
+            --leaf-dark: #7fe0a6;
+
+            --error: #ffaaa3;
+            --error-soft: #3a1b1a;
         }
 
-        * { box-sizing: border-box; }
-        h1, h2, p, ul { margin: 0; padding: 0; }
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            min-height: 100%;
+        }
 
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            min-height: 100svh;
+            padding: 20px;
+
+            display: grid;
+            place-items: center;
+
             background:
-                radial-gradient(900px 500px at 100% -10%, var(--ube-soft), transparent 60%),
-                radial-gradient(700px 480px at -10% 110%, var(--ube-soft), transparent 60%),
-                var(--bg);
-            color: var(--ink);
+                radial-gradient(55% 45% at 100% 0%, rgba(10, 145, 26, .10), transparent 70%),
+                radial-gradient(50% 45% at 0% 100%, rgba(255, 201, 51, .10), transparent 70%),
+                var(--page);
+
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
 
-        button, input { font: inherit; }
-        .display { font-family: 'Unbounded', 'Figtree', system-ui, sans-serif; letter-spacing: -.02em; }
+        h1, h2, h3, h4, p, ul, ol {
+            margin: 0;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: var(--font-head);
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        button, input {
+            font: inherit;
+        }
+
+        /* ==============================
+           MAIN LANDSCAPE CONTAINER
+           (fits one screen; only the policies scroll)
+        ============================== */
 
         .shell {
-            width: 100%;
-            max-width: 1180px;
-            min-height: 100vh;
-            margin: 0 auto;
-            padding: 32px 20px;
-            display: grid;
-            grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-            gap: 0;
-            align-items: stretch;
-            align-content: center;
-        }
-
-        /* ---------- Left brand panel ---------- */
-        .side {
             position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            gap: 28px;
-            padding: 36px 32px;
-            border-radius: 28px 0 0 28px;
-            background: linear-gradient(155deg, #f27984 0%, #e5505c 55%, #c9303f 100%);
-            color: #dbcbcb;
+
+            width: 100%;
+            max-width: 1120px;
+            height: min(700px, calc(100svh - 40px));
+
+            display: grid;
+            grid-template-columns: 5fr 7fr;
+            grid-template-rows: minmax(0, 1fr);
+
+            border: 1px solid var(--border);
+            border-radius: 24px;
             overflow: hidden;
-        }
-/*Container to ng codes*/
-        html[data-theme="dark"] .side {
-            background: linear-gradient(155deg, #d5164f 0%, #8c506d 60%, #2a1a22 100%);
-            border: 1px solid var(--line);
-            border-right: 0;
+
+            background: var(--card);
+
+            box-shadow:
+                0 2px 4px rgba(6, 35, 26, .04),
+                0 28px 60px rgba(6, 35, 26, .12);
         }
 
-        .side::before,
-        .side::after {
+        .shell::before {
             content: '';
             position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            height: 4px;
+            z-index: 2;
+
+            background: linear-gradient(90deg, var(--brand), var(--leaf) 55%, var(--sun));
+        }
+
+        /* ==============================
+           LEFT PANEL: BRANDING + SEAL
+        ============================== */
+
+        .side {
+            min-height: 0;
+
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+
+            padding: 32px 30px 26px;
+
+            background:
+                radial-gradient(90% 60% at 0% 0%, rgba(10, 145, 26, .08), transparent 70%),
+                radial-gradient(80% 60% at 100% 100%, rgba(255, 201, 51, .07), transparent 70%),
+                var(--aside);
+
+            border-right: 1px solid var(--border);
+        }
+
+        .brand h1 {
+            font-size: 19px;
+            font-weight: 700;
+        }
+
+        .brand p {
+            margin-top: 2px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .side-divider {
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Large official seal that fills the left panel */
+
+        .seal-stage {
+            position: relative;
+            flex: 1;
+            min-height: 160px;
+        }
+
+        .seal-stage::before {
+            content: '';
+            position: absolute;
+            inset: 6%;
+
             border-radius: 50%;
-            background: rgba(255, 255, 255, .10);
-            pointer-events: none;
+            background:
+                radial-gradient(closest-side, rgba(10, 145, 26, .16), rgba(255, 201, 51, .10) 62%, transparent 100%);
         }
-        .side::before { width: 280px; height: 280px; right: -110px; top: -90px; }
-        .side::after { width: 200px; height: 200px; left: -70px; bottom: -70px; }
 
-        .brand { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; }
-        .brand-mark {
-            display: grid; place-items: center;
-            width: 46px; height: 46px; border-radius: 14px;
-            background: rgba(255, 255, 255, .20);
-            border: 1px solid rgba(255, 255, 255, .35);
-            font-weight: 800; font-size: 22px;
+        .seal {
+            position: absolute;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+            padding: 6px;
+
+            object-fit: contain;
+            object-position: center;
+
+            filter: drop-shadow(0 14px 22px rgba(6, 35, 26, .22));
+            -webkit-user-drag: none;
+            user-select: none;
         }
-        .brand b { display: block; font-size: 17px; font-weight: 800; }
-        .brand span { display: block; margin-top: 1px; font-size: 12px; opacity: .85; }
 
-        .side-copy { position: relative; z-index: 1; }
-        .side-copy .eyebrow {
-            display: inline-flex; align-items: center; gap: 7px;
-            padding: 5px 12px; border-radius: 999px;
-            background: rgba(255, 255, 255, .18);
-            font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+        .side-foot {
+            display: grid;
+            gap: 10px;
         }
-        .side-copy h1 { margin-top: 16px; font-size: clamp(24px, 2.6vw, 32px); line-height: 1.2; font-weight: 800; }
-        .side-copy p { margin-top: 12px; font-size: 14px; line-height: 1.65; opacity: .92; }
 
-        .progress { position: relative; z-index: 1; display: grid; gap: 12px; list-style: none; }
-        .progress li { display: flex; align-items: center; gap: 12px; font-size: 13.5px; font-weight: 600; }
-        .progress .dot {
-            flex: none; display: grid; place-items: center;
-            width: 26px; height: 26px; border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, .55);
-            font-size: 12px; font-weight: 800;
+        .security-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.5;
         }
-        .progress li.done .dot { background: #fff; border-color: #fff; color: #d63f4c; }
-        html[data-theme="dark"] .progress li.done .dot { color: #35202a; }
-        .progress li.now .dot { border-color: var(--mango); background: var(--mango); color: #4a3200; }
-        .progress li.now { font-weight: 800; }
 
-        /* ---------- Right content panel ---------- */
+        .security-note i {
+            margin-top: 2px;
+            color: var(--leaf);
+        }
+
+        .side-credit {
+            color: var(--faint);
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: .02em;
+        }
+
+        /* ==============================
+           RIGHT PANEL: CONSENT
+        ============================== */
+
         .main {
-            padding: 34px 36px 32px;
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-left: 0;
-            border-radius: 0 28px 28px 0;
-            box-shadow: var(--shadow);
             min-width: 0;
+            min-height: 0;
+
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+
+            padding: 30px 32px 26px;
         }
 
-        .main-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-        .main-top h2 { font-size: 19px; font-weight: 800; }
-        .theme-toggle {
-            display: grid; place-items: center;
-            width: 42px; height: 42px; border-radius: 12px;
-            border: 1.5px solid var(--line); background: var(--field); color: var(--ink-2);
-            cursor: pointer; transition: border-color .15s, color .15s;
+        .main-top {
+            flex: none;
+
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        .theme-toggle:hover { border-color: var(--ube); color: var(--ube); }
-        .theme-toggle svg { width: 19px; height: 19px; }
+
+        .steps {
+            flex: 1;
+            min-width: 0;
+
+            list-style: none;
+            margin: 0;
+            padding: 0;
+
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .steps li {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--faint);
+            white-space: nowrap;
+        }
+
+        .steps .dot {
+            width: 20px;
+            height: 20px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 50%;
+            background: var(--border);
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .steps .is-done {
+            color: var(--leaf-dark);
+        }
+
+        .steps .is-done .dot {
+            background: var(--leaf);
+            color: #ffffff;
+        }
+
+        .steps .is-current {
+            color: var(--brand-dark);
+        }
+
+        .steps .is-current .dot {
+            background: var(--brand);
+            color: #ffffff;
+        }
+
+        .steps .bar {
+            flex: 1;
+            min-width: 14px;
+            height: 2px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--leaf), var(--brand));
+            opacity: .5;
+        }
+
+        .theme-toggle {
+            flex: none;
+            width: 38px;
+            height: 38px;
+
+            display: grid;
+            place-items: center;
+
+            border: 1.5px solid var(--border);
+            border-radius: 11px;
+            background: var(--input);
+            color: var(--muted);
+
+            font-size: 16px;
+            cursor: pointer;
+            transition: border-color .15s, color .15s;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--brand);
+            color: var(--brand-dark);
+        }
+
         .theme-toggle .moon { display: none; }
+
         html[data-theme="dark"] .theme-toggle .sun { display: none; }
         html[data-theme="dark"] .theme-toggle .moon { display: block; }
 
-        .warning {
-            display: flex; gap: 13px;
-            margin-bottom: 20px; padding: 15px 17px;
-            background: var(--mango-soft);
-            border: 1px solid var(--mango-line);
+        .intro {
+            flex: none;
+        }
+
+        .intro h2 {
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .intro p {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .intro p strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        /* Scrollable policies: the only part of the page that scrolls */
+
+        .policy-scroll {
+            flex: 1;
+            min-height: 0;
+
+            display: grid;
+            align-content: start;
+            gap: 12px;
+
+            padding: 12px;
+
+            overflow-y: auto;
+            overscroll-behavior: contain;
+
+            border: 1px solid var(--border);
             border-radius: 16px;
-            color: var(--ink);
-            font-size: 13.5px; line-height: 1.55;
-        }
-        .warning svg { flex: none; width: 22px; height: 22px; margin-top: 1px; color: var(--mango-ink); }
-        .warning strong { display: block; margin-bottom: 5px; font-size: 14px; }
-        .warning ul { padding-left: 18px; display: grid; gap: 2px; color: var(--ink-2); }
+            background: var(--page);
 
-        .codes-box {
-            padding: 18px;
-            background: var(--wash);
-            border: 1.5px dashed var(--line-strong);
-            border-radius: 20px;
-            margin-bottom: 16px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--faint) transparent;
         }
 
-        .codes-heading {
-            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-            gap: 10px; margin-bottom: 14px;
-        }
-        .codes-heading b { font-size: 14px; font-weight: 800; }
-        .codes-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .chip {
-            padding: 4px 11px; border-radius: 999px;
-            background: var(--ube-soft); color: var(--ube);
-            font-size: 11.5px; font-weight: 700;
-        }
-        .peek {
-            display: inline-flex; align-items: center; gap: 6px;
-            min-height: 34px; padding: 5px 12px;
-            border: 1.5px solid var(--line); border-radius: 999px;
-            background: var(--field); color: var(--ink-2);
-            font-size: 12.5px; font-weight: 700; cursor: pointer;
-        }
-        .peek:hover { border-color: var(--ube); color: var(--ube); }
-
-        .codes-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-            gap: 10px;
+        .policy-scroll::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .code {
-            position: relative;
-            display: flex; align-items: center; gap: 11px;
-            width: 100%; min-width: 0; min-height: 52px;
-            padding: 10px 12px;
+        .policy-scroll::-webkit-scrollbar-thumb {
+            background: var(--faint);
+            border-radius: 8px;
+        }
+
+        .policy-scroll:focus-visible {
+            outline: 3px solid var(--brand);
+            outline-offset: 2px;
+        }
+
+        .policy-card {
+            padding: 16px 18px;
+
             background: var(--card);
-            border: 1.5px solid var(--line);
+            border: 1px solid var(--border);
             border-radius: 14px;
-            color: var(--ink);
-            text-align: left;
-            cursor: pointer;
-            transition: border-color .15s, transform .15s, background .15s;
         }
-        .code:hover { border-color: var(--ube); transform: translateY(-1px); }
-        .code.copied { border-color: var(--green); background: var(--green-soft); }
 
-        .number {
-            display: grid; place-items: center;
-            flex: 0 0 26px; height: 26px; border-radius: 8px;
-            background: var(--ube-soft); color: var(--ube);
-            font-size: 12px; font-weight: 800;
+        .policy-card h3 {
+            margin-bottom: 9px;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
         }
-        .code code {
-            min-width: 0; flex: 1;
-            overflow-wrap: anywhere;
-            font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
-            font-size: 14px; font-weight: 700; letter-spacing: .04em;
-            user-select: all;
-            transition: filter .15s;
-        }
-        .code .tag {
-            flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
-            color: var(--faint); opacity: 0; transition: opacity .15s;
-        }
-        .code:hover .tag, .code:focus-visible .tag { opacity: 1; }
-        .code.copied .tag { opacity: 1; color: var(--green); }
 
-        .codes-box.is-hidden .code code { filter: blur(7px); user-select: none; }
+        .policy-card p,
+        .policy-card li {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.65;
+        }
 
-        .actions {
+        .policy-card li strong {
+            color: var(--text);
+        }
+
+        .policy-card p + p {
+            margin-top: 10px;
+        }
+
+        .policy-card h4 {
+            margin-top: 13px;
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .policy-card ul {
+            padding-left: 19px;
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-            margin-bottom: 22px;
+            gap: 5px;
         }
-        .action {
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            min-height: 48px; padding: 11px 8px;
-            border: 1.5px solid var(--line-strong); border-radius: 14px;
-            background: var(--card); color: var(--ink);
-            font-size: 13.5px; font-weight: 700; cursor: pointer;
-            transition: background .15s, border-color .15s, color .15s;
+
+        .policy-card li::marker {
+            color: var(--brand);
         }
-        .action svg { width: 17px; height: 17px; flex: none; }
-        .action:hover { background: var(--ube-soft); border-color: var(--ube); color: var(--ube); }
-        .action.done { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+
+        .policy-card .lead {
+            margin-bottom: 10px;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .policy-card .disclaimer {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .policy-version {
+            justify-self: start;
+
+            display: inline-flex;
+            align-items: center;
+
+            padding: 4px 10px;
+            border-radius: 999px;
+
+            background: var(--leaf-soft);
+            color: var(--leaf-dark);
+
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+
+        /* Consent form */
+
+        .consent-form {
+            flex: none;
+        }
 
         .error {
-            display: flex; gap: 9px;
-            margin-bottom: 14px; padding: 12px 14px;
-            border-radius: 12px; border: 1px solid var(--red);
-            background: var(--red-soft); color: var(--red);
-            font-size: 13.5px; font-weight: 600;
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+
+            margin-bottom: 10px;
+            padding: 10px 13px;
+
+            background: var(--error-soft);
+            border-left: 4px solid var(--error);
+            border-radius: 10px;
+            color: var(--error);
+
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        .error i {
+            margin-top: 2px;
         }
 
         .confirmation {
-            display: flex; align-items: flex-start; gap: 13px;
-            padding: 15px 16px; margin-bottom: 14px;
-            border: 1.5px solid var(--line); border-radius: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+
+            padding: 12px 14px;
+            margin-bottom: 12px;
+
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            background: var(--input);
+
             cursor: pointer;
             transition: border-color .15s, background .15s;
         }
-        .confirmation:hover { border-color: var(--ube); }
-        .confirmation:has(input:checked) { border-color: var(--ube); background: var(--ube-soft); }
-        .confirmation input { width: 20px; height: 20px; margin: 2px 0 0; flex: 0 0 auto; accent-color: var(--ube); cursor: pointer; }
-        .confirmation strong { display: block; font-size: 14px; line-height: 1.5; }
-        .confirmation small { display: block; margin-top: 4px; color: var(--ink-2); font-size: 12.5px; line-height: 1.5; }
+
+        .confirmation:hover {
+            border-color: var(--brand);
+        }
+
+        .confirmation:has(input:checked) {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .confirmation input {
+            width: 20px;
+            height: 20px;
+            margin: 2px 0 0;
+            flex: 0 0 auto;
+
+            accent-color: var(--brand);
+            cursor: pointer;
+        }
+
+        .confirmation strong {
+            display: block;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .confirmation small {
+            display: block;
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 11.5px;
+            line-height: 1.5;
+        }
 
         .continue {
-            display: flex; align-items: center; justify-content: center; gap: 9px;
-            width: 100%; min-height: 52px; padding: 13px 18px;
-            border: 0; border-radius: 999px;
-            background: linear-gradient(135deg, #f27984, #e5505c);
-            color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
-            box-shadow: 0 8px 18px rgba(229, 80, 92, .28);
+            width: 100%;
+            min-height: 46px;
+            padding: 10px 14px;
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+
+            border: 0;
+            border-radius: 11px;
+
+            background: var(--brand);
+            color: #ffffff;
+
+            font-size: 13.5px;
+            font-weight: 700;
+
+            cursor: pointer;
+            box-shadow: 0 8px 18px var(--ring);
             transition: filter .15s, transform .15s, opacity .15s;
         }
-        html[data-theme="dark"] .continue { background: linear-gradient(135deg, #ff8f9a, #ff7f8b); color: #2b0c12; box-shadow: none; }
-        .continue:hover:not(:disabled) { filter: brightness(1.06); }
-        .continue:active:not(:disabled) { transform: scale(.98); }
-        .continue:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 
-        .hint { min-height: 18px; margin-top: 11px; text-align: center; color: var(--ink-2); font-size: 12.5px; }
+        .continue:hover:not(:disabled) {
+            filter: brightness(1.07);
+        }
 
-        .footer { grid-column: 1 / -1; margin-top: 18px; text-align: center; color: var(--ink-2); font-size: 12px; }
+        .continue:active:not(:disabled) {
+            transform: scale(.99);
+        }
 
-        .action:focus-visible, .continue:focus-visible, .code:focus-visible,
-        .peek:focus-visible, .theme-toggle:focus-visible, input:focus-visible {
-            outline: 3px solid var(--mango);
+        .continue:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .hint {
+            min-height: 18px;
+            margin-top: 9px;
+
+            text-align: center;
+            color: var(--faint);
+            font-size: 12px;
+        }
+
+        :focus-visible {
+            outline: 3px solid var(--brand);
             outline-offset: 3px;
         }
 
-        @media (max-width: 991.98px) {
-            .shell { grid-template-columns: minmax(0, 1fr); max-width: 680px; padding: 20px 14px; }
-            .side { border-radius: 24px 24px 0 0; padding: 26px 24px; gap: 20px; }
-            html[data-theme="dark"] .side { border-right: 1px solid var(--line); border-bottom: 0; }
-            .progress { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-            .progress li { flex-direction: column; align-items: flex-start; gap: 6px; font-size: 12px; }
-            .main { border-left: 1px solid var(--line); border-top: 0; border-radius: 0 0 24px 24px; padding: 26px 22px; }
-        }
+        /* ==============================
+           RESPONSIVE LAYOUT
+        ============================== */
 
-        @media (max-width: 520px) {
-            .main { padding: 22px 15px; }
-            .codes-box { padding: 13px; }
-            .codes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-            .code { padding: 9px 8px; gap: 7px; }
-            .code code { font-size: 12px; letter-spacing: 0; }
-            .code .tag { display: none; }
-            .actions { grid-template-columns: minmax(0, 1fr); }
-        }
-
-        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
-
-        @media print {
-            body { background: #fff; color: #000; }
-            .side, .main-top, .warning, .actions, #finishForm, .footer, .peek, .chip, .code .tag { display: none !important; }
-            .shell { display: block; padding: 0; min-height: 0; max-width: none; }
-            .main { border: 0; box-shadow: none; padding: 0; background: #fff; }
-            .codes-box { background: #fff; border: 0; padding: 0; }
-            .codes-box::before {
-                content: "e-Poblacion Recovery Codes \2014  Keep private. Each code can be used once.";
-                display: block; margin-bottom: 14px; font-size: 14px; font-weight: bold; color: #000;
+        @media (max-height: 700px) and (min-width: 821px) {
+            body {
+                padding: 12px;
             }
-            .codes-box.is-hidden .code code { filter: none !important; }
-            .code { break-inside: avoid; border: 1px solid #777; background: #fff; color: #000; }
-            .number { background: #eee; color: #000; }
+
+            .shell {
+                height: calc(100svh - 24px);
+            }
+
+            .side {
+                padding: 24px 26px 20px;
+                gap: 14px;
+            }
+
+            .main {
+                padding: 24px 28px 20px;
+                gap: 11px;
+            }
+
+            .intro h2 {
+                font-size: 23px;
+            }
+
+            .intro p {
+                font-size: 12.5px;
+            }
+
+            .confirmation {
+                padding: 10px 12px;
+                margin-bottom: 9px;
+            }
+
+            .confirmation small {
+                display: none;
+            }
+
+            .hint {
+                margin-top: 6px;
+            }
+        }
+
+        @media (max-width: 820px) {
+            body {
+                padding: 14px;
+                place-items: start center;
+            }
+
+            .shell {
+                max-width: 600px;
+                height: auto;
+
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+
+            /* On phones the consent comes first, branding below. */
+            .main {
+                order: -1;
+                padding: 24px 20px;
+            }
+
+            .policy-scroll {
+                flex: none;
+                max-height: 340px;
+            }
+
+            .side {
+                padding: 24px 22px 20px;
+                border-right: 0;
+                border-top: 1px solid var(--border);
+            }
+
+            .seal-stage {
+                flex: none;
+                width: min(100%, 240px);
+                height: 240px;
+                min-height: 0;
+                margin: 0 auto;
+            }
+
+            .intro h2 {
+                font-size: 23px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .shell {
+                border-radius: 18px;
+            }
+
+            .main {
+                padding: 21px 15px;
+            }
+
+            .side {
+                padding: 22px 17px 18px;
+            }
+
+            .policy-card {
+                padding: 14px;
+            }
+
+            .steps .label-text {
+                display: none;
+            }
+
+            .brand h1 {
+                font-size: 17px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                transition: none !important;
+                scroll-behavior: auto !important;
+            }
         }
     </style>
 </head>
+
 <body>
     <main class="shell">
-        <aside class="side" aria-label="Setup progress">
-            <div class="brand">
-                <div class="brand-mark display" aria-hidden="true">E</div>
-                <div><b class="display">e-Poblacion</b><span>Barangay Record Management System</span></div>
+
+        {{-- ==========================================
+             LEFT PANEL: BRANDING + SEAL
+        =========================================== --}}
+        <aside class="side" aria-label="Sign-in progress">
+
+            <header class="brand">
+                <div>
+                    <h1>e-Poblacion</h1>
+                    <p>Barangay Poblacion Record Management System</p>
+                </div>
+            </header>
+
+            <div class="side-divider"></div>
+
+            {{-- Large official seal: fills the space between the header and the footer. --}}
+            <div class="seal-stage">
+                <img
+                    class="seal"
+                    src="{{ asset('icon.png') }}"
+                    alt="Barangay Poblacion official seal"
+                    width="640"
+                    height="640"
+                    decoding="async"
+                    fetchpriority="high"
+                    draggable="false"
+                >
             </div>
 
-            <div class="side-copy">
-                <span class="eyebrow">Account Security &middot; Final Step</span>
-                <h1 class="display">Keep your way back in.</h1>
-                <p>Your authenticator code was verified. Recovery codes let you sign in if you ever lose access to your authenticator app, so save them somewhere safe before finishing.</p>
-            </div>
+            <div class="side-foot">
+                <p class="security-note">
+                    <i class="bi bi-shield-check" aria-hidden="true"></i>
 
-            <ol class="progress">
-                <li class="done"><span class="dot">&#10003;</span> Scan QR code</li>
-                <li class="done"><span class="dot">&#10003;</span> Verify code</li>
-                <li class="now"><span class="dot">3</span> Save recovery codes</li>
-            </ol>
+                    <span>
+                        Your acceptance is recorded for this account.
+                        Never share your verification codes with anyone.
+                    </span>
+                </p>
+
+                <p class="side-credit">e-Poblacion &middot; Secure Barangay Record Management</p>
+            </div>
         </aside>
 
+
+        {{-- ==========================================
+             RIGHT PANEL: POLICY CONSENT
+        =========================================== --}}
         <section class="main" aria-labelledby="pageTitle">
+
             <div class="main-top">
-                <h2 id="pageTitle">Save Your Recovery Codes</h2>
-                <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle light or dark theme">
-                    <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-                    <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+                {{-- Sign-in progress --}}
+                <ol class="steps" aria-label="Sign-in progress">
+                    <li class="is-done">
+                        <span class="dot">
+                            <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        </span>
+                        <span class="label-text">Password</span>
+                    </li>
+
+                    <li class="bar" aria-hidden="true"></li>
+
+                    <li class="is-done">
+                        <span class="dot">
+                            <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        </span>
+                        <span class="label-text">Two-factor</span>
+                    </li>
+
+                    <li class="bar" aria-hidden="true"></li>
+
+                    <li class="is-current" aria-current="step">
+                        <span class="dot">3</span>
+                        <span class="label-text">Policy consent</span>
+                    </li>
+                </ol>
+
+                <button
+                    type="button"
+                    class="theme-toggle"
+                    id="themeToggle"
+                    aria-label="Toggle light or dark theme"
+                >
+                    <i class="bi bi-sun sun" aria-hidden="true"></i>
+                    <i class="bi bi-moon-stars moon" aria-hidden="true"></i>
                 </button>
             </div>
 
-            <div class="warning" role="alert">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>
-                <div>
-                    <strong>Important security notice</strong>
+            <div class="intro">
+                <h2 id="pageTitle">Required Policy Consent</h2>
+
+                <p>
+                    Your authenticator code was verified. Scroll through the
+                    Terms &amp; Conditions, Privacy Policy, and Data Privacy
+                    Notice below. <strong>Acceptance is required</strong> before
+                    you can continue to the records system.
+                </p>
+            </div>
+
+            {{-- Only this box scrolls. --}}
+            <div
+                class="policy-scroll"
+                tabindex="0"
+                role="region"
+                aria-label="Terms and Conditions, Privacy Policy, and Data Privacy Notice (scrollable)"
+            >
+                {{-- TERMS AND CONDITIONS --}}
+                <section class="policy-card" aria-labelledby="termsTitle">
+                    <h3 id="termsTitle">1. Terms &amp; Conditions</h3>
+
+                    <p class="lead">
+                        By signing in to e-Poblacion, you agree to use the system only for official
+                        Barangay Poblacion record-management work and to follow these terms.
+                    </p>
+
                     <ul>
-                        <li>Each recovery code is intended for one-time use.</li>
-                        <li>Keep the codes private and store them securely.</li>
-                        <li>Do not share them with anyone.</li>
-                        <li>Save a copy before continuing.</li>
+                        <li>
+                            <strong>Authorized use only.</strong>
+                            Access is limited to Captain and Secretary accounts issued by the barangay.
+                            Do not use another person's account.
+                        </li>
+                        <li>
+                            <strong>Protect your account.</strong>
+                            Keep your username, password, and authenticator access confidential,
+                            and never share them with anyone.
+                        </li>
+                        <li>
+                            <strong>Keep records accurate.</strong>
+                            Enter and update resident, household, document, complaint,and relief
+                            records accurately and only for legitimate barangay purposes.
+                        </li>
+                        <li>
+                            <strong>Respect access limits.</strong>
+                            Do not try to view or change records beyond your assigned permissions,
+                            and do not copy or disclose records without authority.
+                        </li>
+                        <li>
+                            <strong>Keep the system safe.</strong>
+                            Do not disrupt the system, bypass its security features, or use it
+                            for personal or unlawful purposes.
+                        </li>
+                        <li>
+                            <strong>Activity may be recorded.</strong>
+                            System activity may be logged to support accountability and the
+                            protection of barangay records.
+                        </li>
+                        <li>
+                            <strong>Changes to these terms.</strong>
+                            The barangay may update these terms when needed. Continued use of
+                            the system means you accept the updated terms.
+                        </li>
                     </ul>
+
+                    <p class="disclaimer">
+                        These terms are provided for general information and do not constitute
+                        a certified legal document. Questions may be raised with the Barangay
+                        Poblacion office.
+                    </p>
+                </section>
+
+                {{-- PRIVACY POLICY --}}
+                <section class="policy-card" aria-labelledby="privacyTitle">
+                    <h3 id="privacyTitle">2. Privacy Policy</h3>
+
+                    <p class="lead">
+                        e-Poblacion is an internal Barangay Record Management System. It is used
+                        by authorized barangay personnel to maintain official records, and it
+                        is not an online portal for residents.
+                    </p>
+
+                    <h4>What is handled</h4>
+                    <p>
+                        Personal information needed for barangay record management, such as
+                        resident and household details, document requests, reports and complaints,
+                        and relief records. The full list of information categories is in the
+                        Data Privacy Notice.
+                    </p>
+
+                    <h4>Why it is handled</h4>
+                    <p>
+                        Information is used only for legitimate barangay purposes: keeping
+                        accurate records, processing documents, handling reports and complaints,
+                        and supporting disaster response and relief programs.
+                    </p>
+
+                    <h4>How it is protected</h4>
+                    <ul>
+                        <li>
+                            Access is restricted to authorized barangay personnel based on their
+                            assigned system permissions.
+                        </li>
+                        <li>
+                            Accounts are protected by credentials and authenticator-app verification.
+                        </li>
+                        <li>
+                            Authorized personnel must keep their credentials private and must
+                            not share their passwords.
+                        </li>
+                    </ul>
+
+                    <h4>Use and disclosure</h4>
+                    <p>
+                        Records are used for official barangay functions and are disclosed only
+                        to authorized personnel or where required or permitted by applicable law.
+                    </p>
+
+                    <h4>Your rights</h4>
+                    <p>
+                        You may ask the Barangay Poblacion office about the personal data held
+                        about you, including requests for access or correction. See the Data
+                        Privacy Notice and Contact Barangay.
+                    </p>
+
+                    <p class="disclaimer">
+                        This policy is provided for general information and does not constitute
+                        a certified legal compliance statement. Formal compliance is verified
+                        separately by the barangay.
+                    </p>
+                </section>
+
+                {{-- DATA PRIVACY NOTICE --}}
+                <section class="policy-card" aria-labelledby="noticeTitle">
+                    <h3 id="noticeTitle">3. Data Privacy Notice</h3>
+
+                    <p class="lead">
+                        e-Poblacion collects and processes personal information for legitimate
+                        barangay record-management purposes, including resident records, household
+                        records, document processing, reports and complaints, and relief-related records.
+                    </p>
+
+                    <p>
+                        The information that may be maintained in the system may include:
+                    </p>
+
+                    <ul>
+                        <li>Full name</li>
+                        <li>Address and household details</li>
+                        <li>Contact information</li>
+                        <li>Records related to barangay services</li>
+                        <li>Documents and other supporting information</li>
+                        <li>Disaster assessment and relief-related records</li>
+                    </ul>
+
+                    <p>
+                        Personal information is collected only for legitimate barangay purposes
+                        and is handled in accordance with applicable Philippine data privacy
+                        requirements, including the Data Privacy Act of 2012. Access to records
+                        is restricted to authorized barangay personnel according to their
+                        assigned system permissions.
+                    </p>
+
+                    <p>
+                        Authorized personnel should protect their account credentials and must
+                        not share their passwords with other individuals.
+                    </p>
+
+                    <p>
+                        You have the right to be informed, to access, and to request the
+                        correction of your personal data. For privacy concerns, you may contact
+                        the Barangay Poblacion office directly.
+                    </p>
+
+                    <p class="disclaimer">
+                        This notice is provided for general information and does not constitute
+                        a certified legal compliance statement. Formal compliance is verified
+                        separately by the barangay.
+                    </p>
+                </section>
+
+                <div class="policy-version">
+                    Policy version: {{ $policyVersion }}
                 </div>
             </div>
 
-            <section class="codes-box" id="recoveryCodes" aria-label="Your recovery codes">
-                <div class="codes-heading">
-                    <b>Your recovery codes</b>
-                    <div class="codes-meta">
-                        <span class="chip">{{ count($recoveryCodes) }} codes &middot; One use each</span>
-                        <button type="button" class="peek" id="peekBtn" aria-pressed="false">Hide codes</button>
-                    </div>
-                </div>
-
-                <div class="codes-grid">
-                    @foreach ($recoveryCodes as $code)
-                        <button type="button" class="code" title="Click to copy this code">
-                            <span class="number">{{ $loop->iteration }}</span>
-                            <code>{{ $code }}</code>
-                            <span class="tag">Copy</span>
-                        </button>
-                    @endforeach
-                </div>
-            </section>
-
-            <div class="actions">
-                <button type="button" class="action" id="copyBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
-                    <span>Copy codes</span>
-                </button>
-                <button type="button" class="action" id="downloadBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
-                    <span>Download</span>
-                </button>
-                <button type="button" class="action" id="printBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></svg>
-                    <span>Print codes</span>
-                </button>
-            </div>
-
-            <form method="POST" action="{{ route('two-factor.finish-setup') }}" id="finishForm">
+            <form
+                method="POST"
+                action="{{ route('policy-consent.accept') }}"
+                id="consentForm"
+                class="consent-form"
+            >
                 @csrf
 
                 @if ($errors->any())
-                    <div class="error" role="alert">{{ $errors->first() }}</div>
+                    <div class="error" role="alert">
+                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                        <span>{{ $errors->first() }}</span>
+                    </div>
                 @endif
 
-                <label class="confirmation" for="savedConfirm">
-                    <input type="checkbox" name="saved_confirmation" value="1" id="savedConfirm" required>
+                <label class="confirmation" for="acceptPolicies">
+                    <input
+                        type="checkbox"
+                        name="accept_policies"
+                        value="1"
+                        id="acceptPolicies"
+                        required
+                        @checked(old('accept_policies'))
+                    >
+
                     <span>
-                        <strong>I have saved my recovery codes.</strong>
-                        <small>I understand that I should keep them secure and that this page may not show them again.</small>
+                        <strong>
+                            I have read and agree to the Terms &amp; Conditions,
+                            Privacy Policy, and Data Privacy Notice.
+                        </strong>
+
+                        <small>
+                            I understand that these policies apply to my use of
+                            the e-Poblacion Barangay Record Management System.
+                            I acknowledge that acceptance is required before
+                            I can continue.
+                        </small>
                     </span>
                 </label>
 
-                <button type="submit" class="continue" id="finishBtn" disabled>Continue to e-Poblacion &rarr;</button>
+                <button
+                    type="submit"
+                    class="continue"
+                    id="continueBtn"
+                    disabled
+                >
+                    Accept and Continue to e-Poblacion &rarr;
+                </button>
 
-                <p class="hint" id="hintLine" aria-live="polite">Save your codes and tick the checkbox to continue.</p>
+                <p class="hint" id="hintLine" aria-live="polite">
+                    Review the policies and tick the checkbox to continue.
+                </p>
             </form>
         </section>
 
-        <footer class="footer">e-Poblacion &middot; Secure Barangay Record Management</footer>
     </main>
 
     <script>
-    (function () {
-        'use strict';
+        (function () {
+            'use strict';
 
-        const codeElements = document.querySelectorAll('#recoveryCodes code');
-        const codeButtons = document.querySelectorAll('#recoveryCodes .code');
-        const codesBox = document.getElementById('recoveryCodes');
-        const copyBtn = document.getElementById('copyBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const printBtn = document.getElementById('printBtn');
-        const peekBtn = document.getElementById('peekBtn');
-        const themeToggle = document.getElementById('themeToggle');
-        const checkbox = document.getElementById('savedConfirm');
-        const form = document.getElementById('finishForm');
-        const finishBtn = document.getElementById('finishBtn');
-        const hint = document.getElementById('hintLine');
+            const themeToggle = document.getElementById('themeToggle');
+            const checkbox = document.getElementById('acceptPolicies');
+            const form = document.getElementById('consentForm');
+            const continueBtn = document.getElementById('continueBtn');
+            const hint = document.getElementById('hintLine');
 
-        const FINISH_LABEL = 'Continue to e-Poblacion →';
-        const HINT_IDLE = 'Save your codes and tick the checkbox to continue.';
-        let sending = false;
+            const BUTTON_LABEL = 'Accept and Continue to e-Poblacion →';
+            const IDLE_HINT = 'Review the policies and tick the checkbox to continue.';
 
-        function getCodes() {
-            return Array.from(codeElements, function (element) { return element.textContent.trim(); });
-        }
+            let sending = false;
 
-        async function copyText(text) {
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(text);
-                return;
-            }
+            /*
+             * Theme toggle.
+             * Uses the same localStorage key as the existing page.
+             */
+            themeToggle.addEventListener('click', function () {
+                const root = document.documentElement;
 
-            const area = document.createElement('textarea');
-            area.value = text;
-            area.setAttribute('readonly', '');
-            area.style.position = 'fixed';
-            area.style.opacity = '0';
-            document.body.appendChild(area);
-            area.select();
+                const next = root.getAttribute('data-theme') === 'dark'
+                    ? 'light'
+                    : 'dark';
 
-            let success = false;
-            try {
-                success = document.execCommand('copy');
-            } finally {
-                area.remove();
-            }
+                root.setAttribute('data-theme', next);
 
-            if (!success) throw new Error('Copy was not successful.');
-        }
-
-        function flash(button, label, restore) {
-            const text = button.querySelector('span');
-            const original = restore;
-            button.classList.add('done');
-            if (text) text.textContent = label;
-            setTimeout(function () {
-                button.classList.remove('done');
-                if (text) text.textContent = original;
-            }, 2000);
-        }
-
-        /* Copy one code by clicking it. */
-        codeButtons.forEach(function (button) {
-            button.addEventListener('click', async function () {
-                const value = button.querySelector('code').textContent.trim();
-                const tag = button.querySelector('.tag');
                 try {
-                    await copyText(value);
-                    button.classList.add('copied');
-                    if (tag) tag.textContent = 'Copied';
-                    setTimeout(function () {
-                        button.classList.remove('copied');
-                        if (tag) tag.textContent = 'Copy';
-                    }, 1500);
-                } catch (error) {
-                    alert('Copy failed. Please select and copy the code manually.');
+                    localStorage.setItem('theme', next);
+                } catch (e) {
+                    // Theme remains active for the current page.
                 }
             });
-        });
 
-        copyBtn.addEventListener('click', async function () {
-            try {
-                await copyText(getCodes().join('\n'));
-                flash(copyBtn, 'Copied!', 'Copy codes');
-            } catch (error) {
-                alert('Copy failed. Please select and copy the codes manually.');
-            }
-        });
+            /*
+             * Enable submission only after explicit acceptance.
+             */
+            checkbox.addEventListener('change', function () {
+                continueBtn.disabled = !checkbox.checked || sending;
 
-        downloadBtn.addEventListener('click', function () {
-            const lines = [
-                'e-Poblacion Recovery Codes',
-                'Keep this file private. Each code is intended for one-time use.',
-                ''
-            ].concat(getCodes().map(function (code, index) { return (index + 1) + '. ' + code; }));
+                hint.textContent = checkbox.checked
+                    ? 'You may now accept the policies and continue.'
+                    : IDLE_HINT;
+            });
 
-            const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'e-poblacion-recovery-codes.txt';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+            /*
+             * Prevent duplicate submissions.
+             * Server-side validation remains authoritative.
+             */
+            form.addEventListener('submit', function (event) {
+                if (!checkbox.checked || sending) {
+                    event.preventDefault();
+                    return;
+                }
 
-            flash(downloadBtn, 'Downloaded!', 'Download');
-        });
+                sending = true;
+                continueBtn.disabled = true;
+                continueBtn.textContent = 'Recording acceptance…';
+                hint.textContent = 'Please wait while your acceptance is recorded.';
+            });
 
-        printBtn.addEventListener('click', function () {
-            window.print();
-        });
-
-        /* Hide / show codes (blur) for shoulder-surfing protection. */
-        peekBtn.addEventListener('click', function () {
-            const hidden = codesBox.classList.toggle('is-hidden');
-            peekBtn.textContent = hidden ? 'Show codes' : 'Hide codes';
-            peekBtn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
-        });
-
-        /* Theme toggle (persists using the same key the app is likely to read). */
-        themeToggle.addEventListener('click', function () {
-            const root = document.documentElement;
-            const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-            root.setAttribute('data-theme', next);
-            try { localStorage.setItem('theme', next); } catch (e) { /* storage unavailable */ }
-        });
-
-        checkbox.addEventListener('change', function () {
-            finishBtn.disabled = !checkbox.checked || sending;
-            hint.textContent = checkbox.checked ? 'You may now complete the setup.' : HINT_IDLE;
-        });
-
-        form.addEventListener('submit', function (event) {
-            if (!checkbox.checked || sending) {
-                event.preventDefault();
-                return;
-            }
-
-            sending = true;
-            finishBtn.disabled = true;
-            finishBtn.textContent = 'Completing setup…';
-        });
-
-        window.addEventListener('pageshow', function () {
-            if (!form.contains(document.activeElement)) {
+            /*
+             * Restore button state if the browser restores this page
+             * from its back-forward cache.
+             */
+            window.addEventListener('pageshow', function () {
                 sending = false;
-                finishBtn.textContent = FINISH_LABEL;
-                finishBtn.disabled = !checkbox.checked;
-            }
-        });
-    })();
+                continueBtn.textContent = BUTTON_LABEL;
+                continueBtn.disabled = !checkbox.checked;
+            });
+
+            /*
+             * Initialize state, including validation redirects.
+             */
+            continueBtn.disabled = !checkbox.checked;
+
+        })();
     </script>
 </body>
 </html>
