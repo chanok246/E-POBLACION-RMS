@@ -1,1879 +1,1962 @@
+@php
+    $user = auth()->user();
+    $displayName = $user?->nickname ?: ($user?->name ?? 'User');
+    $avatarUrl = $user?->avatar ? asset('storage/' . $user->avatar) : null;
+    $savedTheme = $user?->theme ?? 'light';
+    $initialTheme = in_array($savedTheme, ['light', 'dark'], true) ? $savedTheme : 'light';
+
+    $isCaptain = $user?->isCaptain() ?? false;
+    $isSecretary = $user?->isSecretary() ?? false;
+
+    $canManageRecords = $isCaptain || $isSecretary;
+    $canAccessReliefVouchers = $isCaptain || $isSecretary;
+    $canAccessUserManagement = $isCaptain;
+    $canAccessSettings = $isCaptain || $isSecretary;
+
+    /* Logo: uses icon@2x.png automatically if you add one (sharper on retina screens) */
+    $logo = asset('icon.png');
+    $logo2x = file_exists(public_path('icon@2x.png')) ? asset('icon@2x.png') : null;
+
+    /* Sidebar links live here. 'icon' = name of an inline SVG in the sprite below (works offline) */
+    $navGroups = [
+        ['label' => 'Overview', 'show' => true, 'items' => array_values(array_filter([
+            ['route' => 'dashboard', 'icon' => 'grid', 'text' => 'Dashboard', 'active' => ['dashboard']],
+            $canManageRecords ? ['route' => 'reports-analytics.index', 'icon' => 'chart', 'text' => 'Reports & Analytics', 'active' => ['reports-analytics.*']] : null,
+        ]))],
+        ['label' => 'Records', 'show' => $canManageRecords, 'items' => [
+            ['route' => 'residents.index', 'icon' => 'people', 'text' => 'Residents', 'active' => ['residents.*']],
+            ['route' => 'households.index', 'icon' => 'house', 'text' => 'Households', 'active' => ['households.index', 'households.create', 'households.show', 'households.edit']],
+            ['route' => 'households.map', 'icon' => 'pin', 'text' => 'Household Map', 'active' => ['households.map']],
+        ]],
+        ['label' => 'Services', 'show' => $canManageRecords || $canAccessReliefVouchers, 'items' => array_values(array_filter([
+            $canManageRecords ? ['route' => 'documents.index', 'icon' => 'file', 'text' => 'Barangay Documents', 'active' => ['documents.*']] : null,
+            $canAccessReliefVouchers ? ['route' => 'relief-vouchers.index', 'icon' => 'qr', 'text' => 'Relief Vouchers', 'active' => ['relief-vouchers.*', 'relief-assistance.*']] : null,
+            $canManageRecords ? ['route' => 'reports-complaints.index', 'icon' => 'shield', 'text' => 'Reports & Complaints', 'active' => ['reports-complaints.*']] : null,
+            $canManageRecords ? ['route' => 'emergency-hotlines.index', 'icon' => 'phone', 'text' => 'Emergency Hotline', 'active' => ['emergency-hotlines.*']] : null,
+        ]))],
+        ['label' => 'Administration', 'show' => $canAccessUserManagement || $canManageRecords, 'items' => array_values(array_filter([
+            $canManageRecords ? ['route' => 'attendance.index', 'icon' => 'clock', 'text' => 'Attendance Monitoring', 'active' => ['attendance.*']] : null,
+            $canAccessUserManagement ? ['route' => 'users.index', 'icon' => 'usergear', 'text' => 'User Management', 'active' => ['users.*']] : null,
+        ]))],
+    ];
+
+    /* ================================================================
+       TOP BAR SEARCH DATA
+       Pages + quick actions are searched instantly in the browser (works offline).
+       Records (residents, households, documents...) come from the global-search route.
+       ================================================================ */
+    $routeHas = fn ($name) => \Illuminate\Support\Facades\Route::has($name);
+
+    $searchKeywords = [
+        'dashboard' => 'home overview main summary',
+        'residents.index' => 'resident people population member citizen',
+        'households.index' => 'household family home house',
+        'households.map' => 'map location gps geo',
+        'attendance.index' => 'attendance monitoring time in time out personnel records daily weekly monthly report qr kiosk',
+        'documents.index' => 'document certificate clearance indigency residency permit request barangay id',
+        'reports-complaints.index' => 'report complaint blotter case incident hearing',
+        'emergency-hotlines.index' => 'emergency hotline contact number phone police fire ambulance',
+        'relief-vouchers.index' => 'relief voucher assistance ayuda qr aid',
+        'reports-analytics.index' => 'analytics statistics chart data insights',
+        'users.index' => 'user account secretary captain staff access',
+    ];
+
+    $searchPages = [];
+    foreach ($navGroups as $group) {
+        if (!$group['show']) { continue; }
+        foreach ($group['items'] as $item) {
+            if (!$routeHas($item['route'])) { continue; }
+            $searchPages[] = [
+                'group' => 'Pages', 'icon' => $item['icon'], 'title' => $item['text'], 'sub' => $group['label'],
+                'url' => route($item['route']), 'kw' => $searchKeywords[$item['route']] ?? '',
+            ];
+        }
+    }
+    if ($canAccessSettings && $routeHas('settings.index')) {
+        $searchPages[] = ['group' => 'Pages', 'icon' => 'usergear', 'title' => 'Personal Settings', 'sub' => 'Account', 'url' => route('settings.index'), 'kw' => 'profile avatar nickname password account preferences 2fa two factor'];
+    }
+    if ($canManageRecords && $routeHas('reminders.index')) {
+        $searchPages[] = ['group' => 'Pages', 'icon' => 'cal', 'title' => 'Schedule & Reminders', 'sub' => 'Services', 'url' => route('reminders.index'), 'kw' => 'schedule reminder calendar appointment event'];
+    }
+
+    $searchActions = [];
+    if ($canManageRecords) {
+        $actionDefs = [
+            ['residents.create', 'people', 'Add resident', 'new register resident'],
+            ['households.create', 'house', 'Add household', 'new register household family'],
+            ['documents.create', 'file', 'New document request', 'create issue certificate clearance indigency'],
+            ['reports-complaints.create', 'shield', 'File a report or complaint', 'new blotter incident case'],
+            ['emergency-hotlines.create', 'phone', 'Add emergency hotline', 'new contact number'],
+        ];
+        foreach ($actionDefs as [$r, $ic, $t, $kw]) {
+            if ($routeHas($r)) {
+                $searchActions[] = ['group' => 'Quick actions', 'icon' => $ic, 'title' => $t, 'sub' => 'Create', 'url' => route($r), 'kw' => $kw];
+            }
+        }
+    }
+    if ($canAccessUserManagement && $routeHas('users.create')) {
+        $searchActions[] = ['group' => 'Quick actions', 'icon' => 'usergear', 'title' => 'Add a Secretary account', 'sub' => 'Create', 'url' => route('users.create'), 'kw' => 'new user account staff'];
+    }
+
+    $searchUrl = ($canManageRecords && $routeHas('global-search')) ? route('global-search') : null;
+
+    /* ================================================================
+       NOTIFICATIONS + MANUAL REMINDERS (same data as before)
+       ================================================================ */
+    $notifications = $notifications ?? [];
+    $reminderToday = collect();
+    $reminderTomorrow = collect();
+
+    if ($user) {
+        $reminderToday = \App\Models\Reminder::query()->where('status', 'scheduled')
+            ->whereBetween('scheduled_at', [\Carbon\Carbon::today()->startOfDay(), \Carbon\Carbon::today()->endOfDay()])
+            ->orderBy('scheduled_at')->get();
+        $reminderTomorrow = \App\Models\Reminder::query()->where('status', 'scheduled')
+            ->whereBetween('scheduled_at', [\Carbon\Carbon::tomorrow()->startOfDay(), \Carbon\Carbon::tomorrow()->endOfDay()])
+            ->orderBy('scheduled_at')->get();
+    }
+
+    // Stable keys let each user clear a reminder without changing its source record.
+    $reminderToday = $reminderToday->map(fn ($r) => [
+        'record' => $r,
+        'key' => 'bell:reminder:' . $r->id . ':' . $r->scheduled_at->timestamp,
+    ]);
+    $reminderTomorrow = $reminderTomorrow->map(fn ($r) => [
+        'record' => $r,
+        'key' => 'bell:reminder:' . $r->id . ':' . $r->scheduled_at->timestamp,
+    ]);
+
+    $allBellKeys = collect($notifications['today'] ?? [])
+        ->concat($notifications['tomorrow'] ?? [])
+        ->pluck('key')
+        ->concat($reminderToday->pluck('key'))
+        ->concat($reminderTomorrow->pluck('key'))
+        ->filter()
+        ->unique()
+        ->values();
+
+    $clearedBellKeys = $user && $allBellKeys->isNotEmpty()
+        ? \App\Models\NotificationClear::query()
+            ->where('user_id', $user->id)
+            ->whereIn('notification_key', $allBellKeys)
+            ->pluck('notification_key')
+            ->flip()
+        : collect();
+
+    $reminderToday = $reminderToday
+        ->reject(fn ($entry) => $clearedBellKeys->has($entry['key']))
+        ->values();
+    $reminderTomorrow = $reminderTomorrow
+        ->reject(fn ($entry) => $clearedBellKeys->has($entry['key']))
+        ->values();
+
+    $existingNotificationCount = (int) ($notifications['count'] ?? 0);
+    $bellNotificationCount = $existingNotificationCount + $reminderToday->count() + $reminderTomorrow->count();
+    $hasBellNotifications = $bellNotificationCount > 0;
+
+    /* Old Bootstrap-icon names from the controller -> offline SVG names */
+    $iconMap = [
+        'bi-bell' => 'bell', 'bi-calendar-event' => 'cal', 'bi-calendar3' => 'cal', 'bi-clock' => 'clock',
+        'bi-geo-alt' => 'pin', 'bi-geo-alt-fill' => 'pin', 'bi-people' => 'people', 'bi-people-fill' => 'people',
+        'bi-house' => 'house', 'bi-house-fill' => 'house', 'bi-shield-exclamation' => 'shield',
+        'bi-telephone' => 'phone', 'bi-telephone-fill' => 'phone', 'bi-qr-code' => 'qr', 'bi-box-seam' => 'box',
+        'bi-file-earmark-text' => 'file', 'bi-file-earmark-text-fill' => 'file', 'bi-exclamation-triangle' => 'alert',
+        'bi-exclamation-triangle-fill' => 'alert', 'bi-gift' => 'box', 'bi-megaphone' => 'bell',
+    ];
+    $ico = fn ($bi) => $iconMap[$bi] ?? 'bell';
+
+    $notifUrl = function ($n) {
+        $type = $n['type'] ?? null;
+        if (empty($n['record_id'])) return null;
+        if ($type === 'relief_operation' && \Illuminate\Support\Facades\Route::has('relief-assistance.show')) return route('relief-assistance.show', $n['record_id']);
+        if ($type === 'person_complaint_hearing' && \Illuminate\Support\Facades\Route::has('reports-complaints.show')) return route('reports-complaints.show', $n['record_id']);
+        return null;
+    };
+
+    $fromOps = fn ($list) => collect($list)->map(fn ($n) => [
+        'key' => $n['key'] ?? null, 'url' => $notifUrl($n), 'prio' => $n['priority'] ?? 'normal', 'icon' => $ico($n['icon'] ?? 'bi-bell'),
+        'title' => $n['title'] ?? 'Reminder', 'msg' => $n['message'] ?? '', 'desc' => $n['description'] ?? null,
+        'time' => $n['time'] ?? null, 'loc' => $n['location'] ?? null,
+    ]);
+    $fromReminders = fn ($list) => $list->map(function ($entry) {
+        $r = $entry['record'];
+
+        return [
+            'key' => $entry['key'],
+            'url' => \Illuminate\Support\Facades\Route::has('reminders.show') ? route('reminders.show', $r) : null,
+            'prio' => match ($r->priority) { 'urgent' => 'high', 'important' => 'medium', default => 'normal' },
+            'icon' => 'cal', 'title' => $r->title, 'msg' => $r->type, 'desc' => $r->notes,
+            'time' => $r->scheduled_at->format('g:i A'), 'loc' => $r->location,
+        ];
+    });
+
+    $bellSections = [
+        ['label' => 'Today', 'cls' => 'today', 'items' => $fromOps($notifications['today'] ?? [])->concat($fromReminders($reminderToday))],
+        ['label' => 'Tomorrow', 'cls' => 'tomorrow', 'items' => $fromOps($notifications['tomorrow'] ?? [])->concat($fromReminders($reminderTomorrow))],
+    ];
+
+    /* Bell redesign helpers: priority tag text + per-section counts for the tabs */
+    $nbPrioLabel = ['high' => 'Urgent', 'medium' => 'Important'];
+    $nbCounts = [];
+    foreach ($bellSections as $s) { $nbCounts[$s['cls']] = $s['items']->count(); }
+@endphp
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{{ $initialTheme }}">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#06231a">
-    <meta name="description" content="e-Poblacion — Record Management System for Barangay Poblacion, Bani, Pangasinan.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#e23b49">
 
-    <title>e-Poblacion | Record Management System</title>
+    <link rel="icon" type="image/png" href="{{ $logo }}">
+    <link rel="shortcut icon" type="image/png" href="{{ $logo }}">
 
-    {{-- Favicon: Barangay Poblacion logo --}}
-    <link rel="icon" type="image/png" href="{{ asset('icon.png') }}">
+    <title>@yield('title', 'Barangay Poblacion Record Management System')</title>
 
-    {{-- Bootstrap Icons --}}
+    {{-- Page components (grid, forms, modals) still use Bootstrap from the CDN.
+         The sidebar, top bar, menus and popups below do NOT depend on it, so they stay intact offline. --}}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-    {{-- Fonts: Space Grotesk (headings), Public Sans (body), JetBrains Mono (tech labels) --}}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Public+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-
-    {{-- Lets CSS hide .reveal items only when JS is running --}}
-    <script>document.documentElement.classList.add('js');</script>
-
     <style>
-        /* ============================================================
-           THEME: semi-watermelon x modern digital
-           Watermelon red + rind green, on deep tech-green with a grid.
-        ============================================================ */
+        /* =========================================================
+           WATERMELON THEME — flesh-pink top bar, soft blush canvas.
+           The sidebar uses a deep-emerald palette that follows html[data-theme] (see SIDEBAR section).
+           System fonts + inline SVG only.
+           ========================================================= */
         :root {
-            --ink: #12201a;
-            --muted: #566a60;
-            --faint: #66796e;
-            --line: #e2e8e4;
-            --line-strong: #c9d4cd;
-            --paper: #f4f8f6;
-            --sheet: #ffffff;
+            --sidebar-w: 248px;
+            --primary: #e5505c; --accent-soft: rgba(229,80,92,.13); --on-accent: #fff;
+            --green: #4fae4e; --green-d: #3b8a40; --flesh: #ef6b78; --pale: #e4f2d6;
+            --page-bg: #f4d9df; --text-dark: #3a2a2e; --muted-text: #8a6f75;
+            --surface: #fdf3f5; --surface-secondary: #fae7eb; --surface-tertiary: #f6dce1;
+            --border-color: #efc6ce; --border-soft: #e6b3bd;
+            --input-bg: #fff; --input-text: #3a2a2e; --table-bg: #fff8f9; --table-hover: #fae7eb;
+            --shadow-color: rgba(120,40,55,.12);
+            --shadow: 0 2px 4px rgba(120,40,55,.06), 0 10px 24px rgba(120,40,55,.08);
+            --tb1: #e23b49; --tb2: #f0616c;
+            --font: ui-rounded, 'Nunito', 'Quicksand', 'Varela Round', 'Trebuchet MS', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            --bs-body-font-family: var(--font);
+            --bs-link-color-rgb: 229,80,92; --bs-link-hover-color-rgb: 190,45,60;
 
-            /* Watermelon (primary) */
-            --brand: #c92a43;
-            --brand-dark: #a31f3a;
-            --brand-soft: #fde8ea;
-            --pink: #ff7b88;
-            --brand-grad: linear-gradient(135deg, #d63a50, #b81f3a); /* white text >= 4.5:1 across the whole gradient */
-            --field-border: #7a8e83;      /* input outline >= 3:1 on white */
+            /* Sidebar palette (light theme): rich forest green, mint highlight */
+            --sb-bg: #0f3b27;
+            --sb-bg-2: #0a2c1d;
+            --sb-border: rgba(255,255,255,.10);
+            --sb-title: #f2fbf6;
+            --sb-text: #d3e9dc;
+            --sb-icon: #8fd6ac;
+            --sb-label: #8fc4a5;
+            --sb-muted: #a9d0b9;
+            --sb-hover-bg: rgba(255,255,255,.08);
+            --sb-active-bg: #6ee7a6;
+            --sb-active-text: #06301d;
+            --sb-active-icon: #06301d;
+            --sb-bar: #6ee7a6;
+            --sb-seal-ring: rgba(255,255,255,.22);
+        }
+        html[data-theme="dark"] {
+            --primary: #ff7f8b; --accent-soft: rgba(255,127,139,.16); --on-accent: #2b0c12;
+            --green: #5fc062; --green-d: #3f9a48; --flesh: #d4596a; --pale: #223a2b;
+            --page-bg: #0f1a14; --text-dark: #f6eff1; --muted-text: #a8b8ad;
+            --surface: #17251d; --surface-secondary: #1c2d23; --surface-tertiary: #24382b;
+            --border-color: rgba(255,255,255,.09); --border-soft: rgba(255,255,255,.15);
+            --input-bg: #1c2d23; --input-text: #f6eff1; --table-bg: #17251d; --table-hover: #1f3126;
+            --shadow-color: rgba(0,0,0,.4); --shadow: 0 2px 4px rgba(0,0,0,.25), 0 8px 20px rgba(0,0,0,.22);
+            --tb1: #8c2f3d; --tb2: #b04757;
+            --bs-link-color-rgb: 255,150,160; --bs-link-hover-color-rgb: 255,190,196;
 
-            /* Rind / leaf (secondary) */
-            --leaf: #2f9e5b;
-            --leaf-dark: #1f7a43;
-            --leaf-soft: #e3f4ea;
-
-            /* Deep tech green */
-            --deep: #06231a;
-            --deep-2: #0a3326;
-
-            --mint: #5ef0a8;
-            --sun: #ffc933;
-            --red: #b3261e;
-            --red-soft: #fce7e6;
-
-            --font-head: 'Space Grotesk', 'Public Sans', system-ui, sans-serif;
-            --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-            --slide-ms: 7000ms;
+            /* Sidebar palette (dark theme): near-black green, softer mint highlight */
+            --sb-bg: #0b1a13;
+            --sb-bg-2: #08130e;
+            --sb-border: rgba(255,255,255,.07);
+            --sb-title: #eef7f1;
+            --sb-text: #c9dfd2;
+            --sb-icon: #7fcf9f;
+            --sb-label: #86b79c;
+            --sb-muted: #98bfaa;
+            --sb-hover-bg: rgba(255,255,255,.06);
+            --sb-active-bg: #62dca0;
+            --sb-active-text: #04241a;
+            --sb-active-icon: #04241a;
+            --sb-bar: #62dca0;
+            --sb-seal-ring: rgba(255,255,255,.16);
         }
 
-        *, *::before, *::after { box-sizing: border-box; }
-        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-        @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+        * { box-sizing: border-box; }
+        html, body { background: var(--page-bg); }
+        body { margin: 0; color: var(--text-dark); font-family: var(--font); transition: background-color .2s, color .2s; }
+        a { text-decoration: none; }
+        .min-w-0 { min-width: 0; }
+        :focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
+        .i { width: 1.1em; height: 1.1em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-        body {
-            margin: 0; font-family: var(--font-body); font-size: 15px; line-height: 1.55;
-            color: var(--ink); background: var(--paper); -webkit-font-smoothing: antialiased;
+        /* =========================================================
+           SIDEBAR - deep emerald with mint highlight
+           - Synced with the dashboard theme (html[data-theme]):
+             forest green in light mode, near-black green in dark mode
+           - Fills the whole height: row size scales with screen height,
+             groups spread evenly, footer pinned to the bottom
+           ========================================================= */
+        .sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-w); z-index: 1040; display: flex; flex-direction: column; padding: 18px 12px 14px; overflow: hidden; color: var(--sb-text);
+            background: linear-gradient(180deg, var(--sb-bg) 0%, var(--sb-bg-2) 100%); border-right: 1px solid var(--sb-border); box-shadow: 2px 0 16px rgba(5,25,15,.18); transition: transform .25s ease, background-color .2s; }
+
+        .sidebar-brand { flex: none; display: flex; align-items: center; gap: 12px; padding: 2px 8px 18px; margin-bottom: 12px; border-bottom: 1px solid var(--sb-border); }
+        .seal { flex: 0 0 46px; width: 46px; height: 46px; padding: 2px; border-radius: 50%; background: var(--sb-seal-ring); }
+        .seal-in { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 50%; background: #fff; }
+        .seal-in svg, .seal-in img { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .seal-in img { object-fit: cover; transform: translateZ(0); backface-visibility: hidden; }
+        .brand-name { font: 700 14.5px/1.2 var(--font); letter-spacing: -.005em; color: var(--sb-title); }
+        .brand-name span { display: block; }
+        .brand-system { margin-top: 3px; font-size: 11.5px; font-weight: 500; line-height: 1.3; color: var(--sb-muted); }
+
+        /* nav takes all remaining height; groups spread out so nothing is left empty */
+        .sidebar-nav { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; padding: 2px 0 6px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--sb-border) transparent; }
+        .sidebar-nav::-webkit-scrollbar { width: 6px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: var(--sb-border); border-radius: 10px; }
+        .sidebar-group { flex: none; display: flex; flex-direction: column; gap: 3px; }
+        .sidebar-label { display: block; margin: 0 0 6px; padding: 0 12px; font-size: 11px; font-weight: 800; letter-spacing: .1em; line-height: 1.2; text-transform: uppercase; color: var(--sb-label); }
+
+        .sidebar-link { position: relative; display: flex; align-items: center; gap: 12px; min-height: clamp(42px, 5.6vh, 52px); padding: 0 14px; border-radius: 12px; color: var(--sb-text); font-size: 13.5px; font-weight: 600; line-height: 1.3; transition: background-color .15s, color .15s, box-shadow .15s; }
+        .sidebar-link .i { width: 20px; height: 20px; stroke-width: 1.85; color: var(--sb-icon); transition: color .15s; }
+        .sidebar-link span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sidebar-link:hover { background: var(--sb-hover-bg); color: var(--sb-title); }
+        .sidebar-link:hover .i { color: var(--sb-title); }
+
+        .sidebar-link.active, .sidebar-link.active:hover { background: var(--sb-active-bg); color: var(--sb-active-text); font-weight: 800; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+        .sidebar-link.active .i, .sidebar-link.active:hover .i { color: var(--sb-active-icon); }
+
+        .sidebar :focus-visible { outline: 2px solid var(--sb-bar); outline-offset: -2px; }
+
+        .sidebar-foot { flex: none; display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 14px 12px 0; border-top: 1px solid var(--sb-border); color: var(--sb-muted); font-size: 11.5px; line-height: 1.3; }
+        .sidebar-foot .i { width: 20px; height: 20px; stroke-width: 1.85; color: var(--sb-icon); }
+        .sidebar-foot strong { display: block; color: var(--sb-title); font-size: 12.5px; font-weight: 700; }
+
+        .sidebar-backdrop { display: none; position: fixed; inset: 0; z-index: 1030; background: rgba(8,24,16,.55); }
+        .main-content { min-height: 100vh; margin-left: var(--sidebar-w); width: calc(100% - var(--sidebar-w)); }
+
+        @media (max-height: 820px) {
+            .sidebar { padding-top: 14px; }
+            .sidebar-brand { padding-bottom: 12px; margin-bottom: 8px; }
+            .brand-system { display: none; }
+            .sidebar-nav { gap: 10px; }
+            .sidebar-link { min-height: 38px; font-size: 13px; }
         }
-        h1, h2, h3, h4 { font-family: var(--font-head); letter-spacing: -0.02em; margin: 0; line-height: 1.15; }
-        p { margin: 0; }
-        a { color: var(--brand-dark); }
-        button { font: inherit; }
-        img { max-width: 100%; }
-
-        :focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
-
-        .skip-link {
-            position: absolute; left: 12px; top: -60px; z-index: 100; background: var(--ink); color: #fff;
-            padding: 10px 14px; border-radius: 8px; text-decoration: none; font-weight: 600;
-        }
-        .skip-link:focus { top: 12px; outline-color: var(--mint); }
-
-        /* ============================================================
-           STAGE: carousel + login side by side
-        ============================================================ */
-        .stage {
-            display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 14px;
-            min-height: 100vh; min-height: 100svh;
-            background:
-                radial-gradient(60% 40% at 100% 0%, rgba(201, 42, 67, .08), transparent 70%),
-                radial-gradient(50% 40% at 0% 100%, rgba(47, 158, 91, .08), transparent 70%),
-                var(--paper);
-        }
-        @media (min-width: 960px) {
-            .stage { grid-template-columns: minmax(0, 1fr) minmax(440px, 520px); }
+        @media (max-height: 700px) {
+            .sidebar-link { min-height: 34px; font-size: 12.5px; }
+            .sidebar-link .i { width: 18px; height: 18px; }
+            .sidebar-foot { display: none; }
         }
 
-        /* ---------- Hero / carousel ---------- */
-        .hero {
-            position: relative; overflow: hidden; border-radius: 22px; background: var(--deep);
-            min-height: 58svh; color: #fff; isolation: isolate;
-            border: 1px solid rgba(94, 240, 168, .18);
-            box-shadow: 0 0 0 1px rgba(255, 255, 255, .03), 0 24px 60px rgba(6, 35, 26, .35);
-        }
-        @media (min-width: 960px) { .hero { min-height: calc(100svh - 28px); } }
+        /* ===================== TOP BAR ===================== */
+        .topbar { position: sticky; top: 0; z-index: 900; display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 66px; padding: 0 28px;
+            background: linear-gradient(90deg, var(--tb1), var(--tb2)); border-radius: 0 0 24px 24px; box-shadow: 0 8px 22px rgba(229,80,92,.24); color: #fff; }
+        .tb-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+        .tb-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+        .topbar-toggle, .topbar-brand { display: none; }
+        .topbar-toggle { width: 40px; height: 40px; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: rgba(255,255,255,.24); color: #fff; font-size: 19px; }
+        .topbar-brand { align-items: center; gap: 9px; font: 800 14px var(--font); color: #fff; }
+        .topbar-brand .mini { position: relative; width: 38px; height: 38px; overflow: hidden; border-radius: 50%; background: #fff; }
+        .topbar-brand .mini svg, .topbar-brand .mini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
-        /* Digital grid overlay */
-        .hero::after {
-            content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+        /* ---- global search ---- */
+        .gsearch { position: relative; width: min(100%, 340px); transition: width .2s ease; }
+        .gsearch:focus-within { width: min(100%, 440px); }
+        .gsearch-field { position: relative; margin: 0; display: block; }
+        .gsearch-field > .i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #fff; font-size: 15px; pointer-events: none; transition: color .15s; }
+        .gsearch-field input { width: 100%; min-height: 40px; padding: 0 74px 0 40px; border: 0; border-radius: 999px; background: rgba(255,255,255,.26); color: #fff; font: 600 14px var(--font); -webkit-appearance: none; appearance: none; }
+        .gsearch-field input::-webkit-search-cancel-button { display: none; }
+        .gsearch-field input::placeholder { color: rgba(255,255,255,.95); }
+        .gsearch-field input:focus { outline: none; background: #fff; color: #3a2a2e; box-shadow: 0 0 0 4px rgba(255,255,255,.35); }
+        .gsearch-field input:focus::placeholder { color: #8a6f75; }
+        .gsearch-field:focus-within > .i { color: var(--primary); }
+        .gsearch-hint { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); padding: 2px 8px; border-radius: 7px; background: rgba(255,255,255,.28); color: #fff; font: 800 10.5px var(--font); letter-spacing: .02em; pointer-events: none; }
+        .gsearch.has-value .gsearch-hint, .gsearch:focus-within .gsearch-hint { display: none; }
+        .gsearch-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; display: none; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--surface-tertiary); color: var(--muted-text); }
+        .gsearch.has-value .gsearch-clear { display: inline-flex; }
+        .gsearch-clear:hover { background: var(--border-soft); color: var(--text-dark); }
+        .gsearch-clear .i { width: 13px; height: 13px; }
+        .gsearch-spin { position: absolute; right: 40px; top: 50%; width: 16px; height: 16px; margin-top: -8px; border: 2px solid var(--border-soft); border-top-color: var(--primary); border-radius: 50%; display: none; animation: gsSpin .7s linear infinite; }
+        .gsearch.loading .gsearch-spin { display: block; }
+        @keyframes gsSpin { to { transform: rotate(360deg); } }
+
+        .gsearch-panel { display: none; position: absolute; left: 0; top: calc(100% + 12px); z-index: 1060; width: min(520px, calc(100vw - 40px)); max-height: min(70vh, 520px); overflow-y: auto; padding: 8px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--surface); color: var(--text-dark); box-shadow: 0 18px 44px rgba(120,40,55,.22); overscroll-behavior: contain; }
+        .gsearch-panel.show { display: block; animation: ddIn .16s ease-out; }
+        .gsearch-panel::-webkit-scrollbar { width: 6px; }
+        .gsearch-panel::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 10px; }
+        .gs-group { display: flex; align-items: center; gap: 8px; padding: 10px 10px 5px; color: var(--muted-text); font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+        .gs-group::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+        .gs-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; margin-bottom: 2px; border-radius: 14px; color: var(--text-dark); cursor: pointer; }
+        .gs-item:hover { color: var(--text-dark); }
+        .gs-item.active { background: var(--surface-tertiary); color: var(--text-dark); }
+        .gs-ico { width: 34px; height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: var(--accent-soft); color: var(--primary); font-size: 16px; }
+        .gs-item.is-action .gs-ico { background: rgba(79,174,78,.16); color: var(--green-d); }
+        html[data-theme="dark"] .gs-item.is-action .gs-ico { color: #8fe29a; }
+        .gs-text { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+        .gs-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 800; line-height: 1.3; }
+        .gs-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; color: var(--muted-text); font-size: 11.5px; font-weight: 600; }
+        .gs-title mark { padding: 0 1px; border-radius: 3px; background: var(--accent-soft); color: var(--primary); }
+        .gs-enter { flex-shrink: 0; display: none; align-items: center; padding: 2px 7px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border-soft); color: var(--muted-text); font-size: 10px; font-weight: 800; }
+        .gs-item.active .gs-enter { display: inline-flex; }
+        .gs-state { padding: 26px 20px; text-align: center; }
+        .gs-state-ico { width: 46px; height: 46px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent-soft); color: var(--primary); font-size: 20px; }
+        .gs-state-title { font-size: 13.5px; font-weight: 800; }
+        .gs-state-text { max-width: 300px; margin: 4px auto 0; color: var(--muted-text); font-size: 11.5px; line-height: 1.5; }
+        .gs-note { display: flex; align-items: center; gap: 8px; margin: 4px 2px 2px; padding: 9px 11px; border-radius: 12px; background: var(--surface-secondary); color: var(--muted-text); font-size: 11px; font-weight: 600; }
+        .gs-foot { display: flex; align-items: center; gap: 14px; margin-top: 6px; padding: 9px 10px 4px; border-top: 1px solid var(--border-color); color: var(--muted-text); font-size: 10.5px; font-weight: 700; }
+        .gs-foot kbd { padding: 1px 6px; border: 1px solid var(--border-soft); border-radius: 5px; background: var(--surface); color: var(--text-dark); font: 800 10px var(--font); }
+
+        .net-pill { display: none; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border-radius: 999px; background: #fff; color: var(--primary); font-size: 12.5px; font-weight: 800; }
+        .net-pill.show { display: inline-flex; }
+        .net-pill::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #e5505c; }
+
+        /* ---- own dropdowns (no Bootstrap needed) ---- */
+        .dd { position: relative; flex-shrink: 0; }
+        .dd-menu { display: none; position: absolute; right: 0; top: calc(100% + 12px); z-index: 1060; color: var(--text-dark); }
+        .dd-menu.show { display: block; animation: ddIn .16s ease-out; }
+        @keyframes ddIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+        /* =========================================================
+           NOTIFICATION BELL (redesigned dropdown)
+           Panel = header + tabs + scrollable cards + footer button
+           ========================================================= */
+        .notification-button { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: rgba(255,255,255,.26); color: #fff; font-size: 20px; transition: background-color .15s, color .15s; }
+        .notification-button:hover, .notification-button[aria-expanded="true"] { background: #fff; color: var(--primary); }
+        .notification-button.has-unread svg { transform-origin: 50% 0; animation: nbRing 1.4s ease .6s 1; }
+        @keyframes nbRing { 0%,100% { transform: rotate(0) } 15% { transform: rotate(14deg) } 30% { transform: rotate(-12deg) } 45% { transform: rotate(8deg) } 60% { transform: rotate(-5deg) } 75% { transform: rotate(2deg) } }
+        .notification-badge { position: absolute; top: -4px; right: -5px; min-width: 19px; height: 19px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--tb1); border-radius: 999px; background: #fff; color: var(--primary); font-size: 9.5px; font-weight: 800; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+        .notification-badge[hidden] { display: none; }
+
+        .notification-menu { width: 400px; max-width: calc(100vw - 24px); padding: 0; border: 1px solid var(--border-color); border-radius: 24px; background: var(--surface); box-shadow: 0 18px 44px rgba(120,40,55,.22); overflow: hidden; }
+        .notification-menu.show { display: flex; flex-direction: column; max-height: min(78vh, 620px); }
+
+        /* header */
+        .notification-menu-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 18px 14px; background: linear-gradient(135deg, var(--accent-soft), transparent 75%), var(--surface-secondary); }
+        .notification-menu-title { font-size: 18px; font-weight: 800; line-height: 1.2; letter-spacing: -.01em; }
+        .notification-menu-subtitle { margin-top: 3px; color: var(--muted-text); font-size: 12px; font-weight: 500; }
+        .nb-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .notification-count-label { flex-shrink: 0; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--primary); font-size: 11px; font-weight: 800; }
+        .notification-count-label[hidden], .notification-clear-all[hidden] { display: none; }
+        .notification-clear-all { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 11px; border: 0; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border-soft); color: var(--muted-text); font: 700 11px var(--font); cursor: pointer; }
+        .notification-clear-all:hover { background: var(--accent-soft); color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+        .notification-clear-all:disabled { opacity: .55; cursor: wait; }
+
+        /* tabs */
+        .nb-tabs { display: flex; gap: 4px; margin: 0 14px; padding: 4px; border-radius: 14px; background: var(--surface-tertiary); transform: translateY(-6px); }
+        .nb-tabs[hidden] { display: none; }
+        .nb-tab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; border: 0; border-radius: 10px; background: transparent; color: var(--muted-text); font: 800 12px var(--font); cursor: pointer; transition: background-color .15s, color .15s, box-shadow .15s; }
+        .nb-tab:hover { color: var(--text-dark); }
+        .nb-tab[aria-selected="true"] { background: var(--surface); color: var(--text-dark); box-shadow: 0 1px 3px var(--shadow-color); }
+        .nb-tab-n { min-width: 18px; padding: 1px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--primary); font-size: 10px; line-height: 1.5; }
+        .nb-tab[aria-selected="true"] .nb-tab-n { background: var(--primary); color: var(--on-accent); }
+
+        /* list */
+        .notification-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 0 8px; overscroll-behavior: contain; }
+        .notification-list::-webkit-scrollbar { width: 6px; }
+        .notification-list::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 10px; }
+
+        .notification-section-label { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 10px 18px 8px; background: var(--surface); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+        .notification-section-label::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent); }
+        .notification-section-line { flex: 1; height: 1px; background: var(--border-color); }
+        .notification-section-today { color: #dc3545; } .notification-section-tomorrow { color: #b07800; }
+        html[data-theme="dark"] .notification-section-today { color: #ff7b87; } html[data-theme="dark"] .notification-section-tomorrow { color: #f2c45f; }
+
+        /* cards */
+        .notification-item-row { position: relative; display: block; margin: 0 12px 8px; }
+        .notification-item { position: relative; display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 12px 40px 12px 16px; overflow: hidden; border: 1px solid var(--border-color); border-radius: 16px; background: var(--surface-secondary); color: var(--text-dark); transition: border-color .15s, box-shadow .15s, transform .15s; }
+        .notification-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--green); }
+        .notification-item-high::before { background: #dc3545; }
+        .notification-item-medium::before { background: #f5b031; }
+        a.notification-item:hover { transform: translateY(-1px); border-color: var(--border-soft); box-shadow: 0 6px 16px var(--shadow-color); color: var(--text-dark); }
+        .notification-item-icon { width: 38px; height: 38px; min-width: 38px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--accent-soft); color: var(--primary); font-size: 16px; }
+        .notification-item-high .notification-item-icon { background: rgba(220,53,69,.13); color: #dc3545; }
+        .notification-item-medium .notification-item-icon { background: rgba(245,176,49,.16); color: #b07800; }
+        html[data-theme="dark"] .notification-item-high .notification-item-icon { background: rgba(255,123,135,.15); color: #ff7b87; }
+        html[data-theme="dark"] .notification-item-medium .notification-item-icon { background: rgba(242,196,95,.15); color: #f2c45f; }
+        .notification-item-content { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+        .notification-item-title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13.5px; font-weight: 800; line-height: 1.3; }
+        .notification-item-message { margin-top: 2px; font-size: 12px; font-weight: 600; line-height: 1.35; opacity: .85; }
+        .notification-item-description { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; color: var(--muted-text); font-size: 11px; line-height: 1.35; }
+        .notification-item-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .notification-item-meta span { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--surface); color: var(--muted-text); font-size: 10.5px; font-weight: 700; line-height: 1.3; }
+        .nb-tag { padding: 1px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+        .nb-tag-high { background: rgba(220,53,69,.14); color: #dc3545; }
+        .nb-tag-medium { background: rgba(245,176,49,.2); color: #b07800; }
+        html[data-theme="dark"] .nb-tag-high { color: #ff7b87; } html[data-theme="dark"] .nb-tag-medium { color: #f2c45f; }
+
+        /* clear (x) button on each card */
+        .notification-clear-button { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted-text); font-size: 0; opacity: 0; cursor: pointer; transition: opacity .15s, background-color .15s, color .15s; }
+        .notification-clear-button .i { width: 13px; height: 13px; }
+        .notification-item-row:hover .notification-clear-button, .notification-item-row:focus-within .notification-clear-button { opacity: 1; }
+        .notification-clear-button:hover { background: rgba(220,53,69,.14); color: #dc3545; }
+        .notification-clear-button:disabled { opacity: .55; cursor: wait; }
+        @media (hover: none) { .notification-clear-button { opacity: 1; } }
+
+        /* tab filtering */
+        .notification-menu[data-filter="today"] [data-section="tomorrow"],
+        .notification-menu[data-filter="tomorrow"] [data-section="today"] { display: none; }
+        .nb-filter-empty { display: none; padding: 30px 20px; text-align: center; color: var(--muted-text); font-size: 12px; font-weight: 600; }
+        .nb-filter-empty.show { display: block; }
+
+        /* empty + feedback */
+        .notification-empty { padding: 36px 24px 32px; text-align: center; }
+        .notification-empty-icon { width: 56px; height: 56px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(79,174,78,.15); color: var(--green-d); font-size: 24px; }
+        .notification-empty-title { font-size: 14px; font-weight: 800; }
+        .notification-empty-text { max-width: 290px; margin: 5px auto 0; color: var(--muted-text); font-size: 11px; line-height: 1.5; }
+        .notification-feedback { padding: 4px 18px; color: var(--muted-text); font-size: 11px; }
+        .notification-feedback:empty { display: none; }
+
+        /* footer */
+        .notification-quick-action { padding: 8px; border-top: 1px solid var(--border-color); background: var(--surface-secondary); }
+        .notification-manage-link { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 11px; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border-soft); color: var(--primary); font-size: 12px; font-weight: 800; transition: background-color .15s, color .15s; }
+        .notification-manage-link:hover { background: var(--primary); color: var(--on-accent); }
+
+        /* ---- profile ---- */
+        .user-profile-trigger { display: inline-flex; align-items: center; gap: 10px; min-width: 176px; padding: 4px 14px 4px 4px; border: 0; border-radius: 999px; background: rgba(255,255,255,.26); color: #fff; transition: background-color .15s, box-shadow .15s; }
+        .user-profile-trigger:hover, .user-profile-trigger[aria-expanded="true"] { background: rgba(255,255,255,.38); box-shadow: 0 0 0 4px rgba(255,255,255,.22); }
+        .user-profile-avatar, .user-dropdown-avatar { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; background: linear-gradient(135deg, #4fae4e, #2f7a34); color: #fff; font-weight: 800; border-radius: 50%; }
+        .user-profile-avatar { width: 36px; height: 36px; font-size: 17px; border: 2px solid #fff; }
+        .user-dropdown-avatar { width: 50px; height: 50px; min-width: 50px; font-size: 22px; border: 3px solid #fff; box-shadow: 0 3px 10px rgba(120,40,55,.18); }
+        .user-profile-avatar img, .user-dropdown-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .user-profile-text { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+        .user-profile-name { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 800; }
+        .user-profile-role { margin-top: 2px; font-size: 11.5px; color: rgba(255,255,255,.9); text-transform: capitalize; }
+        .user-profile-chevron { margin-left: auto; font-size: 12px; transition: transform .2s; }
+        .user-profile-trigger[aria-expanded="true"] .user-profile-chevron { transform: rotate(180deg); }
+        .user-dropdown-menu { width: 312px; padding: 10px; border: 1px solid var(--border-color); border-radius: 22px; background: var(--surface); box-shadow: 0 18px 44px rgba(120,40,55,.22); }
+        .user-dropdown-header { display: flex; align-items: center; gap: 12px; margin: -10px -10px 8px; padding: 16px; border-radius: 21px 21px 0 0; background: linear-gradient(135deg, var(--accent-soft), transparent 70%), var(--surface-secondary); border-bottom: 1px solid var(--border-color); }
+        .user-dropdown-eyebrow { margin-bottom: 2px; color: var(--muted-text); font-size: 12px; font-weight: 600; }
+        .user-dropdown-name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; font-size: 16px; }
+        .user-role-badge, .user-status-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+        .user-role-badge { margin-top: 5px; padding: 3px 10px; background: var(--accent-soft); color: var(--primary); }
+        .user-status-badge { margin-top: 5px; margin-left: 4px; padding: 3px 10px; background: rgba(79,174,78,.16); color: var(--green-d); }
+        html[data-theme="dark"] .user-status-badge { color: #8fe29a; }
+        .user-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        .user-dropdown-section-title { padding: 8px 10px 4px; color: var(--muted-text); font-size: 12px; font-weight: 800; }
+        .user-dropdown-item, .theme-switch-row { display: flex; align-items: center; gap: 11px; width: 100%; padding: 8px 10px; margin-bottom: 2px; border: 0; border-radius: 14px; background: transparent; color: var(--text-dark); font: 700 13px var(--font); text-align: left; cursor: pointer; transition: background-color .15s; }
+        .user-dropdown-item { min-height: 48px; } .theme-switch-row { min-height: 54px; }
+        .user-dropdown-item:hover, .user-dropdown-item:focus, .theme-switch-row:hover { background: var(--surface-tertiary); color: var(--text-dark); outline: none; }
+        .user-dropdown-item-icon, .theme-switch-icon { width: 34px; height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--accent-soft); color: var(--primary); font-size: 16px; }
+        .user-dropdown-item.text-danger .user-dropdown-item-icon { color: #dc3545; background: rgba(220,53,69,.11); }
+        .user-dropdown-item small, .theme-switch-row small { display: block; margin-top: 2px; color: var(--muted-text); font-size: 11px; font-weight: 500; }
+        .theme-switch-indicator { width: 38px; height: 21px; margin-left: auto; border-radius: 999px; background: #d7b8be; position: relative; transition: background-color .2s; }
+        .theme-switch-indicator::after { content: ''; position: absolute; width: 17px; height: 17px; top: 2px; left: 2px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+        html[data-theme="dark"] .theme-switch-indicator { background: var(--green); }
+        html[data-theme="dark"] .theme-switch-indicator::after { transform: translateX(17px); }
+        .user-dropdown-divider { margin: 6px 2px; border-top: 1px solid var(--border-color); }
+
+        /* ===================== REMINDER POPUP ===================== */
+        .global-reminder-alert { position: fixed; right: 24px; bottom: 24px; z-index: 1090; width: min(410px, calc(100vw - 30px)); display: none; overflow: hidden; border: 1px solid var(--border-color); border-radius: 22px; background: var(--surface); color: var(--text-dark); box-shadow: 0 22px 55px rgba(120,40,55,.28), 0 4px 18px rgba(120,40,55,.12); }
+        .global-reminder-alert.show { display: block; animation: reminderSlideIn .28s ease-out; }
+        .global-reminder-alert.priority-urgent { border-color: rgba(220,53,69,.4); } .global-reminder-alert.priority-important { border-color: rgba(245,176,49,.45); }
+        .global-reminder-top { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 16px 16px 12px; }
+        .global-reminder-icon { width: 44px; height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; border-radius: 14px; background: var(--accent-soft); color: var(--primary); font-size: 20px; }
+        .priority-urgent .global-reminder-icon { background: rgba(220,53,69,.13); color: #dc3545; } .priority-important .global-reminder-icon { background: rgba(245,176,49,.16); color: #b07800; }
+        .global-reminder-content { min-width: 0; flex: 1; }
+        .global-reminder-label { margin-bottom: 3px; color: var(--primary); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .global-reminder-title { font-size: 16px; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; }
+        .global-reminder-type { margin-top: 3px; color: var(--muted-text); font-size: 11px; font-weight: 600; }
+        .global-reminder-close { width: 30px; height: 30px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted-text); }
+        .global-reminder-close:hover { background: var(--surface-tertiary); color: var(--text-dark); }
+        .global-reminder-details { display: flex; flex-direction: column; gap: 7px; margin: 0 16px; padding: 11px 12px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--surface-secondary); }
+        .global-reminder-detail { display: flex; align-items: flex-start; gap: 8px; font-size: 11.5px; line-height: 1.35; }
+        .global-reminder-detail .i { margin-top: 1px; color: var(--muted-text); }
+        .global-reminder-notes { margin: 11px 16px 0; color: var(--muted-text); font-size: 11px; line-height: 1.45; }
+        .global-reminder-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 16px 16px; }
+        .global-reminder-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 7px 14px; border-radius: 999px; font: 800 11.5px var(--font); cursor: pointer; }
+        .global-reminder-btn-dismiss { border: 1px solid var(--border-soft); background: var(--surface-secondary); color: var(--text-dark); }
+        .global-reminder-btn-dismiss:hover { background: var(--surface-tertiary); color: var(--text-dark); }
+        .global-reminder-btn-view { border: 1px solid var(--green); background: var(--green); color: #fff; }
+        .global-reminder-btn-view:hover { filter: brightness(1.08); color: #fff; }
+        .global-reminder-queue { position: absolute; top: 9px; right: 47px; min-width: 20px; height: 20px; padding: 0 6px; display: none; align-items: center; justify-content: center; border-radius: 999px; background: #dc3545; color: #fff; font-size: 9px; font-weight: 800; }
+        .global-reminder-queue.show { display: inline-flex; }
+        @keyframes reminderSlideIn { from { opacity: 0; transform: translate(10px, 18px); } to { opacity: 1; transform: none; } }
+
+        /* ---- offline toast ---- */
+        .ep-toast { position: fixed; left: 50%; bottom: 22px; z-index: 1100; transform: translate(-50%, 20px); padding: 11px 20px; border-radius: 999px; background: #2a1a1d; color: #fff; font-size: 13.5px; font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,.28); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+        .ep-toast.show { opacity: 1; transform: translate(-50%, 0); }
+        html[data-theme="dark"] .ep-toast { background: #f6eff1; color: #2a1a1d; }
+
+        /* ---- flash messages (no Bootstrap needed) ---- */
+        .flash { position: relative; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; padding: 14px 44px 14px 16px; border-radius: 16px; font-size: 14px; font-weight: 600; border: 1px solid transparent; }
+        .flash-success { background: rgba(79,174,78,.14); border-color: rgba(79,174,78,.35); color: var(--green-d); }
+        .flash-error { background: rgba(229,80,92,.12); border-color: rgba(229,80,92,.35); color: #b3303c; }
+        html[data-theme="dark"] .flash-success { color: #8fe29a; } html[data-theme="dark"] .flash-error { color: #ff9aa4; }
+        .flash ul { margin: 6px 0 0; padding-left: 18px; font-weight: 500; }
+        .flash-x { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+        .flash-x:hover { background: rgba(0,0,0,.08); }
+
+        /* ===================== CONTENT & BOOTSTRAP THEMING ===================== */
+        .page-content { padding: 28px; }
+        .card { background-color: var(--surface); color: var(--text-dark); border-color: var(--border-color); border-radius: 22px; box-shadow: var(--shadow); }
+        .card-header, .card-footer { background-color: var(--surface); color: var(--text-dark); border-color: var(--border-color); }
+        .card-body { color: var(--text-dark); }
+        html[data-theme="dark"] .bg-white { background-color: var(--surface) !important; color: var(--text-dark) !important; }
+        html[data-theme="dark"] .bg-light { background-color: var(--surface-tertiary) !important; color: var(--text-dark) !important; }
+        html[data-theme="dark"] .bg-body { background-color: var(--page-bg) !important; color: var(--text-dark) !important; }
+        .btn-primary { --bs-btn-bg: var(--primary); --bs-btn-border-color: var(--primary); --bs-btn-color: var(--on-accent); --bs-btn-hover-bg: var(--primary); --bs-btn-hover-border-color: var(--primary); --bs-btn-hover-color: var(--on-accent); --bs-btn-active-bg: var(--primary); --bs-btn-active-border-color: var(--primary); --bs-btn-active-color: var(--on-accent); --bs-btn-disabled-bg: var(--primary); --bs-btn-disabled-border-color: var(--primary); font-weight: 700; }
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-outline-primary { --bs-btn-color: var(--primary); --bs-btn-border-color: var(--primary); --bs-btn-hover-bg: var(--primary); --bs-btn-hover-border-color: var(--primary); --bs-btn-hover-color: var(--on-accent); --bs-btn-active-bg: var(--primary); --bs-btn-active-border-color: var(--primary); --bs-btn-active-color: var(--on-accent); font-weight: 700; }
+        .btn-success { --bs-btn-bg: var(--green); --bs-btn-border-color: var(--green); --bs-btn-hover-bg: var(--green-d); --bs-btn-hover-border-color: var(--green-d); --bs-btn-active-bg: var(--green-d); --bs-btn-active-border-color: var(--green-d); font-weight: 700; }
+        .text-primary { color: var(--primary) !important; }
+        .text-muted { color: var(--muted-text) !important; }
+        .form-control, .form-select { background-color: var(--input-bg); color: var(--input-text); border-color: var(--border-soft); border-radius: 12px; }
+        .form-control::placeholder { color: var(--muted-text); }
+        .form-control:focus, .form-select:focus { background-color: var(--input-bg); color: var(--input-text); border-color: var(--primary); box-shadow: 0 0 0 4px var(--accent-soft); }
+        html[data-theme="dark"] .form-control:disabled, html[data-theme="dark"] .form-control[readonly], html[data-theme="dark"] .form-select:disabled { background-color: #101a14; color: #858c95; }
+        html[data-theme="dark"] .form-select option { background-color: #1c2d23; color: #f6eff1; }
+        .table { --bs-table-bg: var(--table-bg); --bs-table-color: var(--text-dark); --bs-table-border-color: var(--border-color); color: var(--text-dark); background-color: var(--table-bg); }
+        .table > :not(caption) > * > * { background-color: var(--table-bg); color: var(--text-dark); border-bottom-color: var(--border-color); }
+        .table-hover > tbody > tr:hover > * { background-color: var(--table-hover); color: var(--text-dark); }
+        .table-light { --bs-table-bg: var(--surface-secondary); --bs-table-color: var(--muted-text); }
+        html[data-theme="dark"] .table-light > * { background-color: var(--surface-secondary) !important; color: var(--muted-text) !important; }
+        html[data-theme="dark"] .border, html[data-theme="dark"] .border-top, html[data-theme="dark"] .border-end, html[data-theme="dark"] .border-bottom, html[data-theme="dark"] .border-start { border-color: var(--border-color) !important; }
+        .dropdown-menu { background-color: var(--surface); border-color: var(--border-color); box-shadow: 0 .5rem 1rem var(--shadow-color); }
+        .dropdown-item { color: var(--text-dark); }
+        .dropdown-item:hover, .dropdown-item:focus { background-color: var(--surface-tertiary); color: var(--text-dark); }
+        .modal-content { background-color: var(--surface); color: var(--text-dark); border-color: var(--border-color); border-radius: 22px; }
+        .modal-header, .modal-footer { border-color: var(--border-color); }
+        .list-group-item { background-color: var(--surface); color: var(--text-dark); border-color: var(--border-color); }
+        .page-link { background-color: var(--surface); color: var(--text-dark); border-color: var(--border-color); }
+        .page-link:hover { background-color: var(--surface-tertiary); color: var(--text-dark); border-color: var(--border-color); }
+        .page-item.active .page-link { background-color: var(--primary); border-color: var(--primary); color: var(--on-accent); }
+        .input-group-text { background-color: var(--surface-tertiary); color: var(--text-dark); border-color: var(--border-soft); }
+        .alert { border-radius: 16px; }
+        html[data-theme="dark"] .alert-light { background-color: #1f3126; color: #f6eff1; border-color: rgba(255,255,255,.12); }
+        html[data-theme="dark"] .btn-outline-secondary { color: #c9d6cd; border-color: rgba(255,255,255,.22); }
+        html[data-theme="dark"] .btn-outline-secondary:hover { background-color: rgba(255,255,255,.18); color: #fff; }
+
+        /* ===================== RESPONSIVE ===================== */
+        @media (max-width: 991px) {
+            .sidebar { transform: translateX(-100%); width: min(var(--sidebar-w), 86vw); }
+            body.sidebar-open .sidebar { transform: none; box-shadow: 0 0 32px rgba(15,30,22,.28); }
+            body.sidebar-open .sidebar-backdrop { display: block; }
+            body.sidebar-open { overflow: hidden; }
+            .main-content { margin-left: 0; width: 100%; }
+            .topbar { padding: 0 18px; }
+            .topbar-toggle, .topbar-brand { display: inline-flex; }
+            .gsearch { flex: 1; width: auto; max-width: 340px; }
+            .gsearch:focus-within { width: auto; max-width: 340px; }
+            .gsearch-hint { display: none; }
+            .page-content { padding: 20px; }
+        }
+        @media (max-width: 768px) {
+            .user-profile-trigger { min-width: auto; padding-right: 6px; }
+            .user-profile-text, .user-profile-chevron { display: none; }
+            .user-dropdown-menu { width: min(312px, calc(100vw - 24px)); }
+            .topbar-brand span:last-child { display: none; }
+        }
+        @media (max-width: 576px) {
+            .page-content { padding: 15px; } .topbar { padding: 0 14px; }
+            .topbar-brand { display: none; }
+            .notification-menu { position: fixed; top: 74px; right: 12px; left: 12px; width: auto; max-width: none; }
+            .notification-menu.show { max-height: calc(100vh - 96px); }
+            .gsearch { position: static; }
+            .gsearch-panel { position: fixed; top: 74px; left: 12px; right: 12px; width: auto; }
+            .global-reminder-alert { right: 15px; bottom: 15px; width: calc(100vw - 30px); }
+            .gs-foot { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+        /* =====================================================================
+           TOP BAR DECORATION (red flesh + glossy shine + black seeds,
+           with white and green rind layers underneath).
+           Keep this block near the END of this <style>.
+           ===================================================================== */
+        :root {
+            --rind-white: #fff8f0;
+            --rind-green: #3fae56;
+
+            /* Black teardrop seeds with a small glossy highlight (8 seeds per 520px) */
+            --seed-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='66' viewBox='0 0 520 66'%3E%3Cdefs%3E%3Cg id='s'%3E%3Cpath d='M0-9C2-5 6-1 6 3a6 6 0 0 1-12 0C-6-1-2-5 0-9z' fill='%23140a0c'/%3E%3Cellipse cx='-1.9' cy='2' rx='1.2' ry='2.3' fill='%23ffffff' opacity='.42'/%3E%3C/g%3E%3C/defs%3E%3Cuse href='%23s' transform='translate(40 22) rotate(-20)'/%3E%3Cuse href='%23s' transform='translate(105 48) rotate(25)'/%3E%3Cuse href='%23s' transform='translate(170 20) rotate(10)'/%3E%3Cuse href='%23s' transform='translate(238 49) rotate(-30)'/%3E%3Cuse href='%23s' transform='translate(300 19) rotate(20)'/%3E%3Cuse href='%23s' transform='translate(362 47) rotate(-10)'/%3E%3Cuse href='%23s' transform='translate(428 22) rotate(32)'/%3E%3Cuse href='%23s' transform='translate(486 49) rotate(-25)'/%3E%3C/svg%3E");
+        }
+        html[data-theme="dark"] {
+            --rind-white: #d3e3d6;
+            --rind-green: #2f7a3c;
+        }
+
+        .topbar {
+            background-color: var(--tb1);
             background-image:
-                linear-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, .06) 1px, transparent 1px);
-            background-size: 44px 44px;
-            -webkit-mask-image: radial-gradient(120% 90% at 100% 0%, #000 0%, rgba(0, 0, 0, .45) 45%, transparent 75%);
-            mask-image: radial-gradient(120% 90% at 100% 0%, #000 0%, rgba(0, 0, 0, .45) 45%, transparent 75%);
+                var(--seed-pattern),
+                linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 60%),
+                linear-gradient(90deg, var(--tb1), var(--tb2));
+            background-size: 520px 66px, auto, auto;
+            background-repeat: repeat-x, no-repeat, no-repeat;
+            box-shadow:
+                0 4px 0 var(--rind-white),
+                0 8px 0 var(--rind-green),
+                0 16px 24px rgba(226,59,73,.22);
+        }
+        html[data-theme="dark"] .topbar {
+            box-shadow:
+                0 4px 0 var(--rind-white),
+                0 8px 0 var(--rind-green),
+                0 16px 24px rgba(0,0,0,.35);
         }
 
-        .carousel { position: absolute; inset: 0; }
-        .slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .9s ease, visibility 0s .9s; }
-        .slide.is-active { opacity: 1; visibility: visible; transition: opacity .9s ease; z-index: 1; }
-        .slide-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.08); }
-        .slide.is-active .slide-media { animation: kenburns 14s ease-out forwards; }
-        @keyframes kenburns { to { transform: scale(1); } }
-        .slide::after {
-            content: ''; position: absolute; inset: 0;
-            background:
-                radial-gradient(55% 45% at 88% 8%, rgba(201, 42, 67, .38), transparent 70%),
-                linear-gradient(0deg, rgba(6, 35, 26, .95) 0%, rgba(6, 35, 26, .6) 42%, rgba(6, 35, 26, .18) 75%),
-                linear-gradient(180deg, rgba(6, 35, 26, .55) 0%, rgba(6, 35, 26, 0) 24%);
+        /* Search bar: default look (white field, dark text) */
+        .gsearch-field input { background: #fff; color: #3a2a2e; font: 500 14px var(--font); box-shadow: 0 2px 8px rgba(120,40,55,.18); }
+        .gsearch-field input::placeholder { color: #9a8389; font-weight: 400; }
+        .gsearch-field input:focus { background: #fff; color: #3a2a2e; box-shadow: 0 0 0 4px rgba(255,255,255,.4); }
+        .gsearch-field > .i { color: #9a8389; }
+        .gsearch-field:focus-within > .i { color: var(--primary); }
+        .gsearch-hint { background: #f6dce1; color: #8a6f75; font-weight: 700; }
+        html[data-theme="dark"] .gsearch-field input { background: #fff; color: #3a2a2e; }
+
+        /* Header buttons: outlined instead of filled, so the seeds stay visible behind them. */
+        .topbar-toggle,
+        .user-profile-trigger {
+            background: transparent;
+            color: #fff;
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,.75);
+        }
+        .topbar-toggle:hover,
+        .user-profile-trigger:hover,
+        .user-profile-trigger[aria-expanded="true"] {
+            background: rgba(255,255,255,.12);
+            box-shadow: inset 0 0 0 2px #fff;
         }
 
-        .slide-content {
-            position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
-            padding: 28px 28px 96px; max-width: 760px;
+        /* Notification bell: yellow */
+        .notification-button {
+            background: transparent;
+            color: #ffd43b;
+            box-shadow: inset 0 0 0 2px #ffd43b;
         }
-        @media (min-width: 960px) { .slide-content { padding: 48px 48px 116px; } }
+        .notification-button:hover,
+        .notification-button[aria-expanded="true"] {
+            background: #ffd43b;
+            color: #7a4e00;
+            box-shadow: inset 0 0 0 2px #ffd43b;
+        }
+        .notification-button svg { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+        .notification-badge { background: #ffd43b; color: #7a1f00; border-color: var(--tb1); }
 
-        .slide-eyebrow {
-            display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 12px; font-weight: 500;
-            letter-spacing: .04em; text-transform: uppercase;
-            padding: 7px 13px; border-radius: 999px; background: rgba(255, 255, 255, .1);
-            border: 1px solid rgba(255, 255, 255, .18);
-            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); margin-bottom: 16px;
+        /* =====================================================================
+           UI/UX COLOR SYSTEM (semantic) — keep at the very END of this <style>
+           Brand decoration  : watermelon red header (decor only)
+           Primary / action  : GREEN   (buttons, links, focus, selected tabs)
+           Success           : green   (saved, active account, all caught up)
+           Info / neutral    : BLUE    (today, normal reminders, quick actions)
+           Warning           : AMBER   (important, tomorrow-level attention, offline)
+           Danger / urgent   : RED     (urgent, errors, delete/clear, sign out)
+           ===================================================================== */
+        :root {
+            --primary: #2f9e44; --primary-d: #237a35; --accent-soft: rgba(47,158,68,.13); --on-accent: #fff;
+            --danger: #c92a3b; --danger-soft: rgba(201,42,59,.12);
+            --warning: #e8a317; --warning-text: #9a6300; --warning-soft: rgba(232,163,23,.18);
+            --info: #1c7ed6; --info-soft: rgba(28,126,214,.13);
+            --bs-link-color-rgb: 35,122,53; --bs-link-hover-color-rgb: 27,97,42;
         }
-        .slide-eyebrow::before {
-            content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--mint);
-            box-shadow: 0 0 0 0 rgba(94, 240, 168, .6); animation: pulse 2s ease-out infinite;
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(94, 240, 168, .6); }
-            70% { box-shadow: 0 0 0 9px rgba(94, 240, 168, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(94, 240, 168, 0); }
-        }
-        .slide-title { font-weight: 700; font-size: clamp(32px, 4.6vw, 60px); margin-bottom: 14px; color: #fff; }
-        .gradient-e {
-            font-style: normal;
-            background: linear-gradient(90deg, var(--pink), var(--sun));
-            -webkit-background-clip: text; background-clip: text;
-            -webkit-text-fill-color: transparent; color: transparent;
-        }
-        .slide-subtitle { font-size: clamp(15px, 1.35vw, 17px); color: #d3e6de; max-width: 54ch; }
-
-        .slide-content > * { opacity: 0; transform: translateY(14px); }
-        .slide.is-active .slide-content > * { animation: rise .7s ease forwards; }
-        .slide.is-active .slide-content > *:nth-child(2) { animation-delay: .12s; }
-        .slide.is-active .slide-content > *:nth-child(3) { animation-delay: .24s; }
-        @keyframes rise { to { opacity: 1; transform: none; } }
-
-        .hero-brand {
-            position: absolute; z-index: 5; top: 20px; left: 20px; display: flex; align-items: center; gap: 10px;
-            padding: 6px 14px 6px 6px; border-radius: 999px; background: rgba(6, 35, 26, .55);
-            border: 1px solid rgba(255, 255, 255, .14);
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #fff; text-decoration: none;
-        }
-        .hero-brand img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #fff; }
-        .hero-brand span { font-family: var(--font-head); font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
-        @media (min-width: 960px) { .hero-brand { top: 28px; left: 28px; } }
-
-        .carousel-counter {
-            position: absolute; z-index: 5; top: 26px; right: 24px; font-family: var(--font-mono); font-weight: 500;
-            font-size: 13px; letter-spacing: .06em; color: rgba(255, 255, 255, .75); font-variant-numeric: tabular-nums;
-        }
-        .carousel-counter b { color: var(--pink); font-size: 18px; font-weight: 700; }
-
-        .hero-controls {
-            position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 16px;
-            padding: 0 20px 22px;
-        }
-        @media (min-width: 960px) { .hero-controls { padding: 0 48px 40px; } }
-
-        .carousel-indicators { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex: 1; max-width: 420px; }
-        .carousel-indicators li { flex: 1; }
-        .carousel-indicators button {
-            position: relative; display: block; width: 100%; height: 24px; padding: 0; border: 0; background: none; cursor: pointer;
-        }
-        .carousel-indicators button::before, .carousel-indicators button::after {
-            content: ''; position: absolute; left: 0; top: 10px; height: 4px; border-radius: 999px;
-        }
-        .carousel-indicators button::before { width: 100%; background: rgba(255, 255, 255, .25); }
-        .carousel-indicators button::after { width: 0; background: linear-gradient(90deg, var(--pink), var(--brand)); }
-        .carousel-indicators button.is-done::after { width: 100%; }
-        .carousel-indicators button.is-active::after { animation: fill var(--slide-ms) linear forwards; }
-        .carousel.is-paused ~ .hero-controls .carousel-indicators button.is-active::after { animation-play-state: paused; }
-        .hero.no-autoplay .carousel-indicators button.is-active::after { animation: none; width: 100%; }
-        @keyframes fill { to { width: 100%; } }
-
-        .carousel-arrows { display: flex; gap: 8px; margin-left: auto; }
-        .carousel-nav {
-            width: 42px; height: 42px; border-radius: 12px; border: 1.5px solid rgba(255, 255, 255, .3);
-            background: rgba(255, 255, 255, .08); color: #fff; display: grid; place-items: center; cursor: pointer;
-            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: background .15s, border-color .15s;
-        }
-        .carousel-nav:hover { background: rgba(201, 42, 67, .35); border-color: var(--pink); }
-        .carousel-nav:focus-visible, .carousel-indicators button:focus-visible, .scroll-indicator:focus-visible { outline-color: var(--mint); }
-
-        .scroll-indicator {
-            position: absolute; z-index: 6; right: 16px; bottom: 74px; display: inline-flex; align-items: center; gap: 8px;
-            background: var(--brand-grad); color: #fff; border: 0; border-radius: 999px; padding: 9px 14px 9px 16px;
-            font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 8px 20px rgba(201, 42, 67, .4);
-        }
-        .scroll-indicator .mouse { display: inline-block; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); }
-        @media (min-width: 960px) { .scroll-indicator { display: none; } }
-
-        /* ============================================================
-           LOGIN
-        ============================================================ */
-        .login-section { display: grid; place-items: center; padding: 8px 4px 28px; scroll-margin-top: 8px; }
-        @media (min-width: 960px) { .login-section { padding: 24px; } }
-
-        .login-card {
-            position: relative; overflow: hidden;
-            width: 100%; max-width: 440px; background: var(--sheet); border: 1px solid var(--line);
-            border-radius: 22px; padding: 34px 28px 26px;
-            box-shadow: 0 2px 4px rgba(6, 35, 26, .04), 0 24px 50px rgba(6, 35, 26, .1);
-        }
-        .login-card::before {
-            content: ''; position: absolute; left: 0; right: 0; top: 0; height: 5px;
-            background: linear-gradient(90deg, var(--brand), var(--pink) 45%, var(--sun) 70%, var(--leaf));
-        }
-        @media (min-width: 480px) { .login-card { padding: 40px 36px 30px; } }
-
-        .login-brand { margin-bottom: 24px; }
-        .login-logo { width: 54px; height: 54px; border-radius: 14px; object-fit: cover; background: var(--brand-soft); margin-bottom: 16px; display: block; box-shadow: 0 0 0 4px var(--brand-soft); }
-        .login-brand h1 { font-size: 30px; font-weight: 700; }
-        .tagline { color: var(--brand-dark); font-weight: 700; font-size: 14px; margin-top: 2px; }
-        .welcome { color: var(--muted); font-size: 14.5px; margin-top: 10px; }
-        .portal-badge {
-            display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 6px 12px; border-radius: 999px;
-            background: var(--leaf-soft); color: var(--leaf-dark); font-family: var(--font-mono); font-size: 11.5px; font-weight: 700;
-            letter-spacing: .02em; text-transform: uppercase;
+        html[data-theme="dark"] {
+            --primary: #5fc062; --primary-d: #8fe29a; --accent-soft: rgba(95,192,98,.16); --on-accent: #0b2314;
+            --danger: #ff7b87; --danger-soft: rgba(255,123,135,.15);
+            --warning: #f2c45f; --warning-text: #f2c45f; --warning-soft: rgba(242,196,95,.15);
+            --info: #6cb2ff; --info-soft: rgba(108,178,255,.15);
+            --bs-link-color-rgb: 143,226,154; --bs-link-hover-color-rgb: 190,242,198;
         }
 
-        /* Role segmented control */
-        .role-selector { margin-bottom: 20px; }
-        .role-selector-label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 8px; }
-        .role-pills { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
-        .role-thumb {
-            position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 9px;
-            background: var(--brand-grad); box-shadow: 0 6px 16px rgba(201, 42, 67, .35); transition: transform .28s cubic-bezier(.4, 0, .2, 1);
-        }
-        .role-pills[data-active="1"] .role-thumb { transform: translateX(100%); }
-        .role-pill {
-            position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-            min-height: 42px; border: 0; background: none; border-radius: 9px; font-weight: 700; font-size: 14.5px;
-            color: var(--muted); cursor: pointer; transition: color .2s;
-        }
-        .role-pill.is-active { color: #fff; }
-        .role-hint { margin-top: 8px; font-size: 13px; color: var(--muted); }
-        .role-hint b { color: var(--ink); }
+        /* Quick actions in search = blue (differs from green "pages") */
+        .gs-item.is-action .gs-ico { background: var(--info-soft); color: var(--info); }
+        html[data-theme="dark"] .gs-item.is-action .gs-ico { color: var(--info); }
 
-        /* Alerts */
-        .alert-error { padding: 12px 14px; border-radius: 10px; background: var(--red-soft); border-left: 5px solid var(--red); margin-bottom: 18px; font-size: 14px; }
-        .alert-error strong { display: flex; gap: 8px; align-items: flex-start; color: #8f1f1c; }
-        .alert-error ul { margin: 6px 0 0; padding-left: 26px; }
-        .alert-error li { color: #7a2523; }
-        .alert-success { padding: 12px 14px; border-radius: 10px; background: var(--leaf-soft); border-left: 5px solid var(--leaf); margin-bottom: 18px; font-size: 14px; }
-        .alert-success strong { display: flex; gap: 8px; align-items: flex-start; color: var(--leaf-dark); }
+        /* Notification badge = attention (red text on white) */
+        .notification-badge { color: #7a1f00; }
+        .notification-count-label { background: var(--danger-soft); color: var(--danger); }
 
-        /* Fields */
-        .form-group { margin-bottom: 16px; }
-        .form-label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px; }
-        .input-wrap { position: relative; }
-        .input-icon { position: absolute; top: 50%; transform: translateY(-50%); color: var(--faint); font-size: 17px; }
-        .input-icon.left { left: 14px; pointer-events: none; }
-        .input-icon.right {
-            right: 6px; width: 38px; height: 38px; display: grid; place-items: center; border: 0; background: none;
-            border-radius: 8px; cursor: pointer; color: var(--muted);
-        }
-        .input-icon.right:hover { background: var(--paper); color: var(--ink); }
-        .form-input {
-            width: 100%; min-height: 48px; padding: 11px 14px; font: inherit; color: var(--ink); background: #fff;
-            border: 1.5px solid var(--field-border); border-radius: 12px; transition: border-color .15s, box-shadow .15s;
-        }
-        .form-input.has-icon-left { padding-left: 42px; }
-        .form-input.has-icon-right { padding-right: 48px; }
-        .form-input::placeholder { color: var(--faint); }
-        .form-input:hover { border-color: var(--ink); }
-        .form-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(201, 42, 67, .15); }
-        .input-wrap:focus-within .input-icon.left { color: var(--brand); }
-        .form-input.is-invalid { border-color: var(--red); }
-        .form-input.is-invalid:focus { box-shadow: 0 0 0 4px var(--red-soft); }
-        .field-error { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--red); }
-        .field-tip { display: none; margin-top: 6px; font-size: 13px; font-weight: 600; color: #8a5a00; }
-        .field-tip.is-on { display: flex; gap: 6px; align-items: center; }
+        /* Notification sections: Today = info blue, Tomorrow = neutral */
+        .notification-section-today, html[data-theme="dark"] .notification-section-today { color: var(--info); }
+        .notification-section-tomorrow, html[data-theme="dark"] .notification-section-tomorrow { color: var(--muted-text); }
 
-        .form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 4px 0 14px; }
-        .checkbox-wrap { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-size: 14px; font-weight: 500; }
-        .checkbox-wrap input { width: 18px; height: 18px; accent-color: var(--brand); cursor: pointer; }
+        /* Notification cards: normal = info, important = amber, urgent = red */
+        .notification-item::before { background: var(--info); }
+        .notification-item-high::before { background: var(--danger); }
+        .notification-item-medium::before { background: var(--warning); }
+        .notification-item-icon { background: var(--info-soft); color: var(--info); }
+        .notification-item-high .notification-item-icon, html[data-theme="dark"] .notification-item-high .notification-item-icon { background: var(--danger-soft); color: var(--danger); }
+        .notification-item-medium .notification-item-icon, html[data-theme="dark"] .notification-item-medium .notification-item-icon { background: var(--warning-soft); color: var(--warning-text); }
+        .nb-tag-high, html[data-theme="dark"] .nb-tag-high { background: var(--danger-soft); color: var(--danger); }
+        .nb-tag-medium, html[data-theme="dark"] .nb-tag-medium { background: var(--warning-soft); color: var(--warning-text); }
+        .notification-clear-button:hover { background: var(--danger-soft); color: var(--danger); }
+        .notification-clear-all:hover { background: var(--danger-soft); color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
+        .notification-manage-link { color: var(--primary-d); }
+        .notification-manage-link:hover { background: var(--primary); color: var(--on-accent); }
 
-        /* Forgot password: clear, visible, goes straight to the recovery page */
-        .forgot-link {
-            display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px;
-            background: var(--brand-soft); color: var(--brand-dark);
-            font-size: 14px; font-weight: 700; text-decoration: none; transition: background .15s, color .15s;
-        }
-        .forgot-link:hover { background: var(--brand); color: #fff; }
-        .forgot-link:focus-visible { outline-offset: 3px; }
+        /* Reminder popup */
+        .global-reminder-icon { background: var(--info-soft); color: var(--info); }
+        .global-reminder-label { color: var(--info); }
+        .global-reminder-alert.priority-urgent { border-color: var(--danger); }
+        .global-reminder-alert.priority-important { border-color: var(--warning); }
+        .priority-urgent .global-reminder-icon { background: var(--danger-soft); color: var(--danger); }
+        .priority-important .global-reminder-icon { background: var(--warning-soft); color: var(--warning-text); }
+        .global-reminder-queue { background: var(--danger); }
+        .global-reminder-btn-view { background: var(--primary); border-color: var(--primary); color: var(--on-accent); }
+        .global-reminder-btn-view:hover { color: var(--on-accent); }
 
-        /* Username assistance: separate from password reset and 2FA */
-        .assist-line { margin: 0 0 14px; font-size: 13.5px; color: var(--muted); }
-        .assist-link {
-            border: 0; background: none; padding: 0; font: inherit; font-weight: 700; cursor: pointer;
-            color: var(--leaf-dark); text-decoration: underline; text-underline-offset: 3px;
-        }
-        .assist-link:hover { color: var(--leaf); }
+        /* Offline = warning, not brand red */
+        .net-pill { color: var(--warning-text); }
+        .net-pill::before { background: var(--warning); }
 
-        .forgot-note { display: none; margin: 0 0 16px; padding: 12px 14px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); font-size: 13.5px; color: var(--muted); line-height: 1.5; }
-        .forgot-note.is-on, .forgot-note:target { display: block; }
-        .forgot-note h2 { font-size: 14px; margin: 0 0 6px; color: var(--ink); display: flex; align-items: center; gap: 8px; }
-        .forgot-note h2 i { color: var(--leaf); }
+        /* Account menu: role = info, status = success, sign out = danger */
+        .user-role-badge { background: var(--info-soft); color: var(--info); }
+        .user-dropdown-item.text-danger { color: var(--danger); }
+        .user-dropdown-item.text-danger .user-dropdown-item-icon { background: var(--danger-soft); color: var(--danger); }
 
-        /* Recovery panel (email password reset) */
-        .recovery-mode-hidden { display: none !important; }
-        .recovery-panel { margin: 0 0 22px; }
-        .recovery-panel h2 { font-size: 21px; margin-bottom: 8px; }
-        .recovery-panel .recovery-intro { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
-        .recovery-panel .recovery-back { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; font-size: 14px; font-weight: 600; text-decoration: none; }
-        .recovery-panel .recovery-back:hover { text-decoration: underline; }
-        .recovery-panel .recovery-security { margin-top: 16px; color: var(--muted); font-size: 12.5px; }
+        /* Flash messages */
+        .flash-error { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+        html[data-theme="dark"] .flash-error { color: var(--danger); }
 
-        .btn-primary {
-            width: 100%; min-height: 50px; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-            border: 0; border-radius: 12px; background: var(--brand-grad); color: #fff; font-weight: 700; font-size: 16px; cursor: pointer;
-            box-shadow: 0 10px 22px rgba(201, 42, 67, .32);
-            transition: filter .15s, transform .15s, box-shadow .15s;
-        }
-        .btn-primary:hover { filter: brightness(.92); box-shadow: 0 12px 28px rgba(201, 42, 67, .42); }
-        .btn-primary:active { transform: scale(.99); }
-        .btn-primary i { transition: transform .2s; }
-        .btn-primary:hover i { transform: translateX(3px); }
-        .btn-primary[disabled] { background: #7f8f86; box-shadow: none; cursor: progress; }
-        .btn-primary .spin { display: none; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .4); border-top-color: #fff; animation: spin .7s linear infinite; }
-        .btn-primary.is-loading .spin { display: inline-block; }
-        .btn-primary.is-loading i { display: none; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .signup-link { margin-top: 16px; text-align: center; font-size: 12.5px; color: var(--muted); display: flex; gap: 6px; justify-content: center; align-items: center; font-family: var(--font-mono); }
-        .signup-link i { color: var(--leaf); }
-
-        /* ============================================================
-           TERMS & PRIVACY (one unified section)
-        ============================================================ */
-        .privacy-section { padding: 72px 20px; scroll-margin-top: 12px; }
-        .privacy-inner { max-width: 1180px; margin: 0 auto; }
-        .privacy-head { max-width: 640px; margin-bottom: 36px; }
-        .section-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-weight: 700; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--brand-dark); margin-bottom: 10px; }
-        .section-eyebrow::before { content: ''; width: 22px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--brand), var(--leaf)); }
-        .section-title { font-size: clamp(28px, 3.6vw, 42px); font-weight: 700; margin-bottom: 10px; }
-        .section-subtitle { color: var(--muted); font-size: 16px; }
-
-        .privacy-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-bottom: 28px; }
-        @media (min-width: 640px) { .privacy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (min-width: 1000px) { .privacy-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-
-        .privacy-card {
-            display: flex; flex-direction: column; background: var(--sheet); border: 1px solid var(--line);
-            border-radius: 16px; padding: 22px; transition: border-color .15s, transform .15s, box-shadow .15s;
-        }
-        .privacy-card:hover { border-color: var(--brand); transform: translateY(-3px); box-shadow: 0 14px 30px rgba(201, 42, 67, .12); }
-        .pc-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-dark); font-size: 20px; margin-bottom: 16px; }
-        .privacy-card:nth-child(even) .pc-icon { background: var(--leaf-soft); color: var(--leaf-dark); }
-        .privacy-card:nth-child(even):hover { border-color: var(--leaf); box-shadow: 0 14px 30px rgba(47, 158, 91, .12); }
-        .privacy-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-        .privacy-card p { color: var(--muted); font-size: 14.5px; margin-bottom: 16px; }
-        .privacy-card a { margin-top: auto; font-weight: 700; font-size: 14px; text-decoration: none; }
-        .privacy-card a:hover { text-decoration: underline; }
-
-        /* Pop-up (modal) for Terms, Privacy Policy, Data Privacy Notice, Contact */
-        html.modal-open { overflow: hidden; }
-        .legal-modal {
-            padding: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--sheet); color: var(--ink);
-            width: min(720px, calc(100% - 28px)); max-height: min(86vh, 860px);
-            box-shadow: 0 30px 80px rgba(6, 35, 26, .35);
-        }
-        .legal-modal[open] { display: flex; flex-direction: column; animation: modal-in .18s ease-out; }
-        .legal-modal::backdrop { background: rgba(6, 35, 26, .62); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
-        @keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
-        .lm-head {
-            display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-            padding: 24px 28px 18px; border-bottom: 1px solid var(--line);
-        }
-        .lm-head h2 { font-size: 24px; font-weight: 700; }
-        .lm-sub { color: var(--brand-dark); font-weight: 700; font-size: 13.5px; margin-top: 4px; }
-        .lm-close {
-            flex: none; width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line);
-            border-radius: 10px; background: var(--paper); color: var(--muted); cursor: pointer; font-size: 15px;
-            transition: background .15s, color .15s, border-color .15s;
-        }
-        .lm-close:hover { background: var(--brand-soft); color: var(--brand-dark); border-color: var(--brand); }
-        .lm-body { padding: 22px 28px; overflow-y: auto; flex: 1; max-width: none; overscroll-behavior: contain; align-content: start; }
-        .lm-foot { padding: 14px 28px 20px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; }
-        .lm-done {
-            min-height: 42px; padding: 0 22px; border: 0; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14.5px;
-            color: #fff; background: var(--brand-grad);
-        }
-        .lm-done:hover { filter: brightness(.92); }
-        .lm-label { font-size: 14px; color: var(--muted); }
-        .lm-chips { list-style: none; margin: -4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-        .lm-chips li { padding: 6px 12px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); font-size: 13.5px; font-weight: 500; }
-        @media (max-width: 480px) {
-            .lm-head { padding: 18px 18px 14px; }
-            .lm-body { padding: 18px; }
-            .lm-foot { padding: 12px 18px 16px; }
-            .lm-head h2 { font-size: 20px; }
-        }
-        @media (prefers-reduced-motion: reduce) { .legal-modal[open] { animation: none; } }
-
-        .pn-body { display: grid; gap: 14px; color: #2c3c36; max-width: 70ch; align-content: start; }
-        .pn-body .pn-lead { font-size: 16.5px; color: var(--ink); }
-        .pn-body h3 { font-size: 16px; font-weight: 700; color: var(--ink); margin-top: 6px; }
-        .pn-body ul.pn-list { list-style: disc; margin: 0; padding-left: 22px; display: grid; gap: 8px; }
-        .pn-body ul.pn-list li::marker { color: var(--brand); }
-        .pn-disclaimer { padding: 12px 14px; border-radius: 10px; background: #fff3d1; border-left: 5px solid var(--sun); font-size: 13.5px; color: #6b4a00; }
-
-        /* Contact details inside the Contact Barangay panel */
-        .contact-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-        .contact-list li { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
-        .contact-list i { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: var(--leaf-soft); color: var(--leaf-dark); font-size: 17px; }
-        .contact-list b { display: block; color: var(--ink); font-size: 14.5px; }
-        .contact-list span { color: var(--muted); font-size: 14px; }
-
-        /* ============================================================
-           FOOTER
-        ============================================================ */
-        .site-footer {
-            position: relative; overflow: hidden; background: var(--deep); color: #c5d8d0; padding: 56px 20px 24px;
-            border-top: 3px solid transparent;
-            border-image: linear-gradient(90deg, var(--brand), var(--pink), var(--sun), var(--leaf)) 1;
-        }
-        .site-footer::before {
-            content: ''; position: absolute; inset: 0; pointer-events: none;
-            background-image:
-                linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px);
-            background-size: 44px 44px;
-            -webkit-mask-image: radial-gradient(90% 100% at 100% 0%, #000, transparent 70%);
-            mask-image: radial-gradient(90% 100% at 100% 0%, #000, transparent 70%);
-        }
-        .footer-grid, .footer-bottom { position: relative; }
-        .footer-grid { max-width: 1180px; margin: 0 auto; display: grid; gap: 32px; grid-template-columns: minmax(0, 1fr); }
-        @media (min-width: 760px) { .footer-grid { grid-template-columns: 1.6fr 1fr 1fr; } }
-        .footer-brand h3 { color: #fff; font-size: 26px; font-weight: 700; margin-bottom: 4px; }
-        .footer-brand p { color: #9fbbb1; }
-        .footer-brand .locale { margin-top: 14px; color: #c5d8d0; }
-        .footer-col h4 { color: var(--pink); font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 12px; }
-        .footer-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-        .footer-col a { color: #c5d8d0; text-decoration: none; font-size: 14.5px; }
-        .footer-col a:hover { color: #fff; text-decoration: underline; }
-        .site-footer a:focus-visible { outline-color: var(--mint); }
-        /* Copyright is centered across the whole footer container (desktop, tablet, mobile). */
-        .footer-bottom {
-            max-width: 1180px; margin: 36px auto 0; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, .14);
-            font-family: var(--font-mono); font-size: 12.5px; color: #9fbbb1;
-            text-align: center;
-        }
-
-        /* ============================================================
-           SCROLL-TO-TOP + REVEAL
-        ============================================================ */
-        .scroll-top {
-            position: fixed; right: 18px; bottom: 18px; z-index: 50; width: 46px; height: 46px; border-radius: 14px; border: 0;
-            background: var(--brand-grad); color: #fff; font-size: 18px; display: grid; place-items: center; cursor: pointer;
-            box-shadow: 0 10px 24px rgba(201, 42, 67, .4); opacity: 0; visibility: hidden; transform: translateY(10px);
-            transition: opacity .2s, transform .2s, visibility .2s;
-        }
-        .scroll-top.is-visible { opacity: 1; visibility: visible; transform: none; }
-
-        .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
-        .js .reveal.is-in { opacity: 1; transform: none; }
-        @media (prefers-reduced-motion: reduce) {
-            .js .reveal { opacity: 1; transform: none; transition: none; }
-            .slide.is-active .slide-media { animation: none; transform: none; }
-            .slide-content > * { opacity: 1; transform: none; animation: none !important; }
-            .slide, .slide.is-active { transition: none; }
-            .slide-eyebrow::before { animation: none; }
-        }
-
-
-        /* Attendance kiosk launcher and full-screen overlay (watermelon theme) */
-        .attendance-kiosk-launcher {
-            width:100%; display:flex; align-items:center; justify-content:center; gap:9px;
-            margin-top:12px; padding:12px 16px; border:1.5px solid var(--line-strong); border-radius:12px;
-            background:#fff; color:var(--leaf-dark); font:inherit; font-size:13.5px; font-weight:700;
-            cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
-        }
-        .attendance-kiosk-launcher:hover { background:var(--brand-soft); border-color:var(--pink); color:var(--brand-dark); transform:translateY(-1px); }
-        .attendance-kiosk-launcher:focus-visible, .kiosk-window button:focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
-        .attendance-kiosk-overlay {
-            position:fixed; inset:0; z-index:10000; display:none; flex-direction:column;
-            background:#fdf7f8;
-        }
-        .attendance-kiosk-overlay.is-open { display:flex; }
-        .kiosk-window-bar {
-            position:relative; min-height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px;
-            padding:8px 18px; background:#fff; color:var(--ink); border-bottom:1px solid var(--line);
-            box-shadow:0 6px 18px rgba(120,40,55,.07);
-        }
-        .kiosk-window-bar::after {
-            content:''; position:absolute; left:0; right:0; bottom:-1px; height:3px;
-            background:linear-gradient(90deg, var(--brand), var(--pink) 50%, var(--leaf));
-        }
-        .kiosk-window-title { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:800; letter-spacing:.1px; }
-        .kiosk-window-title i {
-            width:32px; height:32px; display:grid; place-items:center; border-radius:10px;
-            background:var(--brand-soft); color:var(--brand-dark); font-size:15px;
-        }
-        .kiosk-window-actions { display:flex; align-items:center; gap:8px; }
-        .kiosk-window button {
-            display:inline-flex; align-items:center; gap:7px; min-height:38px; padding:7px 14px;
-            border:1.5px solid var(--line-strong); border-radius:999px; background:#fff; color:var(--ink);
-            font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
-            transition:background .15s, border-color .15s, color .15s, filter .15s;
-        }
-        .kiosk-window button:hover { background:var(--paper); border-color:var(--faint); }
-        .kiosk-window button.kiosk-close {
-            border-color:transparent; color:#fff;
-            background:var(--brand-grad);
-            box-shadow:0 6px 14px rgba(201,42,67,.3);
-        }
-        .kiosk-window button.kiosk-close:hover { filter:brightness(.92); }
-        .kiosk-frame { display:block; width:100%; flex:1; min-height:0; border:0; background:#fdf7f8; }
-        body.kiosk-overlay-open { overflow:hidden; }
-        @media (max-width:480px) {
-            .kiosk-window-bar { padding:8px 10px; }
-            .kiosk-window-title { font-size:12.5px; }
-            .kiosk-window-title i { width:28px; height:28px; }
-            .kiosk-window button { padding:6px 11px; font-size:11.5px; }
-        }
+        /* Bootstrap bits that should follow the semantic colours */
+        .btn-danger { --bs-btn-bg: var(--danger); --bs-btn-border-color: var(--danger); --bs-btn-hover-bg: var(--danger); --bs-btn-hover-border-color: var(--danger); --bs-btn-color: #fff; font-weight: 700; }
+        .btn-outline-danger { --bs-btn-color: var(--danger); --bs-btn-border-color: var(--danger); --bs-btn-hover-bg: var(--danger); --bs-btn-hover-border-color: var(--danger); --bs-btn-hover-color: #fff; font-weight: 700; }
+        .text-danger { color: var(--danger) !important; }
+        .text-success { color: var(--primary-d) !important; }
+        .text-warning { color: var(--warning-text) !important; }
+        .text-info { color: var(--info) !important; }
     </style>
+
+    @stack('styles')
 </head>
 
 <body>
 
-<a href="#login" class="skip-link">Skip to sign in</a>
+{{-- Inline icon sprite: shows even with no internet --}}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5a5 5 0 0 1 4.5 5"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="M3 11 12 3l9 8M5 9.5V21h14V9.5M10 21v-6h4v6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="M12 8v5M12 16.5v.01"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h3M20 17v4"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="i-usergear" viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 11-5.5"/><circle cx="18" cy="17" r="2.5"/><path d="M18 12.5v1.2M18 20.3v1.2M13.5 17h1.2M21.3 17h1.2"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21a2 2 0 0 0 4 0"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-check2" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M16 8l4 4-4 4M20 12H9"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-shieldcheck" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-alarm" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 1.5M4 5l3-2M20 5l-3-2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-patch" viewBox="0 0 24 24"><path d="m12 2.5 2.5 1.8 3 .1.9 2.9 2.4 1.8-1 2.8 1 2.8-2.4 1.8-.9 2.9-3 .1L12 21.5l-2.5-1.8-3-.1-.9-2.9-2.4-1.8 1-2.8-1-2.8 2.4-1.8.9-2.9 3-.1z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m21 8-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20z"/><path d="M12 10v5M12 17.5v.01"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</defs></svg>
 
-<main class="stage">
 
-    {{-- ============================================================
-         HERO / CAROUSEL
-    ============================================================= --}}
-    <section class="hero" id="top" aria-label="e-Poblacion welcome carousel">
+<!-- ============ SIDEBAR ============ -->
 
-        <a href="#top" class="hero-brand" aria-label="e-Poblacion home">
-            <img src="{{ asset('icon.png') }}" alt="">
-            <span>e-Poblacion</span>
-        </a>
+<aside class="sidebar" id="appSidebar">
 
-        <div class="carousel-counter" aria-hidden="true"><b id="carouselNow">01</b> / 05</div>
-
-        <div class="carousel" id="carousel" aria-live="off">
-
-            {{-- SLIDE 1 --}}
-            <div class="slide is-active" aria-hidden="false" data-slide="0">
-                <img class="slide-media" src="{{ asset('images/brgy.png') }}" alt="Barangay Poblacion Hall">
-                <div class="slide-content">
-                    <span class="slide-eyebrow">Barangay Poblacion · Bani, Pangasinan</span>
-                    <h2 class="slide-title">Welcome to <span class="gradient-e">e</span>-Poblacion</h2>
-                    <p class="slide-subtitle">
-                        A digital Record Management System designed to help Barangay Poblacion
-                        organize, manage, and securely maintain official barangay records.
-                    </p>
-                </div>
-            </div>
-
-            {{-- SLIDE 2 --}}
-            <div class="slide" aria-hidden="true" data-slide="1">
-                <img class="slide-media" src="{{ asset('images/barangay-personnel.jpg') }}" alt="Barangay personnel">
-                <div class="slide-content">
-                    <span class="slide-eyebrow">Barangay Personnel</span>
-                    <h2 class="slide-title">Organized Record Management</h2>
-                    <p class="slide-subtitle">
-                        Support authorized barangay personnel with organized resident, household,
-                        document, complaint, and other official records.
-                    </p>
-                </div>
-            </div>
-
-            {{-- SLIDE 3 --}}
-            <div class="slide" aria-hidden="true" data-slide="2">
-                <img class="slide-media" src="{{ asset('images/sk-personnel.jpg') }}" alt="Sangguniang Kabataan personnel">
-                <div class="slide-content">
-                    <span class="slide-eyebrow">Community Records</span>
-                    <h2 class="slide-title">Supporting Community Records</h2>
-                    <p class="slide-subtitle">
-                        Maintain organized records related to community activities, programs,
-                        and barangay documentation.
-                    </p>
-                </div>
-            </div>
-
-            {{-- SLIDE 4 --}}
-            <div class="slide" aria-hidden="true" data-slide="3">
-                <img class="slide-media" src="{{ asset('images/community-event.jpg') }}" alt="Barangay community activity">
-                <div class="slide-content">
-                    <span class="slide-eyebrow">Digital Records</span>
-                    <h2 class="slide-title">Organized. Accessible. Efficient.</h2>
-                    <p class="slide-subtitle">
-                        Manage residents, households, clearances, certificates, reports, complaints,
-                    and relief records through one centralized Record Management System.
-                    </p>
-                </div>
-            </div>
-
-            {{-- SLIDE 5 --}}
-            <div class="slide" aria-hidden="true" data-slide="4">
-                <img class="slide-media" src="{{ asset('images/local-scenery.jpg') }}" alt="Barangay Poblacion community">
-                <div class="slide-content">
-                    <span class="slide-eyebrow">Barangay Record Management</span>
-                    <h2 class="slide-title">Better Records, Better Service</h2>
-                    <p class="slide-subtitle">
-                        e-Poblacion helps Barangay Poblacion maintain accurate, organized,
-                        accessible, and secure official records.
-                    </p>
-                </div>
-            </div>
-
-        </div>
-
-        <div class="hero-controls">
-            {{-- INDICATORS --}}
-            <ul class="carousel-indicators" id="carouselIndicators" role="tablist" aria-label="Carousel navigation">
-                @for ($i = 0; $i < 5; $i++)
-                    <li role="presentation">
-                        <button type="button" role="tab"
-                                class="{{ $i === 0 ? 'is-active' : '' }}"
-                                aria-label="Go to slide {{ $i + 1 }}"
-                                aria-selected="{{ $i === 0 ? 'true' : 'false' }}"
-                                data-slide-to="{{ $i }}"></button>
-                    </li>
-                @endfor
-            </ul>
-
-            <div class="carousel-arrows">
-                <button class="carousel-nav prev" id="carouselPrev" type="button" aria-label="Previous slide">
-                    <i class="bi bi-arrow-left"></i>
-                </button>
-                <button class="carousel-nav next" id="carouselNext" type="button" aria-label="Next slide">
-                    <i class="bi bi-arrow-right"></i>
-                </button>
+    <div class="sidebar-brand">
+        <div class="seal">
+            <div class="seal-in">
+                {{-- Watermelon fallback: shows if the logo file is missing or cannot load offline --}}
+                <svg viewBox="0 0 40 40" aria-hidden="true">
+                    <rect width="40" height="40" fill="#fff"/>
+                    <path d="M4 17a16 16 0 0 0 32 0z" fill="#4fae4e"/>
+                    <path d="M7.4 17a12.6 12.6 0 0 0 25.2 0z" fill="#e4f2d6"/>
+                    <path d="M9.6 17a10.4 10.4 0 0 0 20.8 0z" fill="#ef6b78"/>
+                    <ellipse cx="15.5" cy="22" rx="1.1" ry="1.9" transform="rotate(-20 15.5 22)" fill="#2a1a1d"/>
+                    <ellipse cx="20" cy="25" rx="1.1" ry="1.9" fill="#2a1a1d"/>
+                    <ellipse cx="24.5" cy="22" rx="1.1" ry="1.9" transform="rotate(20 24.5 22)" fill="#2a1a1d"/>
+                </svg>
+                <img src="{{ $logo }}" @if ($logo2x) srcset="{{ $logo }} 1x, {{ $logo2x }} 2x" @endif
+                     width="2000" height="2000" alt="Barangay Poblacion Record Management System"
+                     loading="eager" decoding="sync" fetchpriority="high" onerror="this.remove()">
             </div>
         </div>
 
-        {{-- SCROLL TO LOGIN (small screens) --}}
-        <button class="scroll-indicator" id="scrollIndicator" type="button" aria-label="Scroll to login section">
-            <span>Sign in</span>
-            <span class="mouse" aria-hidden="true"></span>
-        </button>
+        <div class="min-w-0">
+            <div class="brand-name"><span>Barangay</span><span>Poblacion</span></div>
+            <div class="brand-system">Record Management System</div>
+        </div>
+    </div>
 
-    </section>
+    <nav class="sidebar-nav" aria-label="Main navigation">
+        @foreach ($navGroups as $group)
+            @if ($group['show'] && count($group['items']))
+                <div class="sidebar-group">
+                    <small class="sidebar-label">{{ $group['label'] }}</small>
 
-
-    {{-- ============================================================
-         LOGIN SECTION
-    ============================================================= --}}
-    <section class="login-section" id="login" aria-label="Personnel sign in">
-
-        <div class="login-card reveal">
-
-            {{-- Brand --}}
-            <div class="login-brand">
-                <img class="login-logo" src="{{ asset('icon.png') }}" alt="e-Poblacion logo">
-                <h1>e-Poblacion</h1>
-                <p class="tagline">Barangay Record Management System</p>
-                <p class="welcome">Official portal for authorized Barangay Poblacion personnel.</p>
-                <span class="portal-badge">
-                    <i class="bi bi-shield-lock" aria-hidden="true"></i>
-                    <span>Authorized Personnel Access Only</span>
-                </span>
-            </div>
-
-            {{-- Email password recovery: uses the existing login view to avoid a new Blade file. --}}
-            @if ($showEmailPasswordRecoveryForm ?? false)
-                @php
-                    $emailRecoveryStage = $emailPasswordRecoveryStage ?? 'request';
-                    $emailRecoveryAddress = $emailPasswordRecoveryEmail ?? old('email', '');
-                @endphp
-
-                <div class="recovery-panel" id="emailPasswordRecoveryPanel">
-                    <h2>Email Password Recovery</h2>
-                    <p class="recovery-intro">
-                        Enter the verified email address linked to your existing active Captain or Secretary account.
-                        After a password reset, you must sign in normally and complete authenticator-app verification.
-                    </p>
-
-                    @if (session('status'))
-                        <div class="alert-success" role="status">
-                            <strong>
-                                <i class="bi bi-info-circle" aria-hidden="true"></i>
-                                <span>{{ session('status') }}</span>
-                            </strong>
-                        </div>
-                    @endif
-
-                    @if ($errors->has('email') || $errors->has('verification_code') || $errors->has('password') || $errors->has('password_confirmation'))
-                        <div class="alert-error" role="alert">
-                            <strong>
-                                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-                                <span>We could not complete email password recovery.</span>
-                            </strong>
-                            <ul>
-                                @error('email')
-                                    <li>{{ $message }}</li>
-                                @enderror
-                                @error('verification_code')
-                                    <li>{{ $message }}</li>
-                                @enderror
-                                @error('password')
-                                    <li>{{ $message }}</li>
-                                @enderror
-                                @error('password_confirmation')
-                                    <li>{{ $message }}</li>
-                                @enderror
-                            </ul>
-                        </div>
-                    @endif
-
-                    @if ($emailRecoveryStage === 'verify')
-                        <form method="POST" action="{{ route('password-recovery.reset') }}" id="emailPasswordRecoveryForm">
-                            @csrf
-
-                            <div class="form-group">
-                                <label class="form-label" for="recovery_email">Verified account email</label>
-                                <div class="input-wrap">
-                                    <i class="bi bi-envelope input-icon left" aria-hidden="true"></i>
-                                    <input type="email"
-                                           id="recovery_email"
-                                           name="email"
-                                           class="form-input has-icon-left {{ $errors->has('email') ? 'is-invalid' : '' }}"
-                                           value="{{ $emailRecoveryAddress }}"
-                                           autocomplete="email"
-                                           maxlength="255"
-                                           required
-                                           readonly>
-                                </div>
-                                @error('email')
-                                    <span class="field-error" role="alert">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="verification_code">Six-digit email recovery code</label>
-                                <div class="input-wrap">
-                                    <i class="bi bi-shield-lock input-icon left" aria-hidden="true"></i>
-                                    <input type="text"
-                                           id="verification_code"
-                                           name="verification_code"
-                                           class="form-input has-icon-left {{ $errors->has('verification_code') ? 'is-invalid' : '' }}"
-                                           value="{{ old('verification_code') }}"
-                                           inputmode="numeric"
-                                           pattern="[0-9]{6}"
-                                           autocomplete="one-time-code"
-                                           minlength="6"
-                                           maxlength="6"
-                                           required>
-                                </div>
-                                @error('verification_code')
-                                    <span class="field-error" role="alert">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="email_recovery_password">New password</label>
-                                <div class="input-wrap">
-                                    <i class="bi bi-lock input-icon left" aria-hidden="true"></i>
-                                    <input type="password"
-                                           id="email_recovery_password"
-                                           name="password"
-                                           class="form-input has-icon-left {{ $errors->has('password') ? 'is-invalid' : '' }}"
-                                           placeholder="Enter your new password"
-                                           autocomplete="new-password"
-                                           required>
-                                </div>
-                                @error('password')
-                                    <span class="field-error" role="alert">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="email_recovery_password_confirmation">Confirm new password</label>
-                                <div class="input-wrap">
-                                    <i class="bi bi-lock-fill input-icon left" aria-hidden="true"></i>
-                                    <input type="password"
-                                           id="email_recovery_password_confirmation"
-                                           name="password_confirmation"
-                                           class="form-input has-icon-left {{ $errors->has('password_confirmation') ? 'is-invalid' : '' }}"
-                                           placeholder="Re-enter your new password"
-                                           autocomplete="new-password"
-                                           required>
-                                </div>
-                                @error('password_confirmation')
-                                    <span class="field-error" role="alert">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <button type="submit" class="btn-primary" id="emailPasswordRecoverySubmit">
-                                <span>Verify code and reset password</span>
-                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                            </button>
-                        </form>
-
-                        <form method="POST" action="{{ route('password-recovery.send-code') }}" style="margin-top:12px;">
-                            @csrf
-                            <input type="hidden" name="email" value="{{ $emailRecoveryAddress }}">
-                            <button type="submit" class="assist-link">
-                                Send a new recovery code
-                            </button>
-                        </form>
-                    @else
-                        <form method="POST" action="{{ route('password-recovery.send-code') }}" id="emailPasswordRecoveryForm">
-                            @csrf
-
-                            <div class="form-group">
-                                <label class="form-label" for="recovery_email">Account email address</label>
-                                <div class="input-wrap">
-                                    <i class="bi bi-envelope input-icon left" aria-hidden="true"></i>
-                                    <input type="email"
-                                           id="recovery_email"
-                                           name="email"
-                                           class="form-input has-icon-left {{ $errors->has('email') ? 'is-invalid' : '' }}"
-                                           value="{{ $emailRecoveryAddress }}"
-                                           placeholder="Enter the verified email linked to your account"
-                                           autocomplete="email"
-                                           autocapitalize="none"
-                                           maxlength="255"
-                                           required>
-                                </div>
-                                @error('email')
-                                    <span class="field-error" role="alert">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <button type="submit" class="btn-primary" id="emailPasswordRecoverySubmit">
-                                <span>Send recovery code</span>
-                                <i class="bi bi-envelope-arrow-up" aria-hidden="true"></i>
-                            </button>
-                        </form>
-                    @endif
-
-                    <p class="recovery-security">
-                        <i class="bi bi-shield-check" aria-hidden="true"></i>
-                        Recovery codes expire. Password recovery does not sign you in or disable two-factor authentication.
-                    </p>
-
-                    <a class="recovery-back" href="{{ route('login') }}">
-                        <i class="bi bi-arrow-left" aria-hidden="true"></i>
-                        Return to normal sign in
-                    </a>
+                    @foreach ($group['items'] as $item)
+                        @php $isActive = request()->routeIs(...$item['active']); @endphp
+                        <a href="{{ route($item['route']) }}" title="{{ $item['text'] }}" class="sidebar-link {{ $isActive ? 'active' : '' }}" @if ($isActive) aria-current="page" @endif>
+                            <svg class="i" aria-hidden="true"><use href="#i-{{ $item['icon'] }}"/></svg>
+                            <span>{{ $item['text'] }}</span>
+                        </a>
+                    @endforeach
                 </div>
             @endif
+        @endforeach
+    </nav>
 
-            {{-- Normal login form remains in the page so existing login scripts stay intact. --}}
-            <form method="POST" action="{{ route('login.authenticate') }}" id="loginForm" novalidate
-                  class="{{ ($showEmailPasswordRecoveryForm ?? false) ? 'recovery-mode-hidden' : '' }}">
-                @csrf
+    <div class="sidebar-foot">
+        <svg class="i" aria-hidden="true"><use href="#i-patch"/></svg>
+        <div><strong>Bani, Pangasinan</strong>Serving since 1769</div>
+    </div>
 
-                @php
-                    $selectedRole = old('role');
+</aside>
 
-                    if (! in_array($selectedRole, ['captain', 'secretary'], true)) {
-                        $selectedRole = 'captain';
-                    }
-                @endphp
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-                {{-- Role selector --}}
-                <div class="role-selector" role="radiogroup" aria-label="Select your role">
-                    <span class="role-selector-label" id="roleLabel">Sign in as</span>
 
-                    <div class="role-pills" id="rolePills" data-active="{{ $selectedRole === 'secretary' ? 1 : 0 }}">
-                        <span class="role-thumb" aria-hidden="true"></span>
+<!-- ============ MAIN CONTENT ============ -->
 
-                        <button type="button"
-                                class="role-pill {{ $selectedRole === 'captain' ? 'is-active' : '' }}"
-                                data-role="captain" role="radio"
-                                aria-checked="{{ $selectedRole === 'captain' ? 'true' : 'false' }}"
-                                tabindex="{{ $selectedRole === 'captain' ? '0' : '-1' }}">
-                            <i class="bi bi-person-badge" aria-hidden="true"></i>
-                            <span>Captain</span>
-                        </button>
+<div class="main-content">
 
-                        <button type="button"
-                                class="role-pill {{ $selectedRole === 'secretary' ? 'is-active' : '' }}"
-                                data-role="secretary" role="radio"
-                                aria-checked="{{ $selectedRole === 'secretary' ? 'true' : 'false' }}"
-                                tabindex="{{ $selectedRole === 'secretary' ? '0' : '-1' }}">
-                            <i class="bi bi-journal-text" aria-hidden="true"></i>
-                            <span>Secretary</span>
-                        </button>
-                    </div>
+    <nav class="topbar">
 
-                    <div class="role-hint" aria-live="polite">
-                        Signing in as <b id="roleHint">{{ ucfirst($selectedRole) }}</b>
-                    </div>
+        <div class="tb-left">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Open menu" aria-controls="appSidebar" aria-expanded="false">
+                <svg class="i" style="width:20px;height:20px" aria-hidden="true"><use href="#i-menu"/></svg>
+            </button>
 
-                    <input type="hidden" name="role" id="role" value="{{ $selectedRole }}">
-                </div>
+            <div class="topbar-brand">
+                <span class="mini">
+                    <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" fill="#fff"/><path d="M4 17a16 16 0 0 0 32 0z" fill="#4fae4e"/><path d="M9.6 17a10.4 10.4 0 0 0 20.8 0z" fill="#ef6b78"/></svg>
+                    <img src="{{ $logo }}" alt="" width="76" height="76" onerror="this.remove()">
+                </span>
+                <span>Poblacion</span>
+            </div>
 
-                {{-- Success / status messages (e.g. after a completed recovery) --}}
-                @if (session('success') || session('status'))
-                    <div class="alert-success" role="status">
-                        <strong>
-                            <i class="bi bi-check-circle" aria-hidden="true"></i>
-                            <span>{{ session('success') ?? session('status') }}</span>
-                        </strong>
-                    </div>
-                @endif
+            {{-- ============ GLOBAL SEARCH ============ --}}
+            <div class="gsearch" id="gSearch">
+                <label class="gsearch-field" for="gSearchInput">
+                    <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+                    <input type="search" id="gSearchInput" placeholder="Search residents, documents, records..." aria-label="Search"
+                           autocomplete="off" autocapitalize="off" spellcheck="false"
+                           role="combobox" aria-expanded="false" aria-controls="gSearchPanel" aria-autocomplete="list">
+                    <span class="gsearch-hint" aria-hidden="true">Ctrl K</span>
+                    <span class="gsearch-spin" aria-hidden="true"></span>
+                    <button type="button" class="gsearch-clear" id="gSearchClear" aria-label="Clear search" tabindex="-1">
+                        <svg class="i" aria-hidden="true"><use href="#i-x"/></svg>
+                    </button>
+                </label>
 
-                {{-- Validation errors --}}
-                @if ($errors->any())
-                    <div class="alert-error" role="alert">
-                        <strong>
-                            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-                            <span>Please check your login details.</span>
-                        </strong>
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+                <div class="gsearch-panel" id="gSearchPanel" role="listbox" aria-label="Search results"></div>
+            </div>
+        </div>
 
-                {{-- General login error --}}
-                @if (session('login_error'))
-                    <div class="alert-error" role="alert">
-                        <strong>
-                            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-                            <span>{{ session('login_error') }}</span>
-                        </strong>
-                    </div>
-                @endif
+        <div class="tb-right">
 
-                {{-- Username --}}
-                <div class="form-group">
-                    <label class="form-label" for="username">Username</label>
-                    <div class="input-wrap">
-                        <i class="bi bi-person input-icon left" aria-hidden="true"></i>
-                        <input type="text" id="username" name="username"
-                               class="form-input has-icon-left {{ $errors->has('username') ? 'is-invalid' : '' }}"
-                               value="{{ old('username') }}"
-                               placeholder="Enter your username"
-                               autocomplete="username"
-                               autocapitalize="none"
-                               spellcheck="false"
-                               maxlength="50"
-                               required>
-                    </div>
-                    @error('username')
-                        <span class="field-error" role="alert">{{ $message }}</span>
-                    @enderror
-                </div>
+            <span class="net-pill" id="netPill" role="status" aria-live="polite">Offline</span>
 
-                {{-- Password --}}
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <div class="input-wrap">
-                        <i class="bi bi-lock input-icon left" aria-hidden="true"></i>
-                        <input type="password" id="password" name="password"
-                               class="form-input has-icon-left has-icon-right {{ $errors->has('password') ? 'is-invalid' : '' }}"
-                               placeholder="Enter your password" autocomplete="current-password" required>
-                        <button type="button" id="togglePassword" class="input-icon right"
-                                aria-label="Show password" aria-pressed="false">
-                            <i id="togglePasswordIcon" class="bi bi-eye" aria-hidden="true"></i>
-                        </button>
-                    </div>
-                    <span class="field-tip" id="capsTip" role="status">
-                        <i class="bi bi-capslock-fill" aria-hidden="true"></i> Caps Lock is on
-                    </span>
-                    @error('password')
-                        <span class="field-error" role="alert">{{ $message }}</span>
-                    @enderror
-                </div>
-
-                {{-- Remember / Forgot password --}}
-                <div class="form-row">
-                    <label class="checkbox-wrap">
-                        <input type="checkbox" name="remember" id="remember" value="1">
-                        <span>Remember me</span>
-                    </label>
-
-                    {{-- Password reset only: goes straight to the existing email password-recovery page. --}}
-                    <a class="forgot-link" href="{{ route('password-recovery.show') }}" id="forgotPasswordLink">
-                        <i class="bi bi-key" aria-hidden="true"></i>
-                        <span>Forgot password?</span>
-                    </a>
-                </div>
-
-                {{-- Username assistance: separate from password reset and 2FA recovery. --}}
-                <p class="assist-line">
-                    Forgot your username?
-                    <a class="assist-link" href="#username-help" id="usernameHelpLink"
-                       aria-expanded="false" aria-controls="username-help">Get help</a>
-                </p>
-
-                <div class="forgot-note" id="username-help" role="region" aria-label="Username assistance">
-                    <h2><i class="bi bi-person-vcard" aria-hidden="true"></i> Username assistance</h2>
-                    <p>Usernames are not shown on this page. Ask the Barangay Poblacion office to confirm your username in person.</p>
-                </div>
-
-                {{-- Sign in --}}
-                <button type="submit" class="btn-primary" id="signInBtn">
-                    <span class="spin" aria-hidden="true"></span>
-                    <span id="signInText">Sign in</span>
-                    <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            {{-- ============ NOTIFICATIONS + MANUAL REMINDERS (redesigned) ============ --}}
+            <div class="dd">
+                <button type="button"
+                    class="notification-button {{ $bellNotificationCount > 0 ? 'has-unread' : '' }}"
+                    id="notificationDropdown" data-dd="notificationMenu"
+                    aria-expanded="false" aria-haspopup="true" aria-label="Notifications" title="Notifications">
+                    <svg class="i" style="width:21px;height:21px" aria-hidden="true"><use href="#i-bell"/></svg>
+                    @if ($bellNotificationCount > 0)
+                        <span class="notification-badge">{{ $bellNotificationCount > 99 ? '99+' : $bellNotificationCount }}</span>
+                    @endif
                 </button>
 
-                {{-- Security message --}}
-                <p class="signup-link">
-                    <i class="bi bi-lock-fill" aria-hidden="true"></i>
-                    Authorized Captain and Secretary only.
-                </p>
-            </form>
+                <div class="dd-menu notification-menu" id="notificationMenu" data-filter="all" aria-labelledby="notificationDropdown">
 
-            {{-- Separate attendance access; does not submit or alter the RMS login form. --}}
-            <button type="button" class="attendance-kiosk-launcher" id="openAttendanceKiosk"
-                    aria-haspopup="dialog" aria-controls="attendanceKioskOverlay">
-                <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
-                <span>Open Attendance Kiosk</span>
-                <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
-            </button>
+                    {{-- Header --}}
+                    <div class="notification-menu-header">
+                        <div>
+                            <div class="notification-menu-title">Notifications</div>
+                            <div class="notification-menu-subtitle">{{ now()->format('l, F j') }}</div>
+                        </div>
+                        <div class="nb-head-right">
+                            @if ($bellNotificationCount > 0)
+                                <span class="notification-count-label">{{ $bellNotificationCount }} {{ $bellNotificationCount === 1 ? 'item' : 'items' }}</span>
+                            @endif
+                            @if ($hasBellNotifications)
+                                <button type="button" class="notification-clear-all" id="notificationClearAll"
+                                    data-url="{{ route('notifications.clear-all') }}">
+                                    <svg class="i" aria-hidden="true"><use href="#i-check"/></svg>
+                                    Clear all
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Tabs --}}
+                    @if ($hasBellNotifications)
+                        <div class="nb-tabs" id="nbTabs" role="tablist" aria-label="Filter notifications">
+                            <button type="button" class="nb-tab" role="tab" aria-selected="true" data-nb-tab="all">All <span class="nb-tab-n" data-nb-count="all">{{ $bellNotificationCount }}</span></button>
+                            <button type="button" class="nb-tab" role="tab" aria-selected="false" data-nb-tab="today">Today <span class="nb-tab-n" data-nb-count="today">{{ $nbCounts['today'] ?? 0 }}</span></button>
+                            <button type="button" class="nb-tab" role="tab" aria-selected="false" data-nb-tab="tomorrow">Tomorrow <span class="nb-tab-n" data-nb-count="tomorrow">{{ $nbCounts['tomorrow'] ?? 0 }}</span></button>
+                        </div>
+                    @endif
+
+                    {{-- List --}}
+                    <div class="notification-list" id="nbList">
+                        @foreach ($bellSections as $section)
+                            @if ($section['items']->isNotEmpty())
+                                <div class="notification-section-label notification-section-{{ $section['cls'] }}" data-section="{{ $section['cls'] }}">
+                                    <span>{{ $section['label'] }}</span>
+                                    <span class="notification-section-line"></span>
+                                </div>
+
+                                @foreach ($section['items'] as $item)
+                                    @php $tag = !empty($item['url']) ? 'a' : 'div'; @endphp
+                                    <div class="notification-item-row" data-notification-row data-section="{{ $section['cls'] }}" data-key="{{ $item['key'] }}">
+                                        <{{ $tag }} @if ($tag === 'a') href="{{ $item['url'] }}" @endif class="notification-item notification-item-{{ $item['prio'] }}">
+                                            <span class="notification-item-icon"><svg class="i" aria-hidden="true"><use href="#i-{{ $item['icon'] }}"/></svg></span>
+                                            <span class="notification-item-content">
+                                                <span class="notification-item-title">
+                                                    {{ $item['title'] }}
+                                                    @if (isset($nbPrioLabel[$item['prio']]))
+                                                        <span class="nb-tag nb-tag-{{ $item['prio'] }}">{{ $nbPrioLabel[$item['prio']] }}</span>
+                                                    @endif
+                                                </span>
+                                                @if (!empty($item['msg']))
+                                                    <span class="notification-item-message">{{ $item['msg'] }}</span>
+                                                @endif
+                                                @if (!empty($item['desc']))
+                                                    <span class="notification-item-description">{{ $item['desc'] }}</span>
+                                                @endif
+                                                @if (!empty($item['time']) || !empty($item['loc']))
+                                                    <span class="notification-item-meta">
+                                                        @if (!empty($item['time']))
+                                                            <span><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg>{{ $item['time'] }}</span>
+                                                        @endif
+                                                        @if (!empty($item['loc']))
+                                                            <span><svg class="i" aria-hidden="true"><use href="#i-pin"/></svg>{{ $item['loc'] }}</span>
+                                                        @endif
+                                                    </span>
+                                                @endif
+                                            </span>
+                                        </{{ $tag }}>
+                                        <button type="button" class="notification-clear-button"
+                                            data-clear-notification data-key="{{ $item['key'] }}"
+                                            data-url="{{ route('notifications.clear') }}"
+                                            aria-label="Clear this notification" title="Clear">
+                                            <svg class="i" aria-hidden="true"><use href="#i-x"/></svg>
+                                            Clear
+                                        </button>
+                                    </div>
+                                @endforeach
+                            @endif
+                        @endforeach
+
+                        <div class="nb-filter-empty" id="nbFilterEmpty">Nothing here for this day.</div>
+                    </div>
+
+                    @if (!$hasBellNotifications)
+                        <div class="notification-empty">
+                            <div class="notification-empty-icon"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></div>
+                            <div class="notification-empty-title">All caught up</div>
+                            <div class="notification-empty-text">There are no relief operations, complaint hearings, or scheduled reminders for today or tomorrow.</div>
+                        </div>
+                    @endif
+
+                    <div class="notification-feedback" id="notificationFeedback" role="status" aria-live="polite"></div>
+
+                    @if ($canManageRecords && \Illuminate\Support\Facades\Route::has('reminders.index'))
+                        <div class="notification-quick-action">
+                            <a href="{{ route('reminders.index') }}" class="notification-manage-link">
+                                <svg class="i" aria-hidden="true"><use href="#i-cal"/></svg>
+                                Open Schedule &amp; Reminders
+                                <svg class="i" aria-hidden="true"><use href="#i-chev-r"/></svg>
+                            </a>
+                        </div>
+                    @endif
+
+                </div>
+            </div>
+
+
+            {{-- ============ USER PROFILE ============ --}}
+            <div class="dd">
+                <button type="button" class="user-profile-trigger" id="userProfileDropdown" data-dd="userMenu" aria-expanded="false" aria-haspopup="true">
+                    <span class="user-profile-avatar">
+                        @if ($avatarUrl)
+                            <img src="{{ $avatarUrl }}" alt="{{ $displayName }}">
+                        @else
+                            <svg class="i" aria-hidden="true"><use href="#i-user"/></svg>
+                        @endif
+                    </span>
+
+                    <span class="user-profile-text">
+                        <span class="user-profile-name">{{ $displayName }}</span>
+                        <span class="user-profile-role">{{ ucfirst($user?->role ?? 'User') }}</span>
+                    </span>
+
+                    <svg class="i user-profile-chevron" aria-hidden="true"><use href="#i-chev-d"/></svg>
+                </button>
+
+                <div class="dd-menu user-dropdown-menu" id="userMenu" aria-labelledby="userProfileDropdown">
+
+                    <div class="user-dropdown-header">
+                        <div class="user-dropdown-avatar">
+                            @if ($avatarUrl)
+                                <img src="{{ $avatarUrl }}" alt="{{ $displayName }}">
+                            @else
+                                <svg class="i" aria-hidden="true"><use href="#i-user"/></svg>
+                            @endif
+                        </div>
+
+                        <div class="min-w-0">
+                            <div class="user-dropdown-eyebrow">Signed in as</div>
+                            <div class="user-dropdown-name">{{ $displayName }}</div>
+
+                            <span class="user-role-badge">
+                                <svg class="i" style="width:13px;height:13px" aria-hidden="true"><use href="#i-shieldcheck"/></svg>
+                                {{ ucfirst($user?->role ?? 'User') }}
+                            </span>
+
+                            @if ($user?->isActive())
+                                <span class="user-status-badge"><span class="user-status-dot"></span>Active account</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="user-dropdown-section-title">Account</div>
+
+                    @if ($canAccessSettings)
+                        <a href="{{ route('settings.index') }}" class="user-dropdown-item">
+                            <span class="user-dropdown-item-icon"><svg class="i" aria-hidden="true"><use href="#i-usergear"/></svg></span>
+                            <span><strong>Personal Settings</strong><small>Avatar, nickname &amp; account preferences</small></span>
+                        </a>
+                    @endif
+
+                    <div class="user-dropdown-section-title" style="margin-top:8px">Preferences</div>
+
+                    <button type="button" class="theme-switch-row" id="topbarThemeToggle" aria-pressed="{{ $initialTheme === 'dark' ? 'true' : 'false' }}">
+                        <span class="theme-switch-icon"><svg class="i" id="topbarThemeIcon" aria-hidden="true"><use href="#i-moon"/></svg></span>
+                        <span class="theme-switch-copy">
+                            <strong id="topbarThemeLabel">Dark Mode</strong>
+                            <small>Change the interface appearance</small>
+                        </span>
+                        <span class="theme-switch-indicator"></span>
+                    </button>
+
+                    <div class="user-dropdown-divider"></div>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="user-dropdown-item text-danger">
+                            <span class="user-dropdown-item-icon"><svg class="i" aria-hidden="true"><use href="#i-logout"/></svg></span>
+                            <span><strong>Sign out</strong><small>End your current session</small></span>
+                        </button>
+                    </form>
+
+                </div>
+            </div>
 
         </div>
 
-    </section>
-
-</main>
+    </nav>
 
 
+    <main class="page-content">
 
+        @if (session('success'))
+            <div class="flash flash-success" role="alert">
+                <svg class="i" style="margin-top:2px" aria-hidden="true"><use href="#i-check"/></svg>
+                <div>{{ session('success') }}</div>
+                <button type="button" class="flash-x" data-flash-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+        @endif
 
-{{-- Full-screen attendance kiosk overlay. The iframe keeps the kiosk separate from RMS login. --}}
-<div class="attendance-kiosk-overlay" id="attendanceKioskOverlay" role="dialog"
-     aria-modal="true" aria-label="Attendance Kiosk" aria-hidden="true">
-    <div class="kiosk-window-bar">
-        <div class="kiosk-window-title"><i class="bi bi-qr-code-scan" aria-hidden="true"></i> Attendance Kiosk</div>
-        <div class="kiosk-window-actions">
-            <button type="button" id="minimizeAttendanceKiosk" aria-label="Minimize attendance kiosk">
-                <i class="bi bi-dash-lg" aria-hidden="true"></i> Minimize
-            </button>
-            <button type="button" class="kiosk-close" id="closeAttendanceKiosk">
-                <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Login
-            </button>
-        </div>
-    </div>
-    <iframe class="kiosk-frame" id="attendanceKioskFrame"
-            title="Personnel Attendance Kiosk" loading="lazy"></iframe>
+        @if (session('error'))
+            <div class="flash flash-error" role="alert">
+                <svg class="i" style="margin-top:2px" aria-hidden="true"><use href="#i-alert"/></svg>
+                <div>{{ session('error') }}</div>
+                <button type="button" class="flash-x" data-flash-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="flash flash-error" role="alert">
+                <svg class="i" style="margin-top:2px" aria-hidden="true"><use href="#i-alert"/></svg>
+                <div>
+                    <div style="font-weight:800">Please correct the following:</div>
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+                <button type="button" class="flash-x" data-flash-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+        @endif
+
+        @yield('content')
+
+    </main>
+
 </div>
 
-{{-- ============================================================
-     TERMS & PRIVACY (one unified section: 4 cards, each opens a pop-up)
-     Pop-ups: #legal-terms, #legal-policy, #legal-notice, #legal-contact
-============================================================= --}}
-<section class="privacy-section" id="privacy" aria-label="Terms and privacy">
-    <div class="privacy-inner">
 
-        <div class="privacy-head">
-            <p class="section-eyebrow reveal">Your Privacy Matters</p>
-            <h2 class="section-title reveal">Terms &amp; Privacy</h2>
-            <p class="section-subtitle reveal">
-                We respect your data. Review the policies and notices that govern
-                how your information is handled.
-            </p>
+{{-- ============ GLOBAL REMINDER POPUP (outside page content so it shows on every page) ============ --}}
+
+<div id="globalReminderAlert" class="global-reminder-alert" role="alert" aria-live="assertive" aria-atomic="true">
+
+    <div class="global-reminder-top">
+        <div class="global-reminder-icon"><svg class="i" aria-hidden="true"><use href="#i-alarm"/></svg></div>
+
+        <div class="global-reminder-content">
+            <div class="global-reminder-label">Reminder</div>
+            <div class="global-reminder-title" id="globalReminderTitle">Scheduled Reminder</div>
+            <div class="global-reminder-type" id="globalReminderType">Schedule &amp; Reminders</div>
         </div>
 
-        <div class="privacy-grid">
+        <span class="global-reminder-queue" id="globalReminderQueue">1</span>
 
-            <div class="privacy-card reveal">
-                <div class="pc-icon"><i class="bi bi-file-text" aria-hidden="true"></i></div>
-                <h3>Terms &amp; Conditions</h3>
-                <p>The rules and guidelines for using e-Poblacion services and managing official barangay records.</p>
-                <a href="#legal-terms" data-legal="terms">Read terms &rarr;</a>
-            </div>
-
-            <div class="privacy-card reveal">
-                <div class="pc-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></div>
-                <h3>Privacy Policy</h3>
-                <p>How e-Poblacion handles and protects personal information contained in barangay records.</p>
-                <a href="#legal-policy" data-legal="policy">Read policy &rarr;</a>
-            </div>
-
-            <div class="privacy-card reveal">
-                <div class="pc-icon"><i class="bi bi-info-circle" aria-hidden="true"></i></div>
-                <h3>Data Privacy Notice</h3>
-                <p>A plain-language summary of data privacy rights and how personal information is handled within the system.</p>
-                <a href="#legal-notice" data-legal="notice">Read notice &rarr;</a>
-            </div>
-
-            <div class="privacy-card reveal">
-                <div class="pc-icon"><i class="bi bi-telephone" aria-hidden="true"></i></div>
-                <h3>Contact Barangay</h3>
-                <p>Reach the Barangay Poblacion office for inquiries and assistance.</p>
-                <a href="#legal-contact" data-legal="contact">Contact us &rarr;</a>
-            </div>
-
-        </div>
-
-
-        {{-- Pop-up (modal) content: opened by [data-legal] links, cards and footer links. --}}
-        <dialog class="legal-modal" id="legal-terms" aria-labelledby="legal-terms-title">
-            <div class="lm-head">
-                <div>
-                    <h2 id="legal-terms-title">Terms &amp; Conditions</h2>
-                    <p class="lm-sub">Barangay Poblacion, Bani, Pangasinan</p>
-                </div>
-                <button type="button" class="lm-close" data-close aria-label="Close Terms &amp; Conditions">
-                    <i class="bi bi-x-lg" aria-hidden="true"></i>
-                </button>
-            </div>
-            <div class="lm-body pn-body">
-                <p class="pn-lead">
-                    By signing in to e-Poblacion, you agree to use the system only for official
-                    Barangay Poblacion record-management work and to follow these terms.
-                </p>
-
-                <ul class="pn-list">
-                    <li><strong>Authorized use only.</strong> Access is limited to Captain and Secretary
-                        accounts issued by the barangay. Do not use another person's account.</li>
-                    <li><strong>Protect your account.</strong> Keep your username, password, and
-                        authenticator access confidential, and never share them with anyone.</li>
-                    <li><strong>Keep records accurate.</strong> Enter and update resident, household,
-                        document, complaint,and relief records accurately and only for
-                        legitimate barangay purposes.</li>
-                    <li><strong>Respect access limits.</strong> Do not try to view or change records beyond
-                        your assigned permissions, and do not copy or disclose records without authority.</li>
-                    <li><strong>Keep the system safe.</strong> Do not disrupt the system, bypass its
-                        security features, or use it for personal or unlawful purposes.</li>
-                    <li><strong>Activity may be recorded.</strong> System activity may be logged to support
-                        accountability and the protection of barangay records.</li>
-                    <li><strong>Changes to these terms.</strong> The barangay may update these terms when
-                        needed. Continued use of the system means you accept the updated terms.</li>
-                </ul>
-
-                <p class="pn-disclaimer">
-                    These terms are provided for general information and do not constitute a certified
-                    legal document. Questions may be raised with the Barangay Poblacion office.
-                </p>
-            </div>
-            <div class="lm-foot">
-                <button type="button" class="lm-done" data-close>Close</button>
-            </div>
-        </dialog>
-
-        <dialog class="legal-modal" id="legal-policy" aria-labelledby="legal-policy-title">
-            <div class="lm-head">
-                <div>
-                    <h2 id="legal-policy-title">Privacy Policy</h2>
-                    <p class="lm-sub">Barangay Poblacion, Bani, Pangasinan</p>
-                </div>
-                <button type="button" class="lm-close" data-close aria-label="Close Privacy Policy">
-                    <i class="bi bi-x-lg" aria-hidden="true"></i>
-                </button>
-            </div>
-            <div class="lm-body pn-body">
-                <p class="pn-lead">
-                    e-Poblacion is an internal Barangay Record Management System. It is used by authorized
-                    barangay personnel to maintain official records, and it is not an online portal for residents.
-                </p>
-
-                <h3>What is handled</h3>
-                <p>
-                    Personal information needed for barangay record management, such as resident and household
-                    details, document requests, reports and complaints, and relief records. The
-                    full list of information categories is in the
-                    <a href="#legal-notice" data-legal="notice">Data Privacy Notice</a>.
-                </p>
-
-                <h3>Why it is handled</h3>
-                <p>
-                    Information is used only for legitimate barangay purposes: keeping accurate records,
-                    processing documents, handling reports and complaints, and supporting disaster response
-                    and relief programs.
-                </p>
-
-                <h3>How it is protected</h3>
-                <ul class="pn-list">
-                    <li>Access is restricted to authorized barangay personnel based on their assigned system permissions.</li>
-                    <li>Accounts are protected by credentials and authenticator-app verification.</li>
-                    <li>Authorized personnel must keep their credentials private and must not share their passwords.</li>
-                </ul>
-
-                <h3>Use and disclosure</h3>
-                <p>
-                    Records are used for official barangay functions and are disclosed only to authorized
-                    personnel or where required or permitted by applicable law.
-                </p>
-
-                <h3>Your rights</h3>
-                <p>
-                    You may ask the Barangay Poblacion office about the personal data held about you,
-                    including requests for access or correction. See the
-                    <a href="#legal-notice" data-legal="notice">Data Privacy Notice</a> and
-                    <a href="#legal-contact" data-legal="contact">Contact Barangay</a>.
-                </p>
-
-                <p class="pn-disclaimer">
-                    This policy is provided for general information and does not constitute a certified legal
-                    compliance statement. Formal compliance is verified separately by the barangay.
-                </p>
-            </div>
-            <div class="lm-foot">
-                <button type="button" class="lm-done" data-close>Close</button>
-            </div>
-        </dialog>
-
-        <dialog class="legal-modal" id="legal-notice" aria-labelledby="legal-notice-title">
-            <div class="lm-head">
-                <div>
-                    <h2 id="legal-notice-title">Data Privacy Notice</h2>
-                    <p class="lm-sub">Barangay Poblacion, Bani, Pangasinan</p>
-                </div>
-                <button type="button" class="lm-close" data-close aria-label="Close Data Privacy Notice">
-                    <i class="bi bi-x-lg" aria-hidden="true"></i>
-                </button>
-            </div>
-            <div class="lm-body pn-body">
-                <p class="pn-lead">
-                    e-Poblacion collects and processes personal information for legitimate barangay
-                    record-management purposes, including resident records, household records, document
-                    processing, reports and complaints, and relief-related records.
-                </p>
-
-                <p class="lm-label">The information that may be maintained in the system may include:</p>
-                <ul class="lm-chips">
-                    <li>Full name</li>
-                    <li>Address and household details</li>
-                    <li>Contact information</li>
-                    <li>Records related to barangay services</li>
-                    <li>Documents and other supporting information</li>
-                    <li>Disaster assessment and relief-related records</li>
-                </ul>
-
-                <p>
-                    Personal information is collected only for legitimate barangay purposes and is handled in
-                    accordance with applicable Philippine data privacy requirements, including the Data Privacy
-                    Act of 2012. Access to records is restricted to authorized barangay personnel according to
-                    their assigned system permissions.
-                </p>
-
-                <p>
-                    Authorized personnel should protect their account credentials and must not share their
-                    passwords with other individuals.
-                </p>
-
-                <p>
-                    You have the right to be informed, to access, and to request the correction of your personal
-                    data. For privacy concerns, you may contact the Barangay Poblacion office directly.
-                </p>
-
-                <p class="pn-disclaimer">
-                    This notice is provided for general information and does not constitute a certified legal
-                    compliance statement. Formal compliance is verified separately by the barangay.
-                </p>
-            </div>
-            <div class="lm-foot">
-                <button type="button" class="lm-done" data-close>Close</button>
-            </div>
-        </dialog>
-
-        <dialog class="legal-modal" id="legal-contact" aria-labelledby="legal-contact-title">
-            <div class="lm-head">
-                <div>
-                    <h2 id="legal-contact-title">Contact Barangay</h2>
-                    <p class="lm-sub">Barangay Poblacion, Bani, Pangasinan</p>
-                </div>
-                <button type="button" class="lm-close" data-close aria-label="Close Contact Barangay">
-                    <i class="bi bi-x-lg" aria-hidden="true"></i>
-                </button>
-            </div>
-            <div class="lm-body pn-body">
-                <p class="pn-lead">
-                    For questions about e-Poblacion, privacy concerns, or account assistance,
-                    please contact the Barangay Poblacion office directly.
-                </p>
-
-                <ul class="contact-list">
-                    <li>
-                        <i class="bi bi-geo-alt" aria-hidden="true"></i>
-                        <div>
-                            <b>Barangay Poblacion Office</b>
-                            <span>Barangay Poblacion, Bani, Pangasinan, Philippines</span>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="bi bi-person-vcard" aria-hidden="true"></i>
-                        <div>
-                            <b>Account and username help</b>
-                            <span>Ask the office to confirm your username in person. Passwords can be reset with the
-                                <a href="{{ route('password-recovery.show') }}">Forgot password?</a> option on the sign-in form.</span>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="bi bi-shield-check" aria-hidden="true"></i>
-                        <div>
-                            <b>Privacy concerns</b>
-                            <span>To ask about, access, or correct your personal data, contact the barangay office directly.</span>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-            <div class="lm-foot">
-                <button type="button" class="lm-done" data-close>Close</button>
-            </div>
-        </dialog>
-
-    </div>
-</section>
-
-
-{{-- ============================================================
-     FOOTER
-============================================================= --}}
-<footer class="site-footer">
-    <div class="footer-grid">
-
-        <div class="footer-brand">
-            <h3>e-Poblacion</h3>
-            <p>Barangay Record Management System</p>
-            <p class="locale">
-                Barangay Poblacion<br>
-                Bani, Pangasinan, Philippines
-            </p>
-        </div>
-
-        <div class="footer-col">
-            <h4>Quick Links</h4>
-            <ul>
-                <li><a href="#top">Home</a></li>
-                <li><a href="#login">Login</a></li>
-                <li><a href="#legal-contact" data-legal="contact">Contact</a></li>
-            </ul>
-        </div>
-
-        <div class="footer-col">
-            <h4>Legal</h4>
-            <ul>
-                <li><a href="#legal-terms" data-legal="terms">Terms &amp; Conditions</a></li>
-                <li><a href="#legal-policy" data-legal="policy">Privacy Policy</a></li>
-                <li><a href="#legal-notice" data-legal="notice">Data Privacy</a></li>
-            </ul>
-        </div>
-
+        <button type="button" class="global-reminder-close" id="globalReminderClose" aria-label="Dismiss reminder" title="Dismiss">
+            <svg class="i" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
     </div>
 
-    <div class="footer-bottom">
-        &copy; {{ date('Y') }} e-Poblacion. All rights reserved.
+    <div class="global-reminder-details">
+        <div class="global-reminder-detail"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span id="globalReminderTime">Scheduled time</span></div>
+        <div class="global-reminder-detail" id="globalReminderLocationRow"><svg class="i" aria-hidden="true"><use href="#i-pin"/></svg><span id="globalReminderLocation">Location</span></div>
     </div>
-</footer>
+
+    <div class="global-reminder-notes" id="globalReminderNotes" style="display:none"></div>
+
+    <div class="global-reminder-actions">
+        <button type="button" class="global-reminder-btn global-reminder-btn-dismiss" id="globalReminderDismiss">
+            <svg class="i" aria-hidden="true"><use href="#i-check2"/></svg> Dismiss
+        </button>
+        <a href="#" class="global-reminder-btn global-reminder-btn-view" id="globalReminderView">
+            <svg class="i" aria-hidden="true"><use href="#i-cal"/></svg> View Reminder
+        </a>
+    </div>
+
+</div>
+
+<div class="ep-toast" id="epToast" role="status" aria-live="polite"></div>
 
 
-{{-- SCROLL TO TOP --}}
-<button class="scroll-top" id="scrollTop" type="button" aria-label="Scroll to top">
-    <i class="bi bi-arrow-up" aria-hidden="true"></i>
-</button>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+{{-- Page scripts (@push('scripts')) print here, right after Bootstrap --}}
+@stack('scripts')
 
 
-{{-- ============================================================
-     PAGE JAVASCRIPT (self-contained)
-============================================================= --}}
+<!-- ================================================================
+     SIDEBAR · MENUS · THEME · OFFLINE (none of this needs Bootstrap)
+     ================================================================ -->
+
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+(function () {
 
-    var $ = function (id) { return document.getElementById(id); };
-    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const body = document.body;
+    const $ = (id) => document.getElementById(id);
 
-    /* ---------------- Attendance kiosk overlay ---------------- */
-    var kioskOverlay = $('attendanceKioskOverlay');
-    var kioskFrame = $('attendanceKioskFrame');
-    var kioskOpenButton = $('openAttendanceKiosk');
-    var kioskMinimizeButton = $('minimizeAttendanceKiosk');
-    var kioskCloseButton = $('closeAttendanceKiosk');
-    var previousKioskFocus = null;
-    var kioskUrl = @json(route('attendance.kiosk'));
+    /* ---------- Mobile sidebar ---------- */
+    const toggle = $('sidebarToggle');
+    const setSidebar = (open) => {
+        body.classList.toggle('sidebar-open', open);
+        if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    if (toggle) toggle.addEventListener('click', () => setSidebar(!body.classList.contains('sidebar-open')));
+    if ($('sidebarBackdrop')) $('sidebarBackdrop').addEventListener('click', () => setSidebar(false));
 
-    function openAttendanceKiosk() {
-        if (!kioskOverlay || !kioskFrame) return;
-        previousKioskFocus = document.activeElement;
-        if (!kioskFrame.getAttribute('src')) kioskFrame.setAttribute('src', kioskUrl);
-        kioskOverlay.classList.add('is-open');
-        kioskOverlay.setAttribute('aria-hidden', 'false');
-        document.body.classList.add('kiosk-overlay-open');
-        if (kioskMinimizeButton) kioskMinimizeButton.focus();
-    }
+    /* ---------- Dropdown menus (notifications + profile) ---------- */
+    const triggers = Array.from(document.querySelectorAll('[data-dd]'));
+    const closeMenus = (except) => triggers.forEach(t => {
+        if (t === except) return;
+        t.setAttribute('aria-expanded', 'false');
+        const m = $(t.dataset.dd); if (m) m.classList.remove('show');
+    });
+    triggers.forEach(t => t.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = $(t.dataset.dd);
+        const open = !menu.classList.contains('show');
+        closeMenus(open ? t : null);
+        menu.classList.toggle('show', open);
+        t.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }));
+    document.addEventListener('click', (e) => { if (!e.target.closest('.dd-menu')) closeMenus(null); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setSidebar(false); closeMenus(null); } });
 
-    function minimizeAttendanceKiosk() {
-        if (!kioskOverlay) return;
-        kioskOverlay.classList.remove('is-open');
-        kioskOverlay.setAttribute('aria-hidden', 'true');
-        document.body.classList.remove('kiosk-overlay-open');
-        if (previousKioskFocus && typeof previousKioskFocus.focus === 'function') previousKioskFocus.focus();
-    }
+    /* ---------- Notification clearing (does not mark items as read) ---------- */
+    const notificationMenu = $('notificationMenu');
+    const notificationFeedback = $('notificationFeedback');
+    const clearAllButton = $('notificationClearAll');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-    function closeAttendanceKiosk() {
-        minimizeAttendanceKiosk();
-        // Unload the kiosk document to clear its temporary browser session state on Back.
-        if (kioskFrame) kioskFrame.setAttribute('src', 'about:blank');
-        if (previousKioskFocus && typeof previousKioskFocus.focus === 'function') previousKioskFocus.focus();
-    }
+    const updateNotificationCount = () => {
+        if (!notificationMenu) return;
 
-    if (kioskOpenButton) kioskOpenButton.addEventListener('click', openAttendanceKiosk);
-    if (kioskMinimizeButton) kioskMinimizeButton.addEventListener('click', minimizeAttendanceKiosk);
-    if (kioskCloseButton) kioskCloseButton.addEventListener('click', closeAttendanceKiosk);
-    if (kioskOverlay) {
-        kioskOverlay.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
-                event.preventDefault();
-                minimizeAttendanceKiosk();
-            }
-        });
-    }
+        const rows = Array.from(notificationMenu.querySelectorAll('[data-notification-row]'));
+        const count = rows.length;
+        let badge = document.querySelector('.notification-badge');
 
-    /* ---------------- Carousel ---------------- */
-    var hero = $('top');
-    var carousel = $('carousel');
-    var slides = Array.prototype.slice.call(carousel.querySelectorAll('.slide'));
-    var dots = Array.prototype.slice.call(document.querySelectorAll('#carouselIndicators button'));
-    var counter = $('carouselNow');
-    var SLIDE_MS = 7000;
-    var index = 0;
-    var timer = null;
-
-    function show(next) {
-        index = (next + slides.length) % slides.length;
-
-        slides.forEach(function (s, i) {
-            var on = i === index;
-            s.classList.toggle('is-active', on);
-            s.setAttribute('aria-hidden', on ? 'false' : 'true');
-        });
-
-        dots.forEach(function (d, i) {
-            d.classList.remove('is-active', 'is-done');
-            d.setAttribute('aria-selected', i === index ? 'true' : 'false');
-
-            if (i < index) {
-                d.classList.add('is-done');
-            }
-        });
-
-        // Force the progress animation to restart on the active dot.
-        void dots[index].offsetWidth;
-        dots[index].classList.add('is-active');
-
-        counter.textContent = String(index + 1).padStart(2, '0');
-        restart();
-    }
-
-    function restart() {
-        clearTimeout(timer);
-
-        if (reduceMotion || document.hidden || carousel.classList.contains('is-paused')) {
-            return;
+        if (!badge && count > 0) {
+            badge = document.createElement('span');
+            badge.className = 'notification-badge';
+            $('notificationDropdown')?.appendChild(badge);
         }
 
-        timer = setTimeout(function () {
-            show(index + 1);
-        }, SLIDE_MS);
-    }
-
-    if (reduceMotion) {
-        hero.classList.add('no-autoplay');
-    }
-
-    $('carouselPrev').addEventListener('click', function () {
-        show(index - 1);
-    });
-
-    $('carouselNext').addEventListener('click', function () {
-        show(index + 1);
-    });
-
-    dots.forEach(function (d) {
-        d.addEventListener('click', function () {
-            show(parseInt(d.dataset.slideTo, 10));
-        });
-    });
-
-    // Pause while the visitor hovers or focuses the carousel.
-    function pause() {
-        carousel.classList.add('is-paused');
-        clearTimeout(timer);
-    }
-
-    function resume() {
-        carousel.classList.remove('is-paused');
-        restart();
-    }
-
-    hero.addEventListener('mouseenter', function () {
-        if (!reduceMotion) {
-            pause();
-        }
-    });
-
-    hero.addEventListener('mouseleave', function () {
-        if (!reduceMotion) {
-            resume();
-        }
-    });
-
-    // Swipe on touch screens.
-    var startX = null;
-
-    hero.addEventListener('touchstart', function (e) {
-        startX = e.touches[0].clientX;
-    }, { passive: true });
-
-    hero.addEventListener('touchend', function (e) {
-        if (startX === null) {
-            return;
+        if (badge) {
+            badge.textContent = count > 99 ? '99+' : String(count);
+            badge.hidden = count === 0;
         }
 
-        var dx = e.changedTouches[0].clientX - startX;
-
-        if (Math.abs(dx) > 50) {
-            show(index + (dx < 0 ? 1 : -1));
+        const countLabel = notificationMenu.querySelector('.notification-count-label');
+        if (countLabel) {
+            countLabel.textContent = count + (count === 1 ? ' item' : ' items');
+            countLabel.hidden = count === 0;
         }
 
-        startX = null;
-    }, { passive: true });
+        notificationMenu.querySelectorAll('.notification-section-label').forEach(label => {
+            let sibling = label.nextElementSibling;
+            let hasRows = false;
 
-    // Stop the timer when the tab is hidden.
-    document.addEventListener('visibilitychange', function () {
-        if (document.hidden) {
-            clearTimeout(timer);
-        } else {
-            restart();
-        }
-    });
-
-    show(0);
-
-    /* ---------------- Jump to login ---------------- */
-    $('scrollIndicator').addEventListener('click', function () {
-        $('login').scrollIntoView({
-            behavior: reduceMotion ? 'auto' : 'smooth',
-            block: 'start'
-        });
-    });
-
-    /* ---------------- Role selector ---------------- */
-    var pills = $('rolePills');
-    var roleInput = $('role');
-    var roleHint = $('roleHint');
-    var roleButtons = Array.prototype.slice.call(pills.querySelectorAll('.role-pill'));
-
-    function setRole(btn, focus) {
-        roleButtons.forEach(function (b, i) {
-            var on = b === btn;
-
-            b.classList.toggle('is-active', on);
-            b.setAttribute('aria-checked', on ? 'true' : 'false');
-            b.tabIndex = on ? 0 : -1;
-
-            if (on) {
-                pills.dataset.active = String(i);
-            }
-        });
-
-        roleInput.value = btn.dataset.role;
-        roleHint.textContent = btn.dataset.role.charAt(0).toUpperCase()
-            + btn.dataset.role.slice(1);
-
-        if (focus) {
-            btn.focus();
-        }
-    }
-
-    roleButtons.forEach(function (btn, i) {
-        btn.addEventListener('click', function () {
-            setRole(btn, false);
-        });
-
-        btn.addEventListener('keydown', function (e) {
-            var next = null;
-
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                next = roleButtons[(i + 1) % roleButtons.length];
+            while (sibling && !sibling.classList.contains('notification-section-label')) {
+                if (sibling.matches('[data-notification-row]')) {
+                    hasRows = true;
+                    break;
+                }
+                sibling = sibling.nextElementSibling;
             }
 
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                next = roleButtons[(i - 1 + roleButtons.length) % roleButtons.length];
-            }
-
-            if (next) {
-                e.preventDefault();
-                setRole(next, true);
-            }
-        });
-    });
-
-    /* ---------------- Password show / hide + caps lock ---------------- */
-    var pw = $('password');
-    var toggle = $('togglePassword');
-    var toggleIcon = $('togglePasswordIcon');
-
-    toggle.addEventListener('click', function () {
-        var showPassword = pw.type === 'password';
-
-        pw.type = showPassword ? 'text' : 'password';
-        toggleIcon.className = showPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
-        toggle.setAttribute('aria-pressed', showPassword ? 'true' : 'false');
-        toggle.setAttribute('aria-label', showPassword ? 'Hide password' : 'Show password');
-
-        pw.focus();
-    });
-
-    var capsTip = $('capsTip');
-
-    function checkCaps(e) {
-        if (!e.getModifierState) {
-            return;
-        }
-
-        capsTip.classList.toggle('is-on', e.getModifierState('CapsLock'));
-    }
-
-    pw.addEventListener('keydown', checkCaps);
-    pw.addEventListener('keyup', checkCaps);
-
-    pw.addEventListener('blur', function () {
-        capsTip.classList.remove('is-on');
-    });
-
-    /* ---------------- Username assistance (separate from password reset) ----------------
-       "Forgot password?" is a normal link to route('password-recovery.show'),
-       so it needs no JavaScript. Only the username help panel toggles here. */
-    var usernameHelpLink = $('usernameHelpLink');
-    var usernameHelp = $('username-help');
-
-    if (usernameHelpLink && usernameHelp) {
-        usernameHelpLink.addEventListener('click', function (e) {
-            e.preventDefault();
-
-            var open = usernameHelp.classList.toggle('is-on');
-
-            usernameHelpLink.setAttribute('aria-expanded', open ? 'true' : 'false');
-        });
-    }
-
-    /* ---------------- Username/password validation + loading state ---------------- */
-    var form = $('loginForm');
-    var username = $('username');
-    var btn = $('signInBtn');
-    var btnText = $('signInText');
-
-    function setFieldError(input, message) {
-        var group = input.closest('.form-group');
-        var old = group.querySelector('.field-error[data-js]');
-
-        if (old) {
-            old.remove();
-        }
-
-        input.classList.toggle('is-invalid', !!message);
-
-        if (message) {
-            var span = document.createElement('span');
-
-            span.className = 'field-error';
-            span.setAttribute('role', 'alert');
-            span.setAttribute('data-js', '1');
-            span.textContent = message;
-
-            group.appendChild(span);
-        }
-    }
-
-    username.addEventListener('input', function () {
-        if (username.value.trim()) {
-            setFieldError(username, '');
-        }
-    });
-
-    pw.addEventListener('input', function () {
-        if (pw.value) {
-            setFieldError(pw, '');
-        }
-    });
-
-    form.addEventListener('submit', function (e) {
-        var problems = [];
-        var usernameValue = username.value.trim();
-
-        if (!usernameValue) {
-            setFieldError(username, 'Please enter your username.');
-            problems.push(username);
-        } else if (usernameValue.length > 50) {
-            setFieldError(username, 'Your username must not exceed 50 characters.');
-            problems.push(username);
-        }
-
-        if (!pw.value) {
-            setFieldError(pw, 'Please enter your password.');
-            problems.push(pw);
-        }
-
-        if (problems.length) {
-            e.preventDefault();
-            problems[0].focus();
-            return;
-        }
-
-        btn.classList.add('is-loading');
-        btnText.textContent = 'Signing in…';
-        btn.disabled = true;
-    });
-
-    // Restore the button if the visitor comes back with the browser's Back button.
-    window.addEventListener('pageshow', function (e) {
-        if (e.persisted) {
-            btn.disabled = false;
-            btn.classList.remove('is-loading');
-            btnText.textContent = 'Sign in';
-        }
-    });
-
-    // Jump to the first problem after a server-side error.
-    var firstInvalid = form.querySelector('.form-input.is-invalid');
-
-    if (firstInvalid && !form.classList.contains('recovery-mode-hidden')) {
-        firstInvalid.focus();
-    }
-
-    // When the recovery form is active, focus its first invalid field instead.
-    if (document.getElementById('emailPasswordRecoveryPanel')) {
-        var emailRecoveryInvalid = document.querySelector('#emailPasswordRecoveryPanel .form-input.is-invalid');
-
-        if (emailRecoveryInvalid) {
-            emailRecoveryInvalid.focus();
-        } else {
-            var firstEmailRecoveryInput = document.querySelector('#emailPasswordRecoveryPanel input:not([type="hidden"])');
-
-            if (firstEmailRecoveryInput) {
-                firstEmailRecoveryInput.focus();
-            }
-        }
-    }
-
-    /* ---------------- Terms & Privacy pop-ups ---------------- */
-    var legalModals = Array.prototype.slice.call(document.querySelectorAll('dialog.legal-modal'));
-
-    function closeLegal(dlg) {
-        if (dlg.open) {
-            dlg.close();
-        }
-    }
-
-    function openLegal(name) {
-        var dlg = document.getElementById('legal-' + name);
-
-        if (!dlg || typeof dlg.showModal !== 'function') {
-            return false;
-        }
-
-        legalModals.forEach(function (m) {
-            if (m !== dlg) {
-                closeLegal(m);
-            }
+            if (!hasRows) label.remove();
         });
 
-        if (!dlg.open) {
-            dlg.showModal();
-            document.documentElement.classList.add('modal-open');
+        if (count === 0 && !notificationMenu.querySelector('.notification-empty')) {
+            const empty = document.createElement('div');
+            empty.className = 'notification-empty';
+            empty.innerHTML = '<div class="notification-empty-icon">✓</div><div class="notification-empty-title">All caught up</div><div class="notification-empty-text">There are no uncleared notifications for today or tomorrow.</div>';
 
-            var body = dlg.querySelector('.lm-body');
+            const toolbar = notificationMenu.querySelector('.notification-toolbar');
+            if (toolbar) toolbar.remove();
 
-            if (body) {
-                body.scrollTop = 0;
-            }
+            notificationMenu.insertBefore(empty, notificationFeedback || notificationMenu.firstChild);
         }
 
-        return true;
-    }
+        if (clearAllButton) clearAllButton.disabled = count === 0;
+    };
 
-    // Cards, footer links, and links inside the pop-ups.
-    document.addEventListener('click', function (e) {
-        var link = e.target.closest('[data-legal]');
+    const postNotificationClear = async (url, payload) => {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+        });
 
-        if (link && openLegal(link.getAttribute('data-legal'))) {
-            e.preventDefault();
+        if (!response.ok) {
+            let message = 'Unable to clear notification(s). Please try again.';
+            try {
+                const data = await response.json();
+                if (data.message) message = data.message;
+            } catch (e) {}
+            throw new Error(message);
+        }
+
+        return response.json();
+    };
+
+    notificationMenu?.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-clear-notification]');
+        if (!button) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const row = button.closest('[data-notification-row]');
+        const key = button.dataset.key;
+        if (!row || !key || button.disabled) return;
+
+        button.disabled = true;
+        if (notificationFeedback) notificationFeedback.textContent = 'Clearing notification…';
+
+        try {
+            await postNotificationClear(button.dataset.url, { key });
+            row.remove();
+            updateNotificationCount();
+            if (notificationFeedback) notificationFeedback.textContent = 'Notification cleared.';
+        } catch (error) {
+            button.disabled = false;
+            if (notificationFeedback) notificationFeedback.textContent = error.message;
         }
     });
 
-    legalModals.forEach(function (dlg) {
-        // Close buttons.
-        dlg.querySelectorAll('[data-close]').forEach(function (b) {
-            b.addEventListener('click', function () {
-                closeLegal(dlg);
-            });
-        });
+    clearAllButton?.addEventListener('click', async () => {
+        const rows = Array.from(notificationMenu.querySelectorAll('[data-notification-row]'));
+        const keys = rows.map(row => row.dataset.key).filter(Boolean);
+        if (!keys.length || clearAllButton.disabled) return;
 
-        // Click on the dark backdrop closes it.
-        dlg.addEventListener('click', function (e) {
-            if (e.target === dlg) {
-                closeLegal(dlg);
+        clearAllButton.disabled = true;
+        if (notificationFeedback) notificationFeedback.textContent = 'Clearing notifications…';
+
+        try {
+            // The controller accepts up to 200 keys per request.
+            for (let index = 0; index < keys.length; index += 200) {
+                await postNotificationClear(clearAllButton.dataset.url, {
+                    keys: keys.slice(index, index + 200)
+                });
             }
-        });
 
-        // Esc, buttons, and backdrop all end up here.
-        dlg.addEventListener('close', function () {
-            var anyOpen = legalModals.some(function (m) { return m.open; });
-
-            if (!anyOpen) {
-                document.documentElement.classList.remove('modal-open');
-            }
-        });
+            rows.forEach(row => row.remove());
+            updateNotificationCount();
+            if (notificationFeedback) notificationFeedback.textContent = 'All displayed notifications cleared.';
+        } catch (error) {
+            clearAllButton.disabled = false;
+            if (notificationFeedback) notificationFeedback.textContent = error.message;
+        }
     });
 
-    // Direct links such as /login#legal-terms open the pop-up on load.
-    if (location.hash.indexOf('#legal-') === 0) {
-        openLegal(location.hash.slice(7));
-    }
+    /* ---------- Bell tabs (All / Today / Tomorrow) + live tab counts ---------- */
+    (function () {
+        const menu = $('notificationMenu');
+        const list = $('nbList');
+        const tabs = $('nbTabs');
+        if (!menu || !list) return;
 
-    /* ---------------- Scroll to top ---------------- */
-    var scrollTopBtn = $('scrollTop');
+        const emptyMsg = $('nbFilterEmpty');
+        let filter = 'all';
 
-    window.addEventListener('scroll', function () {
-        scrollTopBtn.classList.toggle('is-visible', window.scrollY > 600);
-    }, { passive: true });
+        const sync = () => {
+            const rows = Array.from(list.querySelectorAll('[data-notification-row]'));
+            const n = { all: rows.length, today: 0, tomorrow: 0 };
+            rows.forEach(r => { if (n[r.dataset.section] !== undefined) n[r.dataset.section]++; });
 
-    scrollTopBtn.addEventListener('click', function () {
-        window.scrollTo({
-            top: 0,
-            behavior: reduceMotion ? 'auto' : 'smooth'
+            document.querySelectorAll('[data-nb-count]').forEach(b => { b.textContent = n[b.dataset.nbCount] ?? 0; });
+
+            if (tabs) tabs.hidden = n.all === 0;
+            if (clearAllButton) clearAllButton.hidden = n.all === 0;
+            if (n.all === 0 && filter !== 'all') setFilter('all');
+            if (emptyMsg) emptyMsg.classList.toggle('show', n.all > 0 && filter !== 'all' && n[filter] === 0);
+            $('notificationDropdown')?.classList.toggle('has-unread', n.all > 0);
+        };
+
+        const setFilter = (f) => {
+            filter = f;
+            menu.dataset.filter = f;
+            tabs?.querySelectorAll('[data-nb-tab]').forEach(t => t.setAttribute('aria-selected', t.dataset.nbTab === f ? 'true' : 'false'));
+            sync();
+        };
+
+        tabs?.addEventListener('click', (e) => {
+            const t = e.target.closest('[data-nb-tab]');
+            if (t) setFilter(t.dataset.nbTab);
         });
-    });
 
-    /* ---------------- Reveal on scroll ---------------- */
-    var items = document.querySelectorAll('.reveal');
+        new MutationObserver(sync).observe(list, { childList: true, subtree: true });
+        sync();
+    })();
 
-    if ('IntersectionObserver' in window) {
-        var io = new IntersectionObserver(function (entries) {
-            entries.forEach(function (en) {
-                if (en.isIntersecting) {
-                    en.target.classList.add('is-in');
-                    io.unobserve(en.target);
+    /* ---------- Flash messages ---------- */
+    document.querySelectorAll('[data-flash-close]').forEach(b => b.addEventListener('click', () => b.closest('.flash').remove()));
+
+    /* ---------- Offline awareness ---------- */
+    const pill = $('netPill'), toast = $('epToast');
+    let toastTimer;
+    const say = (msg, sticky) => {
+        toast.textContent = msg; toast.classList.add('show');
+        clearTimeout(toastTimer);
+        if (!sticky) toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+    };
+    const net = (online, announce) => {
+        pill.classList.toggle('show', !online);
+        if (!announce) return;
+        online ? say('Back online.', false) : say('You are offline. Showing the last loaded data.', true);
+    };
+    net(navigator.onLine, !navigator.onLine);
+    window.addEventListener('online', () => net(true, true));
+    window.addEventListener('offline', () => net(false, true));
+
+    /* ---------- Theme (account is the source of truth) ---------- */
+    try { localStorage.removeItem('barangay-theme'); } catch (e) {}
+
+    const root = document.documentElement;
+    const btn = $('topbarThemeToggle'), label = $('topbarThemeLabel'), icon = $('topbarThemeIcon');
+
+    const paint = (theme) => {
+        const dark = theme === 'dark';
+        root.setAttribute('data-theme', theme);
+        if (btn) btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        if (label) label.textContent = dark ? 'Light Mode' : 'Dark Mode';
+        if (icon) icon.firstElementChild.setAttribute('href', dark ? '#i-sun' : '#i-moon');
+        document.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
+    };
+
+    window.EPTheme = {
+        current: () => root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+        async set(theme) {
+            const previous = this.current();
+            if (theme === previous) return true;
+            paint(theme);
+            try {
+                const res = await fetch(@json(route('settings.theme.update')), {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({ theme })
+                });
+                if (!res.ok) throw new Error('save failed');
+                return true;
+            } catch (e) {
+                paint(previous);
+                return false;
+            }
+        }
+    };
+
+    paint(window.EPTheme.current());
+    if (btn) btn.addEventListener('click', () => window.EPTheme.set(window.EPTheme.current() === 'dark' ? 'light' : 'dark'));
+
+})();
+</script>
+
+
+<!-- ================================================================
+     GLOBAL SEARCH
+     - Pages and quick actions: matched instantly in the browser
+     - Records: fetched from the global-search route (debounced, cancels stale requests)
+     - Keyboard: Ctrl/Cmd+K or "/" to focus, Up/Down to move, Enter to open, Esc to close
+     ================================================================ -->
+
+<script>
+(function () {
+    'use strict';
+
+    const wrap = document.getElementById('gSearch');
+    const input = document.getElementById('gSearchInput');
+    const panel = document.getElementById('gSearchPanel');
+    const clearBtn = document.getElementById('gSearchClear');
+    if (!wrap || !input || !panel) return;
+
+    const PAGES = @json($searchPages);
+    const ACTIONS = @json($searchActions);
+    const SEARCH_URL = @json($searchUrl);
+    const MIN_CHARS = 2;
+    const DEBOUNCE = 250;
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    let items = [];          // flat list of selectable rows (for keyboard)
+    let active = -1;
+    let remote = [];         // last record results
+    let remoteState = 'idle'; // idle | loading | done | error | offline
+    let remoteFor = '';      // query that remote results belong to
+    let timer = null, controller = null, seq = 0;
+    const cache = new Map();
+
+    /* ---------- helpers ---------- */
+    const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const terms = (q) => norm(q).split(/\s+/).filter(Boolean);
+    const open = () => { panel.classList.add('show'); input.setAttribute('aria-expanded', 'true'); };
+    const close = () => { panel.classList.remove('show'); input.setAttribute('aria-expanded', 'false'); active = -1; };
+
+    const icon = (name) => {
+        const s = document.createElementNS(SVG_NS, 'svg');
+        s.setAttribute('class', 'i'); s.setAttribute('aria-hidden', 'true');
+        const u = document.createElementNS(SVG_NS, 'use');
+        u.setAttribute('href', '#i-' + name);
+        s.appendChild(u);
+        return s;
+    };
+    const el = (tag, cls, text) => {
+        const n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text !== undefined) n.textContent = text;
+        return n;
+    };
+
+    /* Highlight typed words inside a title (safe: built with text nodes, never innerHTML) */
+    const highlight = (text, ts) => {
+        const frag = document.createDocumentFragment();
+        if (!ts.length) { frag.appendChild(document.createTextNode(text)); return frag; }
+        const plain = norm(text);
+        const marks = new Array(text.length).fill(false);
+        if (plain.length === text.length) {
+            ts.forEach(t => {
+                let from = 0, at;
+                while ((at = plain.indexOf(t, from)) !== -1) {
+                    for (let k = at; k < at + t.length; k++) marks[k] = true;
+                    from = at + t.length;
                 }
             });
-        }, { threshold: 0.12 });
+        }
+        let buf = '', on = false;
+        const flush = () => {
+            if (!buf) return;
+            if (on) { const m = document.createElement('mark'); m.textContent = buf; frag.appendChild(m); }
+            else frag.appendChild(document.createTextNode(buf));
+            buf = '';
+        };
+        for (let k = 0; k < text.length; k++) {
+            if (marks[k] !== on) { flush(); on = marks[k]; }
+            buf += text[k];
+        }
+        flush();
+        return frag;
+    };
 
-        items.forEach(function (el, i) {
-            el.style.transitionDelay = (i % 4) * 60 + 'ms';
-            io.observe(el);
+    /* Score a local entry: every typed word must be found; earlier / title matches rank higher */
+    const score = (entry, ts) => {
+        const title = norm(entry.title), hay = title + ' ' + norm(entry.sub) + ' ' + norm(entry.kw);
+        let total = 0;
+        for (const t of ts) {
+            if (!hay.includes(t)) return -1;
+            const ti = title.indexOf(t);
+            total += ti === 0 ? 30 : title.includes(' ' + t) ? 22 : ti > 0 ? 14 : 6;
+        }
+        return total;
+    };
+
+    const localMatches = (list, ts, limit) => list
+        .map(e => ({ e, s: score(e, ts) })).filter(x => x.s >= 0)
+        .sort((a, b) => b.s - a.s).slice(0, limit).map(x => x.e);
+
+    /* ---------- rendering ---------- */
+    const row = (entry, ts, isAction) => {
+        const a = el('a', 'gs-item' + (isAction ? ' is-action' : ''));
+        a.href = entry.url; a.setAttribute('role', 'option');
+        const ico = el('span', 'gs-ico'); ico.appendChild(icon(isAction ? 'plus' : entry.icon));
+        const txt = el('span', 'gs-text');
+        const title = el('span', 'gs-title'); title.appendChild(highlight(entry.title, ts));
+        txt.appendChild(title);
+        if (entry.sub) txt.appendChild(el('span', 'gs-sub', entry.sub));
+        a.append(ico, txt, el('span', 'gs-enter', '↵'));
+        a.addEventListener('mousemove', () => setActive(items.indexOf(a), false));
+        return a;
+    };
+
+    const section = (label, entries, ts, isAction) => {
+        if (!entries.length) return;
+        panel.appendChild(el('div', 'gs-group', label));
+        entries.forEach(e => { const r = row(e, ts, isAction); items.push(r); panel.appendChild(r); });
+    };
+
+    const state = (iconName, title, text) => {
+        const s = el('div', 'gs-state');
+        const i = el('div', 'gs-state-ico'); i.appendChild(icon(iconName));
+        s.append(i, el('div', 'gs-state-title', title), el('div', 'gs-state-text', text));
+        panel.appendChild(s);
+    };
+
+    const note = (iconName, text) => {
+        const n = el('div', 'gs-note'); n.appendChild(icon(iconName)); n.appendChild(el('span', '', text));
+        panel.appendChild(n);
+    };
+
+    const footer = () => {
+        const f = el('div', 'gs-foot');
+        [['↑↓', 'navigate'], ['↵', 'open'], ['esc', 'close']].forEach(([k, t]) => {
+            const s = el('span'); const kb = el('kbd', '', k); s.append(kb, document.createTextNode(' ' + t)); f.appendChild(s);
         });
-    } else {
-        items.forEach(function (el) {
-            el.classList.add('is-in');
-        });
-    }
-});
+        panel.appendChild(f);
+    };
+
+    const render = () => {
+        const q = input.value.trim();
+        const ts = terms(q);
+        panel.replaceChildren();
+        items = [];
+
+        if (q.length < MIN_CHARS) {
+            /* Nothing typed: show shortcuts */
+            section('Quick actions', ACTIONS.slice(0, 4), [], true);
+            section('Jump to', PAGES.slice(0, 6), [], false);
+            if (!items.length) state('search', 'Search the system', 'Type at least ' + MIN_CHARS + ' characters to search.');
+            else if (q.length === 1) note('search', 'Keep typing to search residents, households and documents.');
+            footer();
+            return setActive(items.length ? 0 : -1, false);
+        }
+
+        section('Pages', localMatches(PAGES, ts, 4), ts, false);
+        section('Quick actions', localMatches(ACTIONS, ts, 3), ts, true);
+
+        /* Records, grouped in the order the server sent them */
+        if (remoteFor === q && remote.length) {
+            const groups = {};
+            remote.forEach(r => (groups[r.group] = groups[r.group] || []).push(r));
+            Object.keys(groups).forEach(g => section(g, groups[g], ts, false));
+        }
+
+        if (SEARCH_URL) {
+            if (remoteState === 'offline') note('alert', 'You are offline. Only pages and actions are searchable.');
+            else if (remoteState === 'error') note('alert', 'Could not search records right now. Try again in a moment.');
+            else if (remoteState === 'loading' && !(remoteFor === q && remote.length)) note('clock', 'Searching records…');
+        }
+
+        const searching = SEARCH_URL && remoteState === 'loading';
+        if (!items.length && !searching && remoteState !== 'error' && remoteState !== 'offline') {
+            state('search', 'No results for “' + q + '”', 'Check the spelling, or try a name, household number or reference number.');
+        }
+
+        footer();
+        setActive(items.length ? 0 : -1, false);
+    };
+
+    const setActive = (idx, scroll) => {
+        items.forEach((n, k) => { n.classList.toggle('active', k === idx); n.setAttribute('aria-selected', k === idx ? 'true' : 'false'); });
+        active = idx;
+        if (idx >= 0 && scroll !== false) items[idx].scrollIntoView({ block: 'nearest' });
+    };
+
+    /* ---------- remote record search ---------- */
+    const setLoading = (on) => wrap.classList.toggle('loading', on);
+
+    const fetchRecords = async (q) => {
+        if (!SEARCH_URL || q.length < MIN_CHARS) return;
+
+        if (!navigator.onLine) { remoteState = 'offline'; remote = []; remoteFor = q; setLoading(false); return render(); }
+
+        const key = norm(q);
+        if (cache.has(key)) {
+            remote = cache.get(key); remoteFor = q; remoteState = 'done'; setLoading(false);
+            return render();
+        }
+
+        if (controller) controller.abort();
+        controller = new AbortController();
+        const mine = ++seq;
+        remoteState = 'loading'; setLoading(true);
+
+        try {
+            const res = await fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin', signal: controller.signal
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            if (mine !== seq) return;                    // a newer search replaced this one
+            remote = Array.isArray(data.results) ? data.results : [];
+            remoteFor = q; remoteState = 'done';
+            cache.set(key, remote);
+            if (cache.size > 40) cache.delete(cache.keys().next().value);
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            if (mine !== seq) return;
+            remote = []; remoteFor = q; remoteState = 'error';
+        }
+        setLoading(false);
+        if (input.value.trim() === q) render();
+    };
+
+    const onInput = () => {
+        const q = input.value.trim();
+        wrap.classList.toggle('has-value', input.value.length > 0);
+        clearTimeout(timer);
+        if (controller) controller.abort();
+        seq++;
+        remote = []; remoteFor = ''; setLoading(false);
+
+        if (q.length >= MIN_CHARS && SEARCH_URL) {
+            remoteState = 'loading';
+            timer = setTimeout(() => fetchRecords(q), DEBOUNCE);
+        } else {
+            remoteState = 'idle';
+        }
+        open(); render();
+    };
+
+    /* ---------- events ---------- */
+    input.addEventListener('input', onInput);
+    input.addEventListener('focus', () => { open(); render(); });
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault(); if (!panel.classList.contains('show')) { open(); render(); }
+            if (items.length) setActive((active + 1) % items.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (items.length) setActive((active - 1 + items.length) % items.length);
+        } else if (e.key === 'Enter') {
+            if (active >= 0 && items[active]) { e.preventDefault(); window.location.href = items[active].href; }
+            else e.preventDefault();
+        } else if (e.key === 'Escape') {
+            if (input.value) { input.value = ''; onInput(); }
+            else { close(); input.blur(); }
+            e.stopPropagation();
+        } else if (e.key === 'Tab') {
+            close();
+        }
+    });
+
+    clearBtn.addEventListener('mousedown', (e) => e.preventDefault());
+    clearBtn.addEventListener('click', () => { input.value = ''; onInput(); input.focus(); });
+
+    document.addEventListener('mousedown', (e) => { if (!wrap.contains(e.target)) close(); });
+
+    /* Ctrl/Cmd+K, or "/" when not typing in a field */
+    document.addEventListener('keydown', (e) => {
+        const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+        const typing = ['input', 'textarea', 'select'].includes(tag) || (document.activeElement && document.activeElement.isContentEditable);
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); input.focus(); input.select(); }
+        else if (e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); input.focus(); input.select(); }
+    });
+
+    window.addEventListener('online', () => { if (input.value.trim().length >= MIN_CHARS) { cache.clear(); onInput(); } });
+    window.addEventListener('pageshow', () => { wrap.classList.toggle('has-value', input.value.length > 0); });
+})();
+</script>
+
+
+<!-- ================================================================
+     GLOBAL REMINDER ENGINE
+     ================================================================ -->
+
+<script>
+(function () {
+    'use strict';
+
+    const box = document.getElementById('globalReminderAlert');
+    if (!box) return;
+
+    const $ = (id) => document.getElementById(id);
+    const el = {
+        title: $('globalReminderTitle'), type: $('globalReminderType'), time: $('globalReminderTime'),
+        locRow: $('globalReminderLocationRow'), loc: $('globalReminderLocation'), notes: $('globalReminderNotes'),
+        view: $('globalReminderView'), dismiss: $('globalReminderDismiss'), close: $('globalReminderClose'), queue: $('globalReminderQueue')
+    };
+
+    const DUE_URL = @json(route('reminders.due'));
+    const KEY = 'epoblacion.reminders.dismissed.v1';
+    const POLL = 30000;
+
+    let queue = [], current = null, audio = null, busy = false;
+
+    /* ---- dismissed keys (kept 7 days) ---- */
+    const read = () => { try { const p = JSON.parse(localStorage.getItem(KEY) || '{}'); return p && typeof p === 'object' ? p : {}; } catch (e) { return {}; } };
+    const write = (d) => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} };
+    const isDismissed = (k) => !!k && !!read()[k];
+    const markDismissed = (k) => {
+        if (!k) return;
+        const d = read(); d[k] = Date.now();
+        const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        Object.keys(d).forEach(x => { if (Number(d[x]) < cutoff) delete d[x]; });
+        write(d);
+    };
+
+    /* ---- sound (Web Audio, no file needed) ---- */
+    const prepAudio = () => {
+        try {
+            if (!audio) { const A = window.AudioContext || window.webkitAudioContext; if (!A) return; audio = new A(); }
+            if (audio.state === 'suspended') audio.resume().catch(() => {});
+        } catch (e) {}
+    };
+    const beep = () => {
+        try {
+            if (!audio) return;
+            prepAudio();
+            const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(880, t);
+            o.frequency.exponentialRampToValueAtTime(1320, t + 0.12);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.12, t + 0.015);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+            o.connect(g); g.connect(audio.destination);
+            o.start(t); o.stop(t + 0.3);
+        } catch (e) {}
+    };
+    document.addEventListener('pointerdown', prepAudio, { once: true, passive: true });
+    document.addEventListener('keydown', prepAudio, { once: true });
+
+    /* ---- popup ---- */
+    const badge = () => {
+        if (!el.queue) return;
+        const n = queue.length;
+        el.queue.textContent = n > 99 ? '99+' : String(n);
+        el.queue.classList.toggle('show', n > 0);
+    };
+
+    const show = (r) => {
+        current = r;
+        const p = String(r.priority || 'normal').toLowerCase();
+        box.classList.remove('priority-normal', 'priority-important', 'priority-urgent');
+        box.classList.add('priority-' + p);
+
+        el.title.textContent = r.title || 'Scheduled Reminder';
+        el.type.textContent = r.type || 'Schedule & Reminders';
+        el.time.textContent = r.scheduled_at_label || r.notification_at_label || 'Scheduled time';
+
+        if (r.location) { el.loc.textContent = r.location; el.locRow.style.display = 'flex'; } else { el.locRow.style.display = 'none'; }
+        if (r.notes) { el.notes.textContent = r.notes; el.notes.style.display = 'block'; } else { el.notes.textContent = ''; el.notes.style.display = 'none'; }
+        if (r.url) { el.view.href = r.url; el.view.style.display = 'inline-flex'; } else { el.view.removeAttribute('href'); el.view.style.display = 'none'; }
+
+        box.classList.add('show');
+        badge();
+        beep();
+    };
+
+    const next = () => {
+        if (current || queue.length === 0) { badge(); return; }
+        const n = queue.shift();
+        badge();
+        show(n);
+    };
+
+    const dismissCurrent = () => {
+        if (!current) return;
+        markDismissed(current.notification_key);
+        current = null;
+        box.classList.remove('show');
+        badge();
+        setTimeout(next, 150);
+    };
+
+    const enqueue = (r) => {
+        if (!r || !r.notification_key) return;
+        const k = r.notification_key;
+        if (isDismissed(k)) return;
+        if (current && current.notification_key === k) return;
+        if (queue.some(q => q.notification_key === k)) return;
+        queue.push(r);
+        queue.sort((a, b) => String(a.notification_at || '').localeCompare(String(b.notification_at || '')));
+        badge();
+        next();
+    };
+
+    /* ---- poll for due reminders ---- */
+    const check = async () => {
+        if (busy || !navigator.onLine) return;
+        busy = true;
+        try {
+            const res = await fetch(DUE_URL, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
+            if (!res.ok) throw new Error('Reminder request failed: ' + res.status);
+            const data = await res.json();
+            if (data && Array.isArray(data.reminders)) data.reminders.forEach(enqueue);
+        } catch (e) {
+            console.debug('Reminder polling:', e);   /* must never break the app */
+        } finally {
+            busy = false;
+        }
+    };
+
+    if (el.dismiss) el.dismiss.addEventListener('click', dismissCurrent);
+    if (el.close) el.close.addEventListener('click', dismissCurrent);
+    if (el.view) el.view.addEventListener('click', () => { if (current) markDismissed(current.notification_key); });
+
+    check();
+    const timer = setInterval(check, POLL);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    window.addEventListener('online', check);
+    window.addEventListener('beforeunload', () => clearInterval(timer));
+})();
 </script>
 
 </body>

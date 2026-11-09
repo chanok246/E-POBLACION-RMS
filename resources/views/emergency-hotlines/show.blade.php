@@ -161,11 +161,7 @@
         font-size: 18px;
         font-weight: 800;
         text-decoration: none;
-    }
-
-    .phone-number:hover {
-        color: var(--hotline-primary) !important;
-        text-decoration: underline;
+        cursor: default;
     }
 
     /* =========================================================
@@ -283,14 +279,6 @@
         --bs-btn-hover-border-color: #4930d0;
         --bs-btn-color: #ffffff;
         --bs-btn-hover-color: #ffffff;
-    }
-
-    /* =========================================================
-       SUCCESS BUTTONS
-    ========================================================== */
-
-    .hotline-show-page .btn-success {
-        --bs-btn-color: #ffffff;
     }
 
     /* =========================================================
@@ -465,24 +453,10 @@
 
                     <div class="d-flex flex-wrap align-items-center gap-3">
 
-                        <a
-                            href="tel:{{ $emergencyHotline->phone_number }}"
-                            class="phone-number"
-                        >
+                        <span class="phone-number">
                             <i class="bi bi-telephone-fill me-2"></i>
                             {{ $emergencyHotline->phone_number }}
-                        </a>
-
-                        @if ($emergencyHotline->isActive())
-
-                            <a
-                                href="tel:{{ $emergencyHotline->phone_number }}"
-                                class="btn btn-success btn-sm"
-                            >
-
-                            </a>
-
-                        @endif
+                        </span>
 
                     </div>
 
@@ -501,25 +475,10 @@
 
                         <div class="d-flex flex-wrap align-items-center gap-3">
 
-                            <a
-                                href="tel:{{ $emergencyHotline->alternate_number }}"
-                                class="phone-number"
-                            >
+                            <span class="phone-number">
                                 <i class="bi bi-telephone me-2"></i>
                                 {{ $emergencyHotline->alternate_number }}
-                            </a>
-
-                            @if ($emergencyHotline->isActive())
-
-                                <a
-                                    href="tel:{{ $emergencyHotline->alternate_number }}"
-                                    class="btn btn-outline-success btn-sm"
-                                >
-                                    <i class="bi bi-telephone-outbound me-1"></i>
-                                    Call
-                                </a>
-
-                            @endif
+                            </span>
 
                         </div>
 
@@ -761,18 +720,10 @@
                                 Active Emergency Contact
                             </h3>
 
-                            <p class="small text-muted mb-3">
+                            <p class="small text-muted mb-0">
                                 This hotline is currently available in the
                                 emergency directory.
                             </p>
-
-                            <a
-                                href="tel:{{ $emergencyHotline->phone_number }}"
-                                class="btn btn-success btn-sm"
-                            >
-                                <i class="bi bi-telephone-fill me-1"></i>
-                                Call {{ $emergencyHotline->name }}
-                            </a>
 
                         </div>
 

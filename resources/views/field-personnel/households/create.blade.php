@@ -1,782 +1,908 @@
-
 @extends('field-personnel.layouts.app')
 
 @section('title', 'Household Collection')
 
-@section('content')
-<div class="container-fluid py-3 field-collection-page">
-    <div class="row justify-content-center">
-        <div class="col-12 col-xl-9">
+@section('page-heading')
+    <h1 class="fc-page-title">Household Collection</h1>
+    <p class="fc-page-description">
+        Record household information for verification by the Barangay.
+    </p>
+@endsection
 
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+@section('content')
+<div class="fc-household-page">
+
+    <div class="fc-page-actions">
+        <a href="{{ route('field-personnel.home') }}" class="fc-button fc-button-secondary">
+            <span aria-hidden="true">←</span> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="fc-alert fc-alert-info">
+        <span class="fc-alert-icon" aria-hidden="true">ⓘ</span>
+        <div>
+            <strong>Important reminder</strong>
+            <p class="fc-info-text">
+                Submitted information will be saved as
+                <strong>Pending for Verification</strong>.
+                It will not become an official household or resident record
+                until approved by the authorized Captain or Secretary.
+            </p>
+        </div>
+    </div>
+
+    <form id="householdCollectionForm"
+          method="POST"
+          action="{{ url('/field-personnel/households') }}">
+        @csrf
+
+        {{-- HOUSEHOLD INFORMATION --}}
+        <section class="fc-card fc-form-card">
+            <div class="fc-section-heading">
+                <span class="fc-section-icon" aria-hidden="true">⌂</span>
                 <div>
-                    <h4 class="fw-bold mb-1">Household Collection</h4>
-                    <p class="text-muted mb-0 small">
-                        Record household information for verification by the Barangay.
+                    <h2 class="fc-card-title">Household Information</h2>
+                    <p class="fc-card-description">Enter the household's location and address.</p>
+                </div>
+            </div>
+
+            <div class="fc-form-grid">
+                <div class="fc-form-group fc-span-6">
+                    <label for="purok" class="fc-label">
+                        Purok <span class="fc-required">*</span>
+                    </label>
+                    <input type="text"
+                           id="purok"
+                           name="household[purok]"
+                           class="fc-input @error('household.purok') fc-input-invalid @enderror"
+                           value="{{ old('household.purok') }}"
+                           maxlength="100"
+                           required>
+                    @error('household.purok')
+                        <span class="fc-error">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="fc-form-group fc-span-12">
+                    <label for="address" class="fc-label">
+                        Complete Household Address <span class="fc-required">*</span>
+                    </label>
+                    <textarea id="address"
+                              name="household[address]"
+                              class="fc-textarea @error('household.address') fc-input-invalid @enderror"
+                              rows="3"
+                              maxlength="255"
+                              required>{{ old('household.address') }}</textarea>
+                    @error('household.address')
+                        <span class="fc-error">{{ $message }}</span>
+                    @enderror
+                </div>
+            </div>
+        </section>
+
+        {{-- GPS LOCATION --}}
+        <section class="fc-card fc-form-card">
+            <div class="fc-section-heading">
+                <span class="fc-section-icon" aria-hidden="true">⌖</span>
+                <div>
+                    <h2 class="fc-card-title">Household GPS Location</h2>
+                    <p class="fc-card-description">
+                        Capture the household's location using this device.
                     </p>
                 </div>
-
-                <a href="{{ route('field-personnel.home') }}"
-                   class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left"></i> Back to Dashboard
-                </a>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
+            <p class="fc-help-text">
+                Allow location permission when your browser asks. For browser-based
+                GPS access, use HTTPS or localhost.
+            </p>
 
-            @if($errors->any())
-                <div class="alert alert-danger" role="alert">
-                    <strong>Please review the following errors:</strong>
-                    <ul class="mb-0 mt-2">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
+            <input type="hidden" name="household[latitude]" id="gpsLatitude"
+                   value="{{ old('household.latitude') }}">
+            <input type="hidden" name="household[longitude]" id="gpsLongitude"
+                   value="{{ old('household.longitude') }}">
+            <input type="hidden" name="household[gps_accuracy_meters]" id="gpsAccuracy"
+                   value="{{ old('household.gps_accuracy_meters') }}">
+            <input type="hidden" name="household[gps_captured_at]" id="gpsCapturedAt"
+                   value="{{ old('household.gps_captured_at') }}">
+
+            <div class="fc-action-row">
+                <button type="button" id="captureGpsButton" class="fc-button fc-button-primary">
+                    <span aria-hidden="true">⌖</span> Capture Household GPS
+                </button>
+                <button type="button" id="clearGpsButton" class="fc-button fc-button-secondary">
+                    Clear GPS
+                </button>
+            </div>
+
+            <div id="gpsStatus" class="fc-alert fc-alert-neutral fc-gps-status"
+                 role="status" aria-live="polite">
+                GPS location has not been captured.
+            </div>
+
+            <div class="fc-gps-details">
+                <div>
+                    <span class="fc-detail-label">Latitude</span>
+                    <strong id="latitudeDisplay">Not captured</strong>
+                </div>
+                <div>
+                    <span class="fc-detail-label">Longitude</span>
+                    <strong id="longitudeDisplay">Not captured</strong>
+                </div>
+                <div>
+                    <span class="fc-detail-label">GPS accuracy</span>
+                    <strong id="accuracyDisplay">Not available</strong>
+                </div>
+                <div>
+                    <span class="fc-detail-label">Captured at</span>
+                    <strong id="capturedAtDisplay">Not captured</strong>
+                </div>
+            </div>
+
+            <p class="fc-help-text fc-help-bottom">
+                GPS accuracy depends on the device and available location signals.
+            </p>
+        </section>
+
+        {{-- HOUSEHOLD HEAD --}}
+        <section class="fc-card fc-form-card">
+            <div class="fc-section-heading">
+                <span class="fc-section-icon" aria-hidden="true">♙</span>
+                <div>
+                    <h2 class="fc-card-title">Household Head</h2>
+                    <p class="fc-card-description">Enter the details of the household head.</p>
+                </div>
+            </div>
+
+            <div class="fc-form-grid">
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">First Name <span class="fc-required">*</span></label>
+                    <input type="text" name="household_head[first_name]"
+                           class="fc-input" value="{{ old('household_head.first_name') }}"
+                           maxlength="100" required>
+                </div>
+
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">Middle Name</label>
+                    <input type="text" name="household_head[middle_name]"
+                           class="fc-input" value="{{ old('household_head.middle_name') }}"
+                           maxlength="100">
+                </div>
+
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">Last Name <span class="fc-required">*</span></label>
+                    <input type="text" name="household_head[last_name]"
+                           class="fc-input" value="{{ old('household_head.last_name') }}"
+                           maxlength="100" required>
+                </div>
+
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">Suffix</label>
+                    <input type="text" name="household_head[suffix]"
+                           class="fc-input" value="{{ old('household_head.suffix') }}"
+                           maxlength="30" placeholder="Jr., Sr., III">
+                </div>
+
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">Birth Date <span class="fc-required">*</span></label>
+                    <input type="date" name="household_head[birth_date]"
+                           class="fc-input" value="{{ old('household_head.birth_date') }}"
+                           max="{{ now()->toDateString() }}" required>
+                </div>
+
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">Sex <span class="fc-required">*</span></label>
+                    <select name="household_head[sex]" class="fc-select" required>
+                        <option value="">Select sex</option>
+                        <option value="Male" @selected(old('household_head.sex') === 'Male')>Male</option>
+                        <option value="Female" @selected(old('household_head.sex') === 'Female')>Female</option>
+                    </select>
+                </div>
+
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">Civil Status <span class="fc-required">*</span></label>
+                    <select name="household_head[civil_status]" class="fc-select" required>
+                        <option value="">Select civil status</option>
+                        @foreach(['Single', 'Married', 'Widowed', 'Separated', 'Annulled'] as $status)
+                            <option value="{{ $status }}"
+                                @selected(old('household_head.civil_status') === $status)>
+                                {{ $status }}
+                            </option>
                         @endforeach
-                    </ul>
+                    </select>
                 </div>
-            @endif
 
-            <div class="alert alert-info border-0">
-                <div class="d-flex gap-2">
-                    <i class="bi bi-info-circle-fill fs-5"></i>
-                    <div>
-                        <strong>Important reminder</strong>
-                        <p class="mb-0 small">
-                            Submitted information will be saved as
-                            <strong>Pending for Verification</strong>.
-                            It will not become an official household or resident
-                            record until approved by the authorized Captain or Secretary.
-                        </p>
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">Contact Number</label>
+                    <div class="fc-phone-group">
+                        <span>+63</span>
+                        <input type="tel" name="household_head[contact_number]"
+                               class="fc-input mobile-number"
+                               value="{{ old('household_head.contact_number') }}"
+                               inputmode="numeric" maxlength="10"
+                               pattern="9[0-9]{9}" placeholder="9XXXXXXXXX">
                     </div>
+                    <small class="fc-hint">Optional. Enter 10 digits starting with 9.</small>
+                </div>
+
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">Email Address</label>
+                    <input type="email" name="household_head[email]"
+                           class="fc-input" value="{{ old('household_head.email') }}"
+                           maxlength="255">
+                </div>
+
+                <div class="fc-form-group fc-span-4">
+                    <label class="fc-label">Residency Type <span class="fc-required">*</span></label>
+                    <select name="household_head[residency_type]"
+                            class="fc-select residency-type" required>
+                        <option value="">Select residency</option>
+                        <option value="Permanent"
+                            @selected(old('household_head.residency_type') === 'Permanent')>Permanent</option>
+                        <option value="Temporary"
+                            @selected(old('household_head.residency_type') === 'Temporary')>Temporary</option>
+                    </select>
+                </div>
+
+                <div class="fc-form-group fc-span-4 residency-year-wrapper">
+                    <label class="fc-label">
+                        Residency Start Year
+                        <span class="fc-required residency-year-required" hidden>*</span>
+                    </label>
+                    <input type="number" name="household_head[residency_start_year]"
+                           class="fc-input residency-year"
+                           value="{{ old('household_head.residency_start_year') }}"
+                           min="1900" max="{{ now()->year }}" step="1">
+                    <small class="fc-hint">Required for Temporary residents.</small>
+                </div>
+
+                <div class="fc-form-group fc-span-8">
+                    <label class="fc-label">Occupation</label>
+                    <input type="text" name="household_head[occupation]"
+                           class="fc-input" value="{{ old('household_head.occupation') }}"
+                           maxlength="150">
                 </div>
             </div>
+        </section>
 
-            <form id="householdCollectionForm"
-                  method="POST"
-                  action="{{ url('/field-personnel/households') }}">
-                @csrf
-
-                {{-- HOUSEHOLD INFORMATION --}}
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="fw-bold mb-0">
-                            <i class="bi bi-house-door me-2"></i>
-                            Household Information
-                        </h5>
-                    </div>
-
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label for="purok" class="form-label fw-semibold">
-                                    Purok <span class="text-danger">*</span>
-                                </label>
-                                <input type="text"
-                                       id="purok"
-                                       name="household[purok]"
-                                       class="form-control @error('household.purok') is-invalid @enderror"
-                                       value="{{ old('household.purok') }}"
-                                       maxlength="100"
-                                       required>
-                                @error('household.purok')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-12">
-                                <label for="address" class="form-label fw-semibold">
-                                    Complete Household Address
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <textarea id="address"
-                                          name="household[address]"
-                                          class="form-control @error('household.address') is-invalid @enderror"
-                                          rows="2"
-                                          maxlength="255"
-                                          required>{{ old('household.address') }}</textarea>
-                                @error('household.address')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
+        {{-- HOUSEHOLD MEMBERS --}}
+        <section class="fc-card fc-form-card">
+            <div class="fc-section-heading fc-section-heading-between">
+                <div class="fc-section-heading">
+                    <span class="fc-section-icon" aria-hidden="true">♧</span>
+                    <div>
+                        <h2 class="fc-card-title">Other Household Members</h2>
+                        <p class="fc-card-description">Add the other individuals living in this household.</p>
                     </div>
                 </div>
 
-                {{-- GPS LOCATION --}}
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="fw-bold mb-0">
-                            <i class="bi bi-geo-alt me-2"></i>
-                            Household GPS Location
-                        </h5>
-                    </div>
+                <button type="button" id="addMemberButton" class="fc-button fc-button-primary">
+                    <span aria-hidden="true">＋</span> Add Member
+                </button>
+            </div>
 
-                    <div class="card-body">
-                        <p class="text-muted small">
-                            Capture the location of the household using this phone.
-                            Allow location permission when your browser asks.
-                        </p>
+            <p class="fc-help-text">
+                The household head is already recorded above. Add only the other household members.
+            </p>
 
-                        <input type="hidden"
-                               name="household[latitude]"
-                               id="gpsLatitude"
-                               value="{{ old('household.latitude') }}">
+            <div id="membersContainer">
+                @php
+                    $oldMembers = old('members', []);
+                @endphp
 
-                        <input type="hidden"
-                               name="household[longitude]"
-                               id="gpsLongitude"
-                               value="{{ old('household.longitude') }}">
-
-                        <input type="hidden"
-                               name="household[gps_accuracy_meters]"
-                               id="gpsAccuracy"
-                               value="{{ old('household.gps_accuracy_meters') }}">
-
-                        <input type="hidden"
-                               name="household[gps_captured_at]"
-                               id="gpsCapturedAt"
-                               value="{{ old('household.gps_captured_at') }}">
-
-                        <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
-                            <button type="button"
-                                    id="captureGpsButton"
-                                    class="btn btn-primary">
-                                <i class="bi bi-crosshair me-1"></i>
-                                Capture Household GPS
-                            </button>
-
-                            <button type="button"
-                                    id="clearGpsButton"
-                                    class="btn btn-outline-secondary">
-                                Clear GPS
+                @foreach($oldMembers as $index => $member)
+                    <div class="fc-member-card" data-member-index="{{ $index }}">
+                        <div class="fc-member-heading">
+                            <h3 class="fc-member-title">Household Member {{ $loop->iteration }}</h3>
+                            <button type="button" class="fc-button fc-button-danger fc-button-small remove-member">
+                                Remove
                             </button>
                         </div>
 
-                        <div id="gpsStatus"
-                             class="alert alert-secondary small mb-0"
-                             role="status"
-                             aria-live="polite">
-                            GPS location has not been captured.
-                        </div>
-
-                        <div class="row g-2 mt-2 small">
-                            <div class="col-12 col-sm-6">
-                                <span class="text-muted">Latitude:</span>
-                                <strong id="latitudeDisplay">Not captured</strong>
+                        <div class="fc-form-grid">
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">First Name <span class="fc-required">*</span></label>
+                                <input type="text" name="members[{{ $index }}][first_name]"
+                                       class="fc-input" value="{{ $member['first_name'] ?? '' }}"
+                                       maxlength="100" required>
                             </div>
-                            <div class="col-12 col-sm-6">
-                                <span class="text-muted">Longitude:</span>
-                                <strong id="longitudeDisplay">Not captured</strong>
-                            </div>
-                            <div class="col-12 col-sm-6">
-                                <span class="text-muted">GPS accuracy:</span>
-                                <strong id="accuracyDisplay">Not available</strong>
-                            </div>
-                            <div class="col-12 col-sm-6">
-                                <span class="text-muted">Captured at:</span>
-                                <strong id="capturedAtDisplay">Not captured</strong>
-                            </div>
-                        </div>
-
-                        <small class="text-muted d-block mt-3">
-                            GPS accuracy depends on the device and available location
-                            signals. Location access generally requires HTTPS or localhost.
-                        </small>
-                    </div>
-                </div>
-
-                {{-- HOUSEHOLD HEAD --}}
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="fw-bold mb-0">
-                            <i class="bi bi-person-badge me-2"></i>
-                            Household Head
-                        </h5>
-                    </div>
-
-                    <div class="card-body">
-                        <div class="row g-3">
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">
-                                    First Name <span class="text-danger">*</span>
-                                </label>
-                                <input type="text"
-                                       name="household_head[first_name]"
-                                       class="form-control"
-                                       value="{{ old('household_head.first_name') }}"
-                                       maxlength="100"
-                                       required>
-                            </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">Middle Name</label>
-                                <input type="text"
-                                       name="household_head[middle_name]"
-                                       class="form-control"
-                                       value="{{ old('household_head.middle_name') }}"
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Middle Name</label>
+                                <input type="text" name="members[{{ $index }}][middle_name]"
+                                       class="fc-input" value="{{ $member['middle_name'] ?? '' }}"
                                        maxlength="100">
                             </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Last Name <span class="text-danger">*</span>
-                                </label>
-                                <input type="text"
-                                       name="household_head[last_name]"
-                                       class="form-control"
-                                       value="{{ old('household_head.last_name') }}"
-                                       maxlength="100"
-                                       required>
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Last Name <span class="fc-required">*</span></label>
+                                <input type="text" name="members[{{ $index }}][last_name]"
+                                       class="fc-input" value="{{ $member['last_name'] ?? '' }}"
+                                       maxlength="100" required>
                             </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">Suffix</label>
-                                <input type="text"
-                                       name="household_head[suffix]"
-                                       class="form-control"
-                                       value="{{ old('household_head.suffix') }}"
-                                       maxlength="30"
-                                       placeholder="Jr., Sr., III">
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Suffix</label>
+                                <input type="text" name="members[{{ $index }}][suffix]"
+                                       class="fc-input" value="{{ $member['suffix'] ?? '' }}"
+                                       maxlength="30">
                             </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Birth Date <span class="text-danger">*</span>
-                                </label>
-                                <input type="date"
-                                       name="household_head[birth_date]"
-                                       class="form-control"
-                                       value="{{ old('household_head.birth_date') }}"
-                                       max="{{ now()->toDateString() }}"
-                                       required>
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Birth Date <span class="fc-required">*</span></label>
+                                <input type="date" name="members[{{ $index }}][birth_date]"
+                                       class="fc-input" value="{{ $member['birth_date'] ?? '' }}"
+                                       max="{{ now()->toDateString() }}" required>
                             </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Sex <span class="text-danger">*</span>
-                                </label>
-                                <select name="household_head[sex]" class="form-select" required>
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Sex <span class="fc-required">*</span></label>
+                                <select name="members[{{ $index }}][sex]" class="fc-select" required>
                                     <option value="">Select sex</option>
-                                    <option value="Male" @selected(old('household_head.sex') === 'Male')>Male</option>
-                                    <option value="Female" @selected(old('household_head.sex') === 'Female')>Female</option>
+                                    <option value="Male" @selected(($member['sex'] ?? '') === 'Male')>Male</option>
+                                    <option value="Female" @selected(($member['sex'] ?? '') === 'Female')>Female</option>
                                 </select>
                             </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Civil Status <span class="text-danger">*</span>
-                                </label>
-                                <select name="household_head[civil_status]" class="form-select" required>
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Civil Status <span class="fc-required">*</span></label>
+                                <select name="members[{{ $index }}][civil_status]" class="fc-select" required>
                                     <option value="">Select civil status</option>
                                     @foreach(['Single', 'Married', 'Widowed', 'Separated', 'Annulled'] as $status)
                                         <option value="{{ $status }}"
-                                            @selected(old('household_head.civil_status') === $status)>
-                                            {{ $status }}
-                                        </option>
+                                            @selected(($member['civil_status'] ?? '') === $status)>{{ $status }}</option>
                                     @endforeach
                                 </select>
                             </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">Contact Number</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">+63</span>
-                                    <input type="tel"
-                                           name="household_head[contact_number]"
-                                           class="form-control mobile-number"
-                                           value="{{ old('household_head.contact_number') }}"
-                                           inputmode="numeric"
-                                           maxlength="10"
-                                           pattern="9[0-9]{9}"
-                                           placeholder="9XXXXXXXXX">
-                                </div>
-                                <small class="text-muted">Optional. Enter 10 digits starting with 9.</small>
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Relationship to Head <span class="fc-required">*</span></label>
+                                <input type="text" name="members[{{ $index }}][relationship]"
+                                       class="fc-input" value="{{ $member['relationship'] ?? '' }}"
+                                       maxlength="100" placeholder="e.g. Spouse, Son, Daughter" required>
                             </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">Email Address</label>
-                                <input type="email"
-                                       name="household_head[email]"
-                                       class="form-control"
-                                       value="{{ old('household_head.email') }}"
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Contact Number</label>
+                                <div class="fc-phone-group">
+                                    <span>+63</span>
+                                    <input type="tel" name="members[{{ $index }}][contact_number]"
+                                           class="fc-input mobile-number"
+                                           value="{{ $member['contact_number'] ?? '' }}"
+                                           inputmode="numeric" maxlength="10"
+                                           pattern="9[0-9]{9}" placeholder="9XXXXXXXXX">
+                                </div>
+                                <small class="fc-hint">Optional. 10 digits starting with 9.</small>
+                            </div>
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Email Address</label>
+                                <input type="email" name="members[{{ $index }}][email]"
+                                       class="fc-input" value="{{ $member['email'] ?? '' }}"
                                        maxlength="255">
                             </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Residency Type <span class="text-danger">*</span>
-                                </label>
-                                <select name="household_head[residency_type]"
-                                        class="form-select residency-type"
-                                        required>
+                            <div class="fc-form-group fc-span-4">
+                                <label class="fc-label">Residency Type <span class="fc-required">*</span></label>
+                                <select name="members[{{ $index }}][residency_type]"
+                                        class="fc-select residency-type" required>
                                     <option value="">Select residency</option>
-                                    <option value="Permanent"
-                                        @selected(old('household_head.residency_type') === 'Permanent')>
-                                        Permanent
-                                    </option>
-                                    <option value="Temporary"
-                                        @selected(old('household_head.residency_type') === 'Temporary')>
-                                        Temporary
-                                    </option>
+                                    <option value="Permanent" @selected(($member['residency_type'] ?? '') === 'Permanent')>Permanent</option>
+                                    <option value="Temporary" @selected(($member['residency_type'] ?? '') === 'Temporary')>Temporary</option>
                                 </select>
                             </div>
-
-                            <div class="col-12 col-md-4 residency-year-wrapper">
-                                <label class="form-label fw-semibold">
+                            <div class="fc-form-group fc-span-4 residency-year-wrapper">
+                                <label class="fc-label">
                                     Residency Start Year
-                                    <span class="text-danger residency-year-required" hidden>*</span>
+                                    <span class="fc-required residency-year-required" hidden>*</span>
                                 </label>
-                                <input type="number"
-                                       name="household_head[residency_start_year]"
-                                       class="form-control residency-year"
-                                       value="{{ old('household_head.residency_start_year') }}"
-                                       min="1900"
-                                       max="{{ now()->year }}"
-                                       step="1">
-                                <small class="text-muted">
-                                    Required for Temporary residents.
-                                </small>
+                                <input type="number" name="members[{{ $index }}][residency_start_year]"
+                                       class="fc-input residency-year"
+                                       value="{{ $member['residency_start_year'] ?? '' }}"
+                                       min="1900" max="{{ now()->year }}" step="1">
+                                <small class="fc-hint">Required for Temporary residents.</small>
                             </div>
-
-                            <div class="col-12 col-md-8">
-                                <label class="form-label fw-semibold">Occupation</label>
-                                <input type="text"
-                                       name="household_head[occupation]"
-                                       class="form-control"
-                                       value="{{ old('household_head.occupation') }}"
+                            <div class="fc-form-group fc-span-8">
+                                <label class="fc-label">Occupation</label>
+                                <input type="text" name="members[{{ $index }}][occupation]"
+                                       class="fc-input" value="{{ $member['occupation'] ?? '' }}"
                                        maxlength="150">
                             </div>
-
                         </div>
                     </div>
-                </div>
+                @endforeach
+            </div>
 
-                {{-- HOUSEHOLD MEMBERS --}}
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <h5 class="fw-bold mb-0">
-                            <i class="bi bi-people me-2"></i>
-                            Other Household Members
-                        </h5>
+            <div id="noMembersMessage" class="fc-empty-members"
+                 @if(count($oldMembers)) hidden @endif>
+                <span aria-hidden="true">♧</span>
+                <strong>No additional household members added.</strong>
+                <small>Use the Add Member button to include other household members.</small>
+            </div>
+        </section>
 
-                        <button type="button"
-                                id="addMemberButton"
-                                class="btn btn-primary btn-sm">
-                            <i class="bi bi-plus-lg me-1"></i>
-                            Add Member
-                        </button>
-                    </div>
+        {{-- SUBMISSION ACTIONS --}}
+        <section class="fc-card fc-submit-card">
+            <label class="fc-confirmation">
+                <input type="checkbox" id="submissionConfirmation" required>
+                <span>
+                    I confirm that the information entered is based on the household data
+                    collected and is ready for verification.
+                </span>
+            </label>
 
-                    <div class="card-body">
-                        <p class="text-muted small">
-                            Add the other individuals living in this household.
-                            The household head is already recorded above.
-                        </p>
+            <div class="fc-submit-actions">
+                <button type="submit" id="submitHouseholdButton"
+                        class="fc-button fc-button-primary fc-submit-button">
+                    Submit for Verification
+                </button>
+                <button type="button" id="clearFormButton"
+                        class="fc-button fc-button-danger">
+                    Clear Form
+                </button>
+            </div>
 
-                        <div id="membersContainer">
-                            @php
-                                $oldMembers = old('members', []);
-                            @endphp
-
-                            @foreach($oldMembers as $index => $member)
-                                <div class="member-card border rounded-3 p-3 mb-3"
-                                     data-member-index="{{ $index }}">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h6 class="fw-bold mb-0 member-heading">
-                                            Household Member {{ $loop->iteration }}
-                                        </h6>
-                                        <button type="button"
-                                                class="btn btn-outline-danger btn-sm remove-member">
-                                            <i class="bi bi-trash"></i> Remove
-                                        </button>
-                                    </div>
-
-                                    <div class="row g-3">
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">First Name *</label>
-                                            <input type="text"
-                                                   name="members[{{ $index }}][first_name]"
-                                                   class="form-control"
-                                                   value="{{ $member['first_name'] ?? '' }}"
-                                                   maxlength="100"
-                                                   required>
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Middle Name</label>
-                                            <input type="text"
-                                                   name="members[{{ $index }}][middle_name]"
-                                                   class="form-control"
-                                                   value="{{ $member['middle_name'] ?? '' }}"
-                                                   maxlength="100">
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Last Name *</label>
-                                            <input type="text"
-                                                   name="members[{{ $index }}][last_name]"
-                                                   class="form-control"
-                                                   value="{{ $member['last_name'] ?? '' }}"
-                                                   maxlength="100"
-                                                   required>
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Suffix</label>
-                                            <input type="text"
-                                                   name="members[{{ $index }}][suffix]"
-                                                   class="form-control"
-                                                   value="{{ $member['suffix'] ?? '' }}"
-                                                   maxlength="30">
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Birth Date *</label>
-                                            <input type="date"
-                                                   name="members[{{ $index }}][birth_date]"
-                                                   class="form-control"
-                                                   value="{{ $member['birth_date'] ?? '' }}"
-                                                   max="{{ now()->toDateString() }}"
-                                                   required>
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Sex *</label>
-                                            <select name="members[{{ $index }}][sex]"
-                                                    class="form-select"
-                                                    required>
-                                                <option value="">Select sex</option>
-                                                <option value="Male" @selected(($member['sex'] ?? '') === 'Male')>Male</option>
-                                                <option value="Female" @selected(($member['sex'] ?? '') === 'Female')>Female</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Civil Status *</label>
-                                            <select name="members[{{ $index }}][civil_status]"
-                                                    class="form-select"
-                                                    required>
-                                                <option value="">Select civil status</option>
-                                                @foreach(['Single', 'Married', 'Widowed', 'Separated', 'Annulled'] as $status)
-                                                    <option value="{{ $status }}"
-                                                        @selected(($member['civil_status'] ?? '') === $status)>
-                                                        {{ $status }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Relationship to Head *</label>
-                                            <input type="text"
-                                                   name="members[{{ $index }}][relationship]"
-                                                   class="form-control"
-                                                   value="{{ $member['relationship'] ?? '' }}"
-                                                   maxlength="100"
-                                                   placeholder="e.g. Spouse, Son, Daughter"
-                                                   required>
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Contact Number</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">+63</span>
-                                                <input type="tel"
-                                                       name="members[{{ $index }}][contact_number]"
-                                                       class="form-control mobile-number"
-                                                       value="{{ $member['contact_number'] ?? '' }}"
-                                                       inputmode="numeric"
-                                                       maxlength="10"
-                                                       pattern="9[0-9]{9}"
-                                                       placeholder="9XXXXXXXXX">
-                                            </div>
-                                            <small class="text-muted">Optional. 10 digits starting with 9.</small>
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Email Address</label>
-                                            <input type="email"
-                                                   name="members[{{ $index }}][email]"
-                                                   class="form-control"
-                                                   value="{{ $member['email'] ?? '' }}"
-                                                   maxlength="255">
-                                        </div>
-
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label fw-semibold">Residency Type *</label>
-                                            <select name="members[{{ $index }}][residency_type]"
-                                                    class="form-select residency-type"
-                                                    required>
-                                                <option value="">Select residency</option>
-                                                <option value="Permanent"
-                                                    @selected(($member['residency_type'] ?? '') === 'Permanent')>
-                                                    Permanent
-                                                </option>
-                                                <option value="Temporary"
-                                                    @selected(($member['residency_type'] ?? '') === 'Temporary')>
-                                                    Temporary
-                                                </option>
-                                            </select>
-                                        </div>
-
-                                        <div class="col-12 col-md-4 residency-year-wrapper">
-                                            <label class="form-label fw-semibold">
-                                                Residency Start Year
-                                                <span class="text-danger residency-year-required" hidden>*</span>
-                                            </label>
-                                            <input type="number"
-                                                   name="members[{{ $index }}][residency_start_year]"
-                                                   class="form-control residency-year"
-                                                   value="{{ $member['residency_start_year'] ?? '' }}"
-                                                   min="1900"
-                                                   max="{{ now()->year }}"
-                                                   step="1">
-                                            <small class="text-muted">Required for Temporary residents.</small>
-                                        </div>
-
-                                        <div class="col-12 col-md-8">
-                                            <label class="form-label fw-semibold">Occupation</label>
-                                            <input type="text"
-                                                   name="members[{{ $index }}][occupation]"
-                                                   class="form-control"
-                                                   value="{{ $member['occupation'] ?? '' }}"
-                                                   maxlength="150">
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-
-                        <div id="noMembersMessage"
-                             class="text-center text-muted border rounded-3 p-4"
-                             @if(count($oldMembers)) hidden @endif>
-                            <i class="bi bi-people fs-2 d-block mb-2"></i>
-                            No additional household members added.
-                        </div>
-                    </div>
-                </div>
-
-                {{-- SUBMISSION ACTIONS --}}
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   id="submissionConfirmation"
-                                   required>
-                            <label class="form-check-label small" for="submissionConfirmation">
-                                I confirm that the information entered is based on the
-                                household data collected and is ready for verification.
-                            </label>
-                        </div>
-
-                        <div class="d-flex flex-column flex-sm-row gap-2">
-                            <button type="submit"
-                                    id="submitHouseholdButton"
-                                    class="btn btn-success flex-fill">
-                                <i class="bi bi-send me-1"></i>
-                                Submit for Verification
-                            </button>
-
-                            <button type="button"
-                                    id="clearFormButton"
-                                    class="btn btn-outline-danger">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i>
-                                Clear Form
-                            </button>
-                        </div>
-
-                        <small class="text-muted d-block mt-3">
-                            Submitting this form does not automatically create official
-                            resident or household records. The submission will first be
-                            reviewed by the authorized Barangay officials.
-                        </small>
-                    </div>
-                </div>
-
-            </form>
-        </div>
-    </div>
+            <p class="fc-help-text fc-submit-note">
+                Submitting this form does not automatically create official resident or
+                household records. The submission will first be reviewed by the authorized
+                Barangay officials.
+            </p>
+        </section>
+    </form>
 </div>
 
 {{-- TEMPLATE FOR DYNAMIC HOUSEHOLD MEMBERS --}}
 <template id="memberTemplate">
-    <div class="member-card border rounded-3 p-3 mb-3"
-         data-member-index="__INDEX__">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0 member-heading">Household Member</h6>
-            <button type="button"
-                    class="btn btn-outline-danger btn-sm remove-member">
-                <i class="bi bi-trash"></i> Remove
+    <div class="fc-member-card" data-member-index="__INDEX__">
+        <div class="fc-member-heading">
+            <h3 class="fc-member-title">Household Member</h3>
+            <button type="button" class="fc-button fc-button-danger fc-button-small remove-member">
+                Remove
             </button>
         </div>
 
-        <div class="row g-3">
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">First Name *</label>
-                <input type="text" name="members[__INDEX__][first_name]"
-                       class="form-control" maxlength="100" required>
+        <div class="fc-form-grid">
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">First Name <span class="fc-required">*</span></label>
+                <input type="text" name="members[__INDEX__][first_name]" class="fc-input" maxlength="100" required>
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Middle Name</label>
-                <input type="text" name="members[__INDEX__][middle_name]"
-                       class="form-control" maxlength="100">
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Middle Name</label>
+                <input type="text" name="members[__INDEX__][middle_name]" class="fc-input" maxlength="100">
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Last Name *</label>
-                <input type="text" name="members[__INDEX__][last_name]"
-                       class="form-control" maxlength="100" required>
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Last Name <span class="fc-required">*</span></label>
+                <input type="text" name="members[__INDEX__][last_name]" class="fc-input" maxlength="100" required>
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Suffix</label>
-                <input type="text" name="members[__INDEX__][suffix]"
-                       class="form-control" maxlength="30">
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Suffix</label>
+                <input type="text" name="members[__INDEX__][suffix]" class="fc-input" maxlength="30">
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Birth Date *</label>
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Birth Date <span class="fc-required">*</span></label>
                 <input type="date" name="members[__INDEX__][birth_date]"
-                       class="form-control" max="{{ now()->toDateString() }}" required>
+                       class="fc-input" max="{{ now()->toDateString() }}" required>
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Sex *</label>
-                <select name="members[__INDEX__][sex]" class="form-select" required>
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Sex <span class="fc-required">*</span></label>
+                <select name="members[__INDEX__][sex]" class="fc-select" required>
                     <option value="">Select sex</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                 </select>
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Civil Status *</label>
-                <select name="members[__INDEX__][civil_status]" class="form-select" required>
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Civil Status <span class="fc-required">*</span></label>
+                <select name="members[__INDEX__][civil_status]" class="fc-select" required>
                     <option value="">Select civil status</option>
                     @foreach(['Single', 'Married', 'Widowed', 'Separated', 'Annulled'] as $status)
                         <option value="{{ $status }}">{{ $status }}</option>
                     @endforeach
                 </select>
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Relationship to Head *</label>
-                <input type="text"
-                       name="members[__INDEX__][relationship]"
-                       class="form-control"
-                       maxlength="100"
-                       placeholder="e.g. Spouse, Son, Daughter"
-                       required>
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Relationship to Head <span class="fc-required">*</span></label>
+                <input type="text" name="members[__INDEX__][relationship]"
+                       class="fc-input" maxlength="100"
+                       placeholder="e.g. Spouse, Son, Daughter" required>
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Contact Number</label>
-                <div class="input-group">
-                    <span class="input-group-text">+63</span>
-                    <input type="tel"
-                           name="members[__INDEX__][contact_number]"
-                           class="form-control mobile-number"
-                           inputmode="numeric"
-                           maxlength="10"
-                           pattern="9[0-9]{9}"
-                           placeholder="9XXXXXXXXX">
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Contact Number</label>
+                <div class="fc-phone-group">
+                    <span>+63</span>
+                    <input type="tel" name="members[__INDEX__][contact_number]"
+                           class="fc-input mobile-number" inputmode="numeric"
+                           maxlength="10" pattern="9[0-9]{9}" placeholder="9XXXXXXXXX">
                 </div>
-                <small class="text-muted">Optional. 10 digits starting with 9.</small>
+                <small class="fc-hint">Optional. 10 digits starting with 9.</small>
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Email Address</label>
-                <input type="email"
-                       name="members[__INDEX__][email]"
-                       class="form-control"
-                       maxlength="255">
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Email Address</label>
+                <input type="email" name="members[__INDEX__][email]" class="fc-input" maxlength="255">
             </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Residency Type *</label>
+            <div class="fc-form-group fc-span-4">
+                <label class="fc-label">Residency Type <span class="fc-required">*</span></label>
                 <select name="members[__INDEX__][residency_type]"
-                        class="form-select residency-type"
-                        required>
+                        class="fc-select residency-type" required>
                     <option value="">Select residency</option>
                     <option value="Permanent">Permanent</option>
                     <option value="Temporary">Temporary</option>
                 </select>
             </div>
-
-            <div class="col-12 col-md-4 residency-year-wrapper">
-                <label class="form-label fw-semibold">
+            <div class="fc-form-group fc-span-4 residency-year-wrapper">
+                <label class="fc-label">
                     Residency Start Year
-                    <span class="text-danger residency-year-required" hidden>*</span>
+                    <span class="fc-required residency-year-required" hidden>*</span>
                 </label>
-                <input type="number"
-                       name="members[__INDEX__][residency_start_year]"
-                       class="form-control residency-year"
-                       min="1900"
-                       max="{{ now()->year }}"
-                       step="1">
-                <small class="text-muted">Required for Temporary residents.</small>
+                <input type="number" name="members[__INDEX__][residency_start_year]"
+                       class="fc-input residency-year"
+                       min="1900" max="{{ now()->year }}" step="1">
+                <small class="fc-hint">Required for Temporary residents.</small>
             </div>
-
-            <div class="col-12 col-md-8">
-                <label class="form-label fw-semibold">Occupation</label>
-                <input type="text"
-                       name="members[__INDEX__][occupation]"
-                       class="form-control"
-                       maxlength="150">
+            <div class="fc-form-group fc-span-8">
+                <label class="fc-label">Occupation</label>
+                <input type="text" name="members[__INDEX__][occupation]"
+                       class="fc-input" maxlength="150">
             </div>
         </div>
     </div>
 </template>
+@endsection
 
+@push('styles')
 <style>
-    .field-collection-page .card {
-        border-radius: 12px;
+    .fc-household-page {
+        width: 100%;
+        max-width: 100%;
+        color: var(--fc-text, #26352e);
     }
 
-    .field-collection-page .card-header {
-        border-bottom: 1px solid #edf0f2;
-        border-radius: 12px 12px 0 0;
+    .fc-household-page *,
+    .fc-household-page *::before,
+    .fc-household-page *::after {
+        box-sizing: border-box;
     }
 
-    .field-collection-page .form-label {
-        font-size: .9rem;
+    .fc-page-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 16px;
     }
 
-    .field-collection-page .form-control,
-    .field-collection-page .form-select,
-    .field-collection-page .input-group-text {
-        min-height: 43px;
+    .fc-info-text {
+        margin: 4px 0 0;
+        line-height: 1.6;
     }
 
-    .field-collection-page textarea.form-control {
-        min-height: 75px;
+    .fc-form-card {
+        margin-bottom: 18px;
     }
 
-    .field-collection-page .member-card {
-        background: #fbfcfd;
+    .fc-section-heading {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        min-width: 0;
     }
 
-    @media (max-width: 575.98px) {
-        .field-collection-page .btn {
-            min-height: 42px;
+    .fc-section-heading-between {
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+
+    .fc-section-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        border-radius: 11px;
+        background: var(--fc-green-light, #e8f4ed);
+        color: var(--fc-green-dark, #185b40);
+        font-size: 22px;
+        font-weight: 700;
+    }
+
+    .fc-section-heading .fc-card-title {
+        margin: 0 0 4px;
+    }
+
+    .fc-form-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 0 16px;
+    }
+
+    .fc-span-4 { grid-column: span 4; }
+    .fc-span-6 { grid-column: span 6; }
+    .fc-span-8 { grid-column: span 8; }
+    .fc-span-12 { grid-column: span 12; }
+
+    .fc-household-page .fc-form-group {
+        min-width: 0;
+        margin-bottom: 17px;
+    }
+
+    .fc-household-page .fc-label {
+        display: block;
+        margin-bottom: 7px;
+        color: #34483d;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .fc-household-page .fc-input,
+    .fc-household-page .fc-select,
+    .fc-household-page .fc-textarea {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: 10px 12px;
+        border: 1px solid var(--fc-border, #e5e9e6);
+        border-radius: 9px;
+        outline: none;
+        background: #fff;
+        color: var(--fc-text, #26352e);
+        font: inherit;
+        font-size: 14px;
+        transition: border-color .2s, box-shadow .2s;
+    }
+
+    .fc-household-page .fc-textarea {
+        min-height: 88px;
+        resize: vertical;
+    }
+
+    .fc-household-page .fc-input:focus,
+    .fc-household-page .fc-select:focus,
+    .fc-household-page .fc-textarea:focus {
+        border-color: var(--fc-green, #237a57);
+        box-shadow: 0 0 0 3px rgba(35, 122, 87, .12);
+    }
+
+    .fc-household-page .fc-input-invalid {
+        border-color: #b42335;
+    }
+
+    .fc-household-page .fc-required {
+        color: #b42335;
+    }
+
+    .fc-household-page .fc-hint,
+    .fc-household-page .fc-help-text {
+        display: block;
+        margin-top: 6px;
+        color: var(--fc-muted, #718078);
+        font-size: 11px;
+        line-height: 1.55;
+    }
+
+    .fc-household-page .fc-help-text {
+        margin: 0 0 15px;
+        font-size: 12px;
+    }
+
+    .fc-household-page .fc-help-bottom {
+        margin: 13px 0 0;
+    }
+
+    .fc-phone-group {
+        display: flex;
+        width: 100%;
+    }
+
+    .fc-phone-group > span {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 12px;
+        border: 1px solid var(--fc-border, #e5e9e6);
+        border-right: 0;
+        border-radius: 9px 0 0 9px;
+        background: #f5f8f6;
+        color: #53645a;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .fc-phone-group .fc-input {
+        border-radius: 0 9px 9px 0;
+    }
+
+    .fc-action-row,
+    .fc-submit-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-bottom: 14px;
+    }
+
+    .fc-household-page .fc-button {
+        font-family: inherit;
+    }
+
+    .fc-gps-status {
+        margin: 0 0 14px;
+    }
+
+    .fc-gps-details {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--fc-border, #e5e9e6);
+        border-radius: 10px;
+        background: #fafcfb;
+    }
+
+    .fc-gps-details > div {
+        min-width: 0;
+    }
+
+    .fc-gps-details strong {
+        display: block;
+        margin-top: 3px;
+        overflow-wrap: anywhere;
+        font-size: 13px;
+    }
+
+    .fc-detail-label {
+        display: block;
+        color: var(--fc-muted, #718078);
+        font-size: 11px;
+    }
+
+    .fc-member-card {
+        margin-top: 15px;
+        padding: 17px;
+        border: 1px solid var(--fc-border, #e5e9e6);
+        border-radius: 11px;
+        background: #fafcfb;
+    }
+
+    .fc-member-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 15px;
+    }
+
+    .fc-member-title {
+        margin: 0;
+        color: var(--fc-green-dark, #185b40);
+        font-size: 14px;
+        font-weight: 800;
+    }
+
+    .fc-empty-members {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 28px 15px;
+        border: 1px dashed #cbd6ce;
+        border-radius: 10px;
+        color: var(--fc-muted, #718078);
+        text-align: center;
+    }
+
+    .fc-empty-members > span {
+        color: var(--fc-green, #237a57);
+        font-size: 27px;
+    }
+
+    .fc-empty-members strong {
+        color: var(--fc-text, #26352e);
+        font-size: 13px;
+    }
+
+    .fc-empty-members small {
+        font-size: 11px;
+    }
+
+    .fc-button-small {
+        min-height: 34px;
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    .fc-submit-card {
+        margin-bottom: 22px;
+    }
+
+    .fc-confirmation {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 18px;
+        color: var(--fc-text, #26352e);
+        font-size: 13px;
+        line-height: 1.6;
+        cursor: pointer;
+    }
+
+    .fc-confirmation input {
+        flex: 0 0 17px;
+        width: 17px;
+        height: 17px;
+        margin-top: 2px;
+        accent-color: var(--fc-green, #237a57);
+    }
+
+    .fc-submit-actions {
+        margin-bottom: 0;
+    }
+
+    .fc-submit-button {
+        flex: 1 1 220px;
+    }
+
+    .fc-submit-note {
+        margin: 13px 0 0;
+    }
+
+    @media (max-width: 767px) {
+        .fc-span-4,
+        .fc-span-6,
+        .fc-span-8 {
+            grid-column: span 6;
         }
 
-        .field-collection-page .card-body {
-            padding: 1rem;
+        .fc-household-page .fc-card {
+            padding: 17px;
+        }
+    }
+
+    @media (max-width: 575px) {
+        .fc-page-actions {
+            justify-content: stretch;
+        }
+
+        .fc-page-actions .fc-button {
+            width: 100%;
+        }
+
+        .fc-span-4,
+        .fc-span-6,
+        .fc-span-8,
+        .fc-span-12 {
+            grid-column: span 12;
+        }
+
+        .fc-section-heading-between {
+            align-items: flex-start;
+        }
+
+        .fc-section-heading-between > .fc-button {
+            width: 100%;
+        }
+
+        .fc-gps-details {
+            grid-template-columns: 1fr;
+        }
+
+        .fc-action-row,
+        .fc-submit-actions {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .fc-action-row .fc-button,
+        .fc-submit-actions .fc-button {
+            width: 100%;
+        }
+
+        .fc-member-card {
+            padding: 13px;
         }
     }
 </style>
+@endpush
 
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('householdCollectionForm');
+
+    if (!form) {
+        return;
+    }
+
     const membersContainer = document.getElementById('membersContainer');
     const memberTemplate = document.getElementById('memberTemplate');
     const addMemberButton = document.getElementById('addMemberButton');
@@ -804,10 +930,11 @@ document.addEventListener('DOMContentLoaded', function () {
     ) + 1;
 
     function updateMemberDisplay() {
-        const cards = membersContainer.querySelectorAll('.member-card');
+        const cards = membersContainer.querySelectorAll('.fc-member-card');
 
         cards.forEach((card, index) => {
-            const heading = card.querySelector('.member-heading');
+            const heading = card.querySelector('.fc-member-title');
+
             if (heading) {
                 heading.textContent = 'Household Member ' + (index + 1);
             }
@@ -817,10 +944,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateResidencyRequirement(select) {
-        const card = select.closest('.card-body') || select.closest('.member-card');
-        const wrapper = select.closest('.row')?.querySelector(
-            '.residency-year-wrapper'
-        );
+        const wrapper = select.closest('.fc-form-group')
+            ?.parentElement
+            ?.querySelector('.residency-year-wrapper');
 
         if (!wrapper) {
             return;
@@ -854,6 +980,7 @@ document.addEventListener('DOMContentLoaded', function () {
         nextMemberIndex++;
 
         const newCard = membersContainer.lastElementChild;
+
         applyResidencyRules(newCard);
         updateMemberDisplay();
 
@@ -872,7 +999,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const card = removeButton.closest('.member-card');
+        const card = removeButton.closest('.fc-member-card');
 
         if (card) {
             card.remove();
@@ -887,9 +1014,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     /*
-     * Philippine mobile number input:
-     * exactly 10 digits beginning with 9.
-     * The +63 prefix is displayed separately.
+     * Philippine mobile number:
+     * 10 digits beginning with 9. The +63 prefix is separate.
      */
     form.addEventListener('input', function (event) {
         if (!event.target.matches('.mobile-number')) {
@@ -910,8 +1036,22 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function showGpsStatus(message, type) {
-        gpsStatus.className = 'alert alert-' + type + ' small mb-0';
+        const statusClasses = {
+            success: 'fc-alert-success',
+            danger: 'fc-alert-error',
+            info: 'fc-alert-info',
+            secondary: 'fc-alert-neutral'
+        };
+
+        gpsStatus.className = 'fc-alert fc-gps-status ' +
+            (statusClasses[type] || 'fc-alert-neutral');
+
         gpsStatus.textContent = message;
+    }
+
+    function restoreGpsButton() {
+        captureGpsButton.disabled = false;
+        captureGpsButton.textContent = '⌖ Capture Household GPS';
     }
 
     function clearGps() {
@@ -926,6 +1066,7 @@ document.addEventListener('DOMContentLoaded', function () {
         capturedAtDisplay.textContent = 'Not captured';
 
         showGpsStatus('GPS location has not been captured.', 'secondary');
+        restoreGpsButton();
     }
 
     function captureGps() {
@@ -937,11 +1078,19 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        if (!window.isSecureContext) {
+            showGpsStatus(
+                'GPS access requires a secure HTTPS connection or localhost. Open this page through the deployed HTTPS address or localhost.',
+                'danger'
+            );
+            return;
+        }
+
         captureGpsButton.disabled = true;
         captureGpsButton.textContent = 'Capturing GPS...';
 
         showGpsStatus(
-            'Requesting your phone location. Please wait...',
+            'Requesting your device location. Please wait...',
             'info'
         );
 
@@ -966,9 +1115,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'success'
                 );
 
-                captureGpsButton.disabled = false;
-                captureGpsButton.innerHTML =
-                    '<i class="bi bi-crosshair me-1"></i> Capture Household GPS';
+                restoreGpsButton();
             },
             function (error) {
                 let message = 'Unable to capture GPS location.';
@@ -982,10 +1129,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 showGpsStatus(message, 'danger');
-
-                captureGpsButton.disabled = false;
-                captureGpsButton.innerHTML =
-                    '<i class="bi bi-crosshair me-1"></i> Capture Household GPS';
+                restoreGpsButton();
             },
             {
                 enableHighAccuracy: true,
@@ -1043,13 +1187,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const submitButton = document.getElementById('submitHouseholdButton');
+
         submitButton.disabled = true;
-        submitButton.innerHTML =
-            '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+        submitButton.textContent = 'Submitting...';
     });
 
     /*
-     * Restore GPS display if validation returns the user to this form.
+     * Restore previously captured GPS values after validation errors.
      */
     if (gpsLatitude.value && gpsLongitude.value) {
         latitudeDisplay.textContent = gpsLatitude.value;
@@ -1077,4 +1221,4 @@ document.addEventListener('DOMContentLoaded', function () {
     applyResidencyRules(form);
 });
 </script>
-@endsection
+@endpush

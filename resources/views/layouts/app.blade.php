@@ -222,11 +222,12 @@
 
     <style>
         /* =========================================================
-           WATERMELON THEME — rind green sidebar, flesh-pink top bar,
-           soft blush canvas. System fonts + inline SVG only.
+           WATERMELON THEME — flesh-pink top bar, soft blush canvas.
+           The sidebar uses a calm deep-emerald palette (see SIDEBAR section).
+           System fonts + inline SVG only.
            ========================================================= */
         :root {
-            --sidebar-w: 252px;
+            --sidebar-w: 260px;
             --primary: #e5505c; --accent-soft: rgba(229,80,92,.13); --on-accent: #fff;
             --green: #4fae4e; --green-d: #3b8a40; --flesh: #ef6b78; --pale: #e4f2d6;
             --page-bg: #f4d9df; --text-dark: #3a2a2e; --muted-text: #8a6f75;
@@ -235,10 +236,22 @@
             --input-bg: #fff; --input-text: #3a2a2e; --table-bg: #fff8f9; --table-hover: #fae7eb;
             --shadow-color: rgba(120,40,55,.12);
             --shadow: 0 2px 4px rgba(120,40,55,.06), 0 10px 24px rgba(120,40,55,.08);
-            --sb1: #6bbb69; --sb2: #4fae4e; --sb3: #3b8a40; --tb1: #e23b49; --tb2: #f0616c;
+            --tb1: #e23b49; --tb2: #f0616c;
             --font: ui-rounded, 'Nunito', 'Quicksand', 'Varela Round', 'Trebuchet MS', system-ui, -apple-system, 'Segoe UI', sans-serif;
             --bs-body-font-family: var(--font);
             --bs-link-color-rgb: 229,80,92; --bs-link-hover-color-rgb: 190,45,60;
+
+            /* Sidebar palette: deep forest emerald, light text, solid mint active block */
+            --sb-bg-top: #12301f;
+            --sb-bg-bottom: #0c2217;
+            --sb-border: rgba(255,255,255,.10);
+            --sb-label: #b9e2c9;          /* section headers  (~10:1 on the sidebar) */
+            --sb-text: #dcebe2;           /* inactive links   (~12:1) */
+            --sb-icon: #a9cbb7;           /* inactive icons   (~8:1) */
+            --sb-hover-bg: rgba(255,255,255,.08);
+            --sb-active-bg: #6ee7a0;      /* solid mint fill */
+            --sb-active-text: #052e1a;    /* near-black green on mint (~10:1) */
+            --sb-muted: #a3c2b0;
         }
         html[data-theme="dark"] {
             --primary: #ff7f8b; --accent-soft: rgba(255,127,139,.16); --on-accent: #2b0c12;
@@ -248,8 +261,12 @@
             --border-color: rgba(255,255,255,.09); --border-soft: rgba(255,255,255,.15);
             --input-bg: #1c2d23; --input-text: #f6eff1; --table-bg: #17251d; --table-hover: #1f3126;
             --shadow-color: rgba(0,0,0,.4); --shadow: 0 2px 4px rgba(0,0,0,.25), 0 8px 20px rgba(0,0,0,.22);
-            --sb1: #2f6b3a; --sb2: #255a30; --sb3: #1b4725; --tb1: #8c2f3d; --tb2: #b04757;
+            --tb1: #8c2f3d; --tb2: #b04757;
             --bs-link-color-rgb: 255,150,160; --bs-link-hover-color-rgb: 255,190,196;
+
+            --sb-bg-top: #0a1c12;
+            --sb-bg-bottom: #06130c;
+            --sb-border: rgba(255,255,255,.09);
         }
 
         * { box-sizing: border-box; }
@@ -260,56 +277,71 @@
         :focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
         .i { width: 1.1em; height: 1.1em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-        /* ===================== SIDEBAR (never scrolls; nav buttons stretch to fill all free space) ===================== */
-        .sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-w); z-index: 1040; display: flex; flex-direction: column; padding: 14px 12px 10px; overflow: hidden; color: #fff;
-            background: linear-gradient(180deg, var(--sb1), var(--sb2) 55%, var(--sb3)); box-shadow: 6px 0 26px rgba(60,120,60,.2); transition: transform .25s ease; }
-        .sidebar::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
-            background: radial-gradient(ellipse 2.5px 4.5px at 88% 38%, rgba(0,0,0,.18) 98%, transparent), radial-gradient(ellipse 2.5px 4.5px at 12% 62%, rgba(0,0,0,.14) 98%, transparent), radial-gradient(ellipse 2.5px 4.5px at 80% 78%, rgba(0,0,0,.16) 98%, transparent); }
-        .sidebar > * { position: relative; z-index: 1; }
-        .sidebar-brand { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 4px 10px; margin-bottom: 2px; border-bottom: 1px solid rgba(255,255,255,.26); }
-        .seal { flex: 0 0 68px; width: 68px; height: 68px; padding: 3px; border-radius: 50%; background: conic-gradient(from 210deg, #7fd07d, var(--pale), #ff8e9a, #e5505c, #7fd07d); box-shadow: 0 6px 16px rgba(0,0,0,.22); }
+        /* =========================================================
+           SIDEBAR (redesigned)
+           - Deep emerald background, no texture, no bright rind
+           - Section headers: bold, uppercase, high contrast
+           - Inactive links: light muted text + icons
+           - Active link: solid mint block with dark text
+           - Same 40px row height, 12px padding and 12px icon gap everywhere
+           ========================================================= */
+        .sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-w); z-index: 1040; display: flex; flex-direction: column; padding: 18px 14px 14px; overflow: hidden; color: var(--sb-text);
+            background: linear-gradient(180deg, var(--sb-bg-top), var(--sb-bg-bottom));
+            border-right: 1px solid var(--sb-border);
+            box-shadow: 4px 0 24px rgba(0,0,0,.18); transition: transform .25s ease; }
+
+        /* Brand / header */
+        .sidebar-brand { flex: none; display: flex; align-items: center; gap: 12px; padding: 0 6px 16px; margin-bottom: 8px; border-bottom: 1px solid var(--sb-border); }
+        .seal { flex: 0 0 56px; width: 56px; height: 56px; padding: 2px; border-radius: 50%; background: rgba(255,255,255,.14); box-shadow: 0 0 0 1px rgba(255,255,255,.22); }
         .seal-in { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 50%; background: #fff; }
         .seal-in svg, .seal-in img { position: absolute; inset: 0; width: 100%; height: 100%; }
         .seal-in img { object-fit: cover; transform: translateZ(0); backface-visibility: hidden; }
-        .brand-name { font: 800 15px/1.15 var(--font); letter-spacing: -.01em; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.15); }
+        .brand-name { font: 800 16px/1.2 var(--font); letter-spacing: -.01em; color: #fff; }
         .brand-name span { display: block; }
-        .brand-system { margin-top: 4px; font-size: 11px; font-weight: 600; line-height: 1.25; color: rgba(255,255,255,.88); }
+        .brand-system { margin-top: 5px; font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--sb-muted); }
 
-        /* The nav is a flex column. Each group grows in proportion to its number of links (--n),
-           and every link inside a group grows equally, so the buttons fill the whole free height. */
-        .sidebar-nav { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
-        .sidebar-group { display: flex; flex-direction: column; flex: var(--n, 1) 1 auto; min-height: 0; }
-        .sidebar-label { flex: none; display: block; margin: 10px 10px 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.72); }
-        .sidebar-link { flex: 1 1 auto; max-height: 58px; display: flex; align-items: center; gap: 11px; min-height: 36px; padding: 0 12px; margin-bottom: 2px; border-radius: 12px; color: #fff; font-size: 13px; font-weight: 700; line-height: 1.2; transition: background-color .15s, color .15s, transform .15s; }
-        .sidebar-link .i { width: 18px; height: 18px; color: rgba(255,255,255,.9); }
-        .sidebar-link:hover { background: rgba(255,255,255,.18); color: #fff; transform: translateX(2px); }
-        .sidebar-link.active, .sidebar-link.active:hover { background: var(--surface); color: var(--green-d); transform: none; box-shadow: 0 8px 18px rgba(0,0,0,.16); }
-        html[data-theme="dark"] .sidebar-link.active { color: #8fe29a; }
-        .sidebar-link.active .i { color: #e5505c; }
-        .sidebar-link.active::after { content: ''; margin-left: auto; border: 5px solid transparent; border-left: 7px solid #e5505c; }
-        .sidebar-foot { flex: none; display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.28); border-radius: 12px; background: rgba(255,255,255,.16); font-size: 10.5px; line-height: 1.25; color: rgba(255,255,255,.9); }
-        .sidebar-foot .i { width: 18px; height: 18px; color: #ffe08a; }
-        .sidebar-foot strong { display: block; color: #fff; font-size: 11.5px; }
+        /* Navigation (scrolls only as a safety net on very short screens) */
+        .sidebar-nav { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; padding-right: 2px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.22) transparent; }
+        .sidebar-nav::-webkit-scrollbar { width: 6px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.22); border-radius: 10px; }
+        .sidebar-group { flex: none; display: flex; flex-direction: column; gap: 2px; }
+        .sidebar-group + .sidebar-group { margin-top: 18px; }
+        .sidebar-label { display: block; margin: 0 0 6px; padding: 0 12px; font-size: 11px; font-weight: 800; letter-spacing: .12em; line-height: 1.2; text-transform: uppercase; color: var(--sb-label); }
+
+        .sidebar-link { position: relative; display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 12px; border-radius: 10px; color: var(--sb-text); font-size: 13.5px; font-weight: 600; line-height: 1.25; transition: background-color .15s, color .15s; }
+        .sidebar-link .i { width: 20px; height: 20px; color: var(--sb-icon); transition: color .15s; }
+        .sidebar-link span { min-width: 0; }
+        .sidebar-link:hover { background: var(--sb-hover-bg); color: #fff; }
+        .sidebar-link:hover .i { color: #fff; }
+
+        /* Active page: solid mint block, dark text and icon */
+        .sidebar-link.active, .sidebar-link.active:hover { background: var(--sb-active-bg); color: var(--sb-active-text); font-weight: 800; box-shadow: none; }
+        .sidebar-link.active .i, .sidebar-link.active:hover .i { color: var(--sb-active-text); }
+
+        /* Keyboard focus must be visible on the dark background */
+        .sidebar :focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+        .sidebar-link.active:focus-visible { outline-color: var(--sb-active-text); }
+
+        /* Footer / location */
+        .sidebar-foot { flex: none; display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 14px 12px 2px; border-top: 1px solid var(--sb-border); color: var(--sb-muted); font-size: 11.5px; line-height: 1.3; }
+        .sidebar-foot .i { width: 20px; height: 20px; color: var(--sb-label); }
+        .sidebar-foot strong { display: block; color: #fff; font-size: 12.5px; font-weight: 800; }
+
         .sidebar-backdrop { display: none; position: fixed; inset: 0; z-index: 1030; background: rgba(40,10,20,.5); }
         .main-content { min-height: 100vh; margin-left: var(--sidebar-w); width: calc(100% - var(--sidebar-w)); }
 
-        /* Tall screens: let the links grow a bit more and use a larger icon/text */
-        @media (min-height: 900px) {
-            .sidebar-link { font-size: 13.5px; max-height: 64px; }
-            .sidebar-link .i { width: 19px; height: 19px; }
-        }
-
-        /* Shrink automatically on short screens so everything still fits without scrolling */
+        /* Short screens: tighten spacing so everything still fits */
         @media (max-height: 820px) {
-            .seal { flex-basis: 54px; width: 54px; height: 54px; }
-            .sidebar-link { min-height: 32px; font-size: 12.5px; }
-            .sidebar-label { margin: 7px 10px 3px; }
+            .sidebar { padding-top: 14px; }
+            .sidebar-brand { padding-bottom: 12px; }
+            .seal { flex-basis: 48px; width: 48px; height: 48px; }
             .brand-system { display: none; }
+            .sidebar-group + .sidebar-group { margin-top: 12px; }
+            .sidebar-link { min-height: 36px; font-size: 13px; }
         }
         @media (max-height: 700px) {
-            .sidebar { padding-top: 10px; }
-            .sidebar-link { min-height: 28px; font-size: 12px; margin-bottom: 1px; }
-            .sidebar-link .i { width: 16px; height: 16px; }
+            .sidebar-link { min-height: 32px; font-size: 12.5px; }
+            .sidebar-link .i { width: 18px; height: 18px; }
             .sidebar-foot { display: none; }
         }
 
@@ -594,7 +626,7 @@
         /* ===================== RESPONSIVE ===================== */
         @media (max-width: 991px) {
             .sidebar { transform: translateX(-100%); }
-            body.sidebar-open .sidebar { transform: none; box-shadow: 0 0 40px rgba(40,10,20,.4); }
+            body.sidebar-open .sidebar { transform: none; box-shadow: 0 0 40px rgba(0,0,0,.45); }
             body.sidebar-open .sidebar-backdrop { display: block; }
             body.sidebar-open { overflow: hidden; }
             .main-content { margin-left: 0; width: 100%; }
@@ -624,20 +656,13 @@
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
         /* =====================================================================
-           WATERMELON THEME (matches the 3D watermelon slice image)
-           - Sidebar: bright green striped RIND, with a pale "inner rind" edge
-           - Top bar: red FLESH with glossy shine, black teardrop SEEDS,
-                      and white + green rind layers under it
-           - Search bar: default look (white field, dark text)
-           - Brand subtitle: clearly visible
+           TOP BAR DECORATION (red flesh + glossy shine + black seeds,
+           with white and green rind layers underneath).
            Keep this block near the END of this <style>.
            ===================================================================== */
         :root {
             --rind-white: #fff8f0;
             --rind-green: #3fae56;
-
-            /* Striped green rind: base green + wavy light and dark stripes */
-            --rind-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='240' viewBox='0 0 96 240'%3E%3Crect width='96' height='240' fill='%232f9e48'/%3E%3Cg fill='%2362c874'%3E%3Cpath d='M10 0h14c-3 40 4 80 0 120s3 80 0 120H10c4-40-3-80 0-120S6 40 10 0z'/%3E%3Cpath d='M58 0h14c-3 40 4 80 0 120s3 80 0 120H58c4-40-3-80 0-120S54 40 58 0z'/%3E%3C/g%3E%3Cg fill='%231f8038' opacity='.75'%3E%3Cpath d='M36 0h7c-2 40 3 80 0 120s2 80 0 120h-7c3-40-2-80 0-120S33 40 36 0z'/%3E%3Cpath d='M82 0h7c-2 40 3 80 0 120s2 80 0 120h-7c3-40-2-80 0-120S79 40 82 0z'/%3E%3C/g%3E%3C/svg%3E");
 
             /* Black teardrop seeds with a small glossy highlight (8 seeds per 520px) */
             --seed-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='66' viewBox='0 0 520 66'%3E%3Cdefs%3E%3Cg id='s'%3E%3Cpath d='M0-9C2-5 6-1 6 3a6 6 0 0 1-12 0C-6-1-2-5 0-9z' fill='%23140a0c'/%3E%3Cellipse cx='-1.9' cy='2' rx='1.2' ry='2.3' fill='%23ffffff' opacity='.42'/%3E%3C/g%3E%3C/defs%3E%3Cuse href='%23s' transform='translate(40 22) rotate(-20)'/%3E%3Cuse href='%23s' transform='translate(105 48) rotate(25)'/%3E%3Cuse href='%23s' transform='translate(170 20) rotate(10)'/%3E%3Cuse href='%23s' transform='translate(238 49) rotate(-30)'/%3E%3Cuse href='%23s' transform='translate(300 19) rotate(20)'/%3E%3Cuse href='%23s' transform='translate(362 47) rotate(-10)'/%3E%3Cuse href='%23s' transform='translate(428 22) rotate(32)'/%3E%3Cuse href='%23s' transform='translate(486 49) rotate(-25)'/%3E%3C/svg%3E");
@@ -647,34 +672,6 @@
             --rind-green: #2f7a3c;
         }
 
-        /* Sidebar: bright green striped rind + pale inner-rind edge on the right */
-        .sidebar {
-            background-color: #2f9e48;
-            background-image: linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,0) 40%, rgba(0,0,0,.08)), var(--rind-pattern);
-            background-size: auto, 96px 240px;
-            box-shadow: inset -6px 0 0 var(--rind-white), 6px 0 26px rgba(40,110,55,.25);
-        }
-        .sidebar::after { display: none; }
-        html[data-theme="dark"] .sidebar {
-            background-image: linear-gradient(180deg, rgba(0,22,8,.58), rgba(0,22,8,.68)), var(--rind-pattern);
-            background-size: auto, 96px 240px;
-        }
-        .sidebar-label { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
-        .sidebar-link { text-shadow: 0 1px 2px rgba(0,0,0,.35); background: rgba(0,60,20,.24); }
-        .sidebar-link:hover { background: rgba(255,255,255,.24); }
-        .sidebar-link.active, .sidebar-link.active:hover { text-shadow: none; background: var(--surface); }
-        .sidebar-foot { background: rgba(0,60,20,.32); }
-
-        /* Brand: "Record Management System" clearly visible, never hidden */
-        .brand-name { font-size: 16px; text-shadow: 0 1px 3px rgba(0,0,0,.45); }
-        .brand-system {
-            display: inline-block !important;
-            margin-top: 6px; padding: 3px 9px; border-radius: 8px;
-            background: rgba(0,50,18,.55); color: #fff;
-            font-size: 11.5px; font-weight: 800; letter-spacing: .02em; line-height: 1.25; text-shadow: none;
-        }
-
-        /* Top bar: red flesh + glossy shine + black seeds, with white and green rind layers underneath */
         .topbar {
             background-color: var(--tb1);
             background-image:
@@ -704,8 +701,7 @@
         .gsearch-hint { background: #f6dce1; color: #8a6f75; font-weight: 700; }
         html[data-theme="dark"] .gsearch-field input { background: #fff; color: #3a2a2e; }
 
-        /* Header buttons: NOT light/white-filled any more, so the seeds stay visible behind them.
-           They are outlined instead of filled. */
+        /* Header buttons: outlined instead of filled, so the seeds stay visible behind them. */
         .topbar-toggle,
         .user-profile-trigger {
             background: transparent;
@@ -736,8 +732,8 @@
 
         /* =====================================================================
            UI/UX COLOR SYSTEM (semantic) — keep at the very END of this <style>
-           Brand decoration  : watermelon red header + green rind sidebar (decor only)
-           Primary / action  : GREEN   (buttons, links, focus, active menu, selected tabs)
+           Brand decoration  : watermelon red header (decor only)
+           Primary / action  : GREEN   (buttons, links, focus, selected tabs)
            Success           : green   (saved, active account, all caught up)
            Info / neutral    : BLUE    (today, normal reminders, quick actions)
            Warning           : AMBER   (important, tomorrow-level attention, offline)
@@ -757,11 +753,6 @@
             --info: #6cb2ff; --info-soft: rgba(108,178,255,.15);
             --bs-link-color-rgb: 143,226,154; --bs-link-hover-color-rgb: 190,242,198;
         }
-
-        /* Primary = green: active menu item */
-        .sidebar-link.active .i { color: var(--primary); }
-        .sidebar-link.active::after { border-left-color: var(--primary); }
-        .sidebar-link.active, .sidebar-link.active:hover { color: var(--primary-d); }
 
         /* Quick actions in search = blue (differs from green "pages") */
         .gs-item.is-action .gs-ico { background: var(--info-soft); color: var(--info); }
@@ -894,8 +885,7 @@
     <nav class="sidebar-nav" aria-label="Main navigation">
         @foreach ($navGroups as $group)
             @if ($group['show'] && count($group['items']))
-                {{-- --n = number of links, so taller groups get proportionally more of the free space --}}
-                <div class="sidebar-group" style="--n: {{ count($group['items']) }}">
+                <div class="sidebar-group">
                     <small class="sidebar-label">{{ $group['label'] }}</small>
 
                     @foreach ($group['items'] as $item)

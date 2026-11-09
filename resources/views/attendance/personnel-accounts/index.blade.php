@@ -1,15 +1,269 @@
-
 @extends('layouts.app')
 
 @section('title', 'Personnel Account Management')
 
 @section('content')
-<div class="container-fluid py-4">
+<style>
+    :root,
+    [data-bs-theme="light"] {
+        --ep-ok-fg: #0b6b3a;
+        --ep-ok-bg: rgba(25, 135, 84, .13);
+        --ep-ok-bd: rgba(25, 135, 84, .40);
+
+        --ep-warn-fg: #7a4f00;
+        --ep-warn-bg: rgba(255, 193, 7, .22);
+        --ep-warn-bd: rgba(176, 126, 0, .45);
+
+        --ep-bad-fg: #a4202e;
+        --ep-bad-bg: rgba(164, 32, 46, .09);
+        --ep-bad-bd: rgba(164, 32, 46, .35);
+
+        --ep-mute-fg: #56615a;
+        --ep-mute-bg: rgba(60, 80, 68, .08);
+        --ep-mute-bd: rgba(60, 80, 68, .30);
+
+        --ep-head-fg: #3f4a44;
+        --ep-note-bg: rgba(25, 135, 84, .07);
+        --ep-field-bg: #ffffff;
+        --ep-field-bd: #aebab3;
+    }
+
+    [data-bs-theme="dark"] {
+        --ep-ok-fg: #7ee0a3;
+        --ep-ok-bg: rgba(126, 224, 163, .14);
+        --ep-ok-bd: rgba(126, 224, 163, .42);
+
+        --ep-warn-fg: #ffd666;
+        --ep-warn-bg: rgba(255, 214, 102, .14);
+        --ep-warn-bd: rgba(255, 214, 102, .42);
+
+        --ep-bad-fg: #ff9a9a;
+        --ep-bad-bg: rgba(255, 154, 154, .12);
+        --ep-bad-bd: rgba(255, 154, 154, .40);
+
+        --ep-mute-fg: #a9b9b0;
+        --ep-mute-bg: rgba(255, 255, 255, .07);
+        --ep-mute-bd: rgba(255, 255, 255, .24);
+
+        --ep-head-fg: #c6d4cc;
+        --ep-note-bg: rgba(126, 224, 163, .07);
+        --ep-field-bg: rgba(255, 255, 255, .05);
+        --ep-field-bd: rgba(255, 255, 255, .22);
+    }
+
+    /* ---------- Text helpers ---------- */
+    .ep-page .text-secondary,
+    .ep-page .text-muted,
+    .ep-page .form-text {
+        color: var(--ep-mute-fg) !important;
+    }
+
+    .ep-page .ep-text-ok   { color: var(--ep-ok-fg) !important; }
+    .ep-page .ep-text-warn { color: var(--ep-warn-fg) !important; }
+    .ep-page .ep-text-bad  { color: var(--ep-bad-fg) !important; }
+    .ep-page .ep-text-mute { color: var(--ep-mute-fg) !important; }
+
+    .ep-page .text-primary { color: var(--ep-ok-fg) !important; }
+    .ep-page .text-danger  { color: var(--ep-bad-fg) !important; }
+
+    /* ---------- Badges / status pills ---------- */
+    .ep-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: .32rem .75rem;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        font-size: .75rem;
+        font-weight: 700;
+        line-height: 1.1;
+        white-space: nowrap;
+    }
+
+    .ep-badge-ok   { color: var(--ep-ok-fg);   background: var(--ep-ok-bg);   border-color: var(--ep-ok-bd); }
+    .ep-badge-warn { color: var(--ep-warn-fg); background: var(--ep-warn-bg); border-color: var(--ep-warn-bd); }
+    .ep-badge-bad  { color: var(--ep-bad-fg);  background: var(--ep-bad-bg);  border-color: var(--ep-bad-bd); }
+    .ep-badge-mute { color: var(--ep-mute-fg); background: var(--ep-mute-bg); border-color: var(--ep-mute-bd); }
+
+    .ep-chip {
+        display: inline-block;
+        padding: .4rem .9rem;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        background: var(--bs-tertiary-bg);
+        color: var(--bs-body-color);
+        font-size: .8rem;
+        font-weight: 700;
+        letter-spacing: .02em;
+    }
+
+    /* ---------- Panels / notes ---------- */
+    .ep-page .card {
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color) !important;
+        color: var(--bs-body-color);
+    }
+
+    .ep-page .card-header {
+        background: transparent;
+        border-bottom: 1px solid var(--bs-border-color);
+        color: var(--bs-body-color);
+    }
+
+    .ep-note {
+        padding: 14px 16px;
+        border: 1px solid var(--ep-ok-bd);
+        border-left: 4px solid var(--ep-ok-fg);
+        border-radius: 10px;
+        background: var(--ep-note-bg);
+        color: var(--bs-body-color);
+    }
+
+    .ep-note .ep-note-icon { color: var(--ep-ok-fg); }
+
+    .ep-subpanel {
+        background: var(--bs-tertiary-bg);
+        border-top: 1px solid var(--bs-border-color);
+        border-bottom: 1px solid var(--bs-border-color);
+        color: var(--bs-body-color);
+    }
+
+    .ep-avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 1px solid var(--ep-ok-bd);
+        background: var(--ep-ok-bg);
+        color: var(--ep-ok-fg);
+    }
+
+    .ep-code {
+        display: inline-block;
+        padding: .5rem 1rem;
+        border: 1px solid var(--ep-ok-bd);
+        border-radius: 10px;
+        background: var(--bs-tertiary-bg);
+        color: var(--ep-ok-fg);
+    }
+
+    /* ---------- Tables ---------- */
+    .ep-page .table {
+        --bs-table-bg: transparent;
+        --bs-table-color: var(--bs-body-color);
+        --bs-table-border-color: var(--bs-border-color);
+        --bs-table-hover-bg: var(--ep-ok-bg);
+        --bs-table-hover-color: var(--bs-body-color);
+    }
+
+    .ep-page .table > thead > tr > th {
+        background: var(--bs-tertiary-bg);
+        color: var(--ep-head-fg);
+        border-bottom: 1px solid var(--bs-border-color);
+        font-weight: 700;
+    }
+
+    /* ---------- Form controls ---------- */
+    .ep-page .form-label {
+        color: var(--bs-body-color);
+        font-weight: 600;
+    }
+
+    .ep-page .form-control,
+    .ep-page .form-select {
+        background-color: var(--ep-field-bg);
+        border-color: var(--ep-field-bd);
+        color: var(--bs-body-color);
+    }
+
+    .ep-page .form-control::placeholder {
+        color: var(--ep-mute-fg);
+        opacity: .85;
+    }
+
+    .ep-page .form-control:focus,
+    .ep-page .form-select:focus {
+        background-color: var(--ep-field-bg);
+        color: var(--bs-body-color);
+        border-color: var(--ep-ok-fg);
+        box-shadow: 0 0 0 .2rem var(--ep-ok-bd);
+    }
+
+    .ep-page .form-control:disabled,
+    .ep-page .form-control[readonly] {
+        opacity: .8;
+    }
+
+    .ep-page .form-control.is-invalid { border-color: var(--ep-bad-fg); }
+
+    .ep-page .invalid-feedback { color: var(--ep-bad-fg); }
+
+    /* ---------- Buttons (colors come through Bootstrap variables) ---------- */
+    .ep-page .btn-outline-secondary {
+        --bs-btn-color: var(--ep-head-fg);
+        --bs-btn-border-color: var(--ep-field-bd);
+        --bs-btn-hover-color: var(--bs-body-bg);
+        --bs-btn-hover-bg: var(--ep-head-fg);
+        --bs-btn-hover-border-color: var(--ep-head-fg);
+    }
+
+    .ep-page .btn-outline-primary,
+    .ep-page .btn-outline-success {
+        --bs-btn-color: var(--ep-ok-fg);
+        --bs-btn-border-color: var(--ep-ok-fg);
+        --bs-btn-hover-color: #06261a;
+        --bs-btn-hover-bg: var(--ep-ok-fg);
+        --bs-btn-hover-border-color: var(--ep-ok-fg);
+        --bs-btn-active-color: #06261a;
+        --bs-btn-active-bg: var(--ep-ok-fg);
+    }
+
+    [data-bs-theme="light"] .ep-page .btn-outline-primary:hover,
+    [data-bs-theme="light"] .ep-page .btn-outline-success:hover {
+        --bs-btn-hover-color: #ffffff;
+    }
+
+    .ep-page .btn-outline-warning {
+        --bs-btn-color: var(--ep-warn-fg);
+        --bs-btn-border-color: var(--ep-warn-fg);
+        --bs-btn-hover-color: #1f1500;
+        --bs-btn-hover-bg: #ffc107;
+        --bs-btn-hover-border-color: #ffc107;
+    }
+
+    .ep-page .btn-outline-danger {
+        --bs-btn-color: var(--ep-bad-fg);
+        --bs-btn-border-color: var(--ep-bad-fg);
+        --bs-btn-hover-color: #ffffff;
+        --bs-btn-hover-bg: #b02a37;
+        --bs-btn-hover-border-color: #b02a37;
+    }
+
+    .ep-page .btn:focus-visible,
+    .ep-page a:focus-visible {
+        outline: 2px solid var(--ep-ok-fg);
+        outline-offset: 2px;
+    }
+
+    .ep-page .btn-close { opacity: .75; }
+    [data-bs-theme="dark"] .ep-page .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+
+    /* ---------- Back links ---------- */
+    .ep-back {
+        color: var(--ep-mute-fg);
+        text-decoration: none;
+        font-size: .88rem;
+    }
+
+    .ep-back:hover { color: var(--ep-ok-fg); }
+</style>
+
+<div class="container-fluid py-4 ep-page">
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
             <h2 class="fw-bold mb-1">Personnel Account Management</h2>
-            <p class="text-muted mb-0">
+            <p class="text-secondary mb-0">
                 Create and manage Field Personnel accounts for mobile Field Collection.
             </p>
         </div>
@@ -21,9 +275,9 @@
     </div>
 
     {{-- System information --}}
-    <div class="alert alert-info border-0 shadow-sm">
+    <div class="ep-note mb-4">
         <div class="d-flex align-items-start gap-2">
-            <i class="bi bi-info-circle-fill fs-5"></i>
+            <i class="bi bi-info-circle-fill fs-5 ep-note-icon"></i>
             <div>
                 <strong>Separate Personnel Accounts</strong>
                 <p class="mb-0">
@@ -40,14 +294,15 @@
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle-fill me-1"></i>
             {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
     @if (session('info'))
-        <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <div class="ep-note alert-dismissible fade show mb-3" role="alert">
+            <i class="bi bi-info-circle ep-note-icon me-1"></i>
             {{ session('info') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
@@ -64,9 +319,9 @@
 
     {{-- Generated passcode: shown only after creation or regeneration --}}
     @if (session('generated_passcode'))
-        <div class="card border-success shadow-sm mb-4">
-            <div class="card-header bg-success text-white">
-                <strong>
+        <div class="card shadow-sm mb-4" style="border-color: var(--ep-ok-fg) !important;">
+            <div class="card-header" style="background: var(--ep-ok-bg);">
+                <strong class="ep-text-ok">
                     <i class="bi bi-shield-check me-1"></i>
                     Generated Passcode
                 </strong>
@@ -78,17 +333,15 @@
                     <strong>{{ session('generated_account_name') }}</strong>
                 </p>
 
-                <p class="text-muted mb-2">
+                <p class="text-secondary mb-3">
                     Copy and securely provide this passcode to the assigned Field Personnel.
                     It will not be displayed again after leaving or refreshing this page.
                 </p>
 
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <code id="generatedPasscode"
-                          class="fs-3 fw-bold px-3 py-2 bg-light border rounded text-dark"
-                          style="letter-spacing: 5px;">
-                        {{ session('generated_passcode') }}
-                    </code>
+                          class="ep-code fs-3 fw-bold"
+                          style="letter-spacing: 5px;">{{ session('generated_passcode') }}</code>
 
                     <button type="button"
                             class="btn btn-outline-success"
@@ -98,7 +351,7 @@
                     </button>
                 </div>
 
-                <div id="copyPasscodeMessage" class="small text-success mt-2" aria-live="polite"></div>
+                <div id="copyPasscodeMessage" class="small ep-text-ok mt-2" aria-live="polite"></div>
 
                 <div class="alert alert-warning mt-3 mb-0">
                     <i class="bi bi-exclamation-triangle-fill me-1"></i>
@@ -110,9 +363,9 @@
 
     {{-- Create account --}}
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white py-3">
+        <div class="card-header py-3">
             <h5 class="fw-bold mb-0">
-                <i class="bi bi-person-plus me-2"></i>
+                <i class="bi bi-person-plus me-2 ep-text-ok"></i>
                 Register Field Personnel Account
             </h5>
         </div>
@@ -125,7 +378,7 @@
 
                     <div class="col-md-4">
                         <label for="first_name" class="form-label">
-                            First Name <span class="text-danger">*</span>
+                            First Name <span class="ep-text-bad">*</span>
                         </label>
                         <input type="text"
                                class="form-control"
@@ -148,7 +401,7 @@
 
                     <div class="col-md-4">
                         <label for="last_name" class="form-label">
-                            Last Name <span class="text-danger">*</span>
+                            Last Name <span class="ep-text-bad">*</span>
                         </label>
                         <input type="text"
                                class="form-control"
@@ -172,7 +425,7 @@
 
                     <div class="col-md-4">
                         <label for="position" class="form-label">
-                            Position <span class="text-danger">*</span>
+                            Position <span class="ep-text-bad">*</span>
                         </label>
                         <input type="text"
                                class="form-control"
@@ -186,7 +439,7 @@
 
                     <div class="col-md-4">
                         <label for="username" class="form-label">
-                            Username <span class="text-danger">*</span>
+                            Username <span class="ep-text-bad">*</span>
                         </label>
                         <input type="text"
                                class="form-control"
@@ -197,15 +450,15 @@
                                pattern="[A-Za-z0-9_-]+"
                                autocomplete="off"
                                required>
-                        <small class="text-muted">
+                        <small class="text-secondary">
                             Letters, numbers, underscores, and hyphens only.
                         </small>
                     </div>
 
                 </div>
 
-                <div class="alert alert-light border mt-3 mb-3">
-                    <i class="bi bi-key me-1"></i>
+                <div class="ep-subpanel rounded-3 border p-3 my-3">
+                    <i class="bi bi-key ep-text-ok me-1"></i>
                     The system will automatically generate a six-digit numeric passcode.
                     The passcode will be displayed once after successful creation.
                 </div>
@@ -220,13 +473,13 @@
 
     {{-- Account list --}}
     <div class="card shadow-sm">
-        <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="card-header py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h5 class="fw-bold mb-0">
-                <i class="bi bi-people me-2"></i>
+                <i class="bi bi-people me-2 ep-text-ok"></i>
                 Registered Field Personnel Accounts
             </h5>
 
-            <span class="badge bg-secondary">
+            <span class="ep-badge ep-badge-mute">
                 {{ $accounts->total() }} Account(s)
             </span>
         </div>
@@ -237,7 +490,7 @@
 
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                        <thead>
                             <tr>
                                 <th class="px-3">Personnel</th>
                                 <th>Username</th>
@@ -256,7 +509,7 @@
                                         <div class="fw-semibold">
                                             {{ $account->full_name }}
                                         </div>
-                                        <small class="text-muted">
+                                        <small class="text-secondary">
                                             Account ID: {{ $account->id }}
                                         </small>
                                     </td>
@@ -271,9 +524,13 @@
 
                                     <td>
                                         @if ($account->account_active)
-                                            <span class="badge bg-success">Active</span>
+                                            <span class="ep-badge ep-badge-ok">
+                                                <i class="bi bi-check-circle"></i> Active
+                                            </span>
                                         @else
-                                            <span class="badge bg-secondary">Inactive</span>
+                                            <span class="ep-badge ep-badge-mute">
+                                                <i class="bi bi-slash-circle"></i> Inactive
+                                            </span>
                                         @endif
                                     </td>
 
@@ -285,7 +542,7 @@
                                         @if ($account->last_login_at)
                                             {{ $account->last_login_at->format('M d, Y h:i A') }}
                                         @else
-                                            <span class="text-muted">Never</span>
+                                            <span class="text-secondary">Never</span>
                                         @endif
                                     </td>
 
@@ -297,7 +554,8 @@
                                                     class="btn btn-sm btn-outline-primary"
                                                     data-bs-toggle="collapse"
                                                     data-bs-target="#usernameForm{{ $account->id }}"
-                                                    aria-expanded="false">
+                                                    aria-expanded="false"
+                                                    aria-controls="usernameForm{{ $account->id }}">
                                                 <i class="bi bi-pencil-square"></i>
                                                 Username
                                             </button>
@@ -348,7 +606,7 @@
                                 <tr class="border-0">
                                     <td colspan="7" class="p-0 border-0">
                                         <div class="collapse" id="usernameForm{{ $account->id }}">
-                                            <div class="bg-light border-top border-bottom p-3">
+                                            <div class="ep-subpanel p-3">
                                                 <form method="POST"
                                                       action="{{ route('attendance.personnel-accounts.username', $account) }}"
                                                       class="row g-2 align-items-end">
@@ -356,7 +614,7 @@
                                                     @method('PUT')
 
                                                     <div class="col-md-5">
-                                                        <label class="form-label fw-semibold"
+                                                        <label class="form-label"
                                                                for="username{{ $account->id }}">
                                                             New Username
                                                         </label>
@@ -402,9 +660,9 @@
 
             @else
                 <div class="text-center py-5 px-3">
-                    <i class="bi bi-person-lines-fill display-4 text-muted"></i>
+                    <i class="bi bi-person-lines-fill display-4 ep-text-mute"></i>
                     <h5 class="mt-3">No Field Personnel Accounts Yet</h5>
-                    <p class="text-muted mb-0">
+                    <p class="text-secondary mb-0">
                         Use the registration form above to create the first account.
                     </p>
                 </div>

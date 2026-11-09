@@ -21,67 +21,73 @@
         /* light (default) */
         --hx-bg: #f2f4f7;
         --hx-surface: #ffffff;
-        --hx-sunken: #f6f8fa;
-        --hx-line: #e1e6ec;
-        --hx-line-strong: #c9d1db;
-        --hx-ink: #10243e;
-        --hx-text: #2a3a4f;
-        --hx-muted: #66768a;
-        --hx-signal: #e0393e;
-        --hx-signal-soft: #fdecec;
+        --hx-sunken: #f3f7f4;
+        --hx-line: #dce7e0;
+        --hx-line-strong: #c2d3c8;
+        --hx-ink: #16291f;
+        --hx-text: #2b3f33;
+        --hx-muted: #5a6c62;
+        --hx-signal: #1f7a4d;
+        --hx-signal-soft: #e3f1e8;
         --hx-ok: #16805a;
         --hx-ok-soft: #e3f5ed;
         --hx-warn: #a86a08;
         --hx-warn-soft: #fbf0dc;
-        --hx-cta: #10243e;
+        --hx-err: #b42330;
+        --hx-err-soft: #fbeceb;
+        --hx-cta: #1f7a4d;
         --hx-cta-text: #ffffff;
-        --hx-focus: rgba(224, 57, 62, .28);
-        --hx-shadow: 0 1px 2px rgba(16, 36, 62, .05), 0 8px 24px rgba(16, 36, 62, .06);
+        --hx-focus: rgba(31, 122, 77, .28);
+        --hx-shadow: 0 1px 2px rgba(22, 41, 31, .05), 0 8px 24px rgba(22, 41, 31, .06);
 
         font-family: var(--hx-body);
         color: var(--hx-text);
     }
 
     [data-theme="dark"] .hx {
-        --hx-bg: #0d141d;
-        --hx-surface: #15202d;
-        --hx-sunken: #101a26;
-        --hx-line: #263547;
-        --hx-line-strong: #33465c;
-        --hx-ink: #f2f6fa;
-        --hx-text: #d3dce6;
-        --hx-muted: #8fa1b5;
-        --hx-signal: #ff6b70;
-        --hx-signal-soft: #3a1a1e;
+        --hx-bg: #0f1a14;
+        --hx-surface: #17251d;
+        --hx-sunken: #12201a;
+        --hx-line: #2a3d32;
+        --hx-line-strong: #3a5244;
+        --hx-ink: #f2f8f4;
+        --hx-text: #d3e2d9;
+        --hx-muted: #9bb3a5;
+        --hx-signal: #62dca0;
+        --hx-signal-soft: rgba(98, 220, 160, .14);
         --hx-ok: #4fd1a0;
         --hx-ok-soft: #12352b;
         --hx-warn: #f2b955;
         --hx-warn-soft: #382b12;
-        --hx-cta: #f2f6fa;
-        --hx-cta-text: #0d141d;
-        --hx-focus: rgba(255, 107, 112, .32);
+        --hx-err: #ff9a9a;
+        --hx-err-soft: rgba(255, 154, 154, .12);
+        --hx-cta: #62dca0;
+        --hx-cta-text: #04241a;
+        --hx-focus: rgba(98, 220, 160, .30);
         --hx-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
     }
 
     @media (prefers-color-scheme: dark) {
         [data-theme="system"] .hx {
-            --hx-bg: #0d141d;
-            --hx-surface: #15202d;
-            --hx-sunken: #101a26;
-            --hx-line: #263547;
-            --hx-line-strong: #33465c;
-            --hx-ink: #f2f6fa;
-            --hx-text: #d3dce6;
-            --hx-muted: #8fa1b5;
-            --hx-signal: #ff6b70;
-            --hx-signal-soft: #3a1a1e;
+            --hx-bg: #0f1a14;
+            --hx-surface: #17251d;
+            --hx-sunken: #12201a;
+            --hx-line: #2a3d32;
+            --hx-line-strong: #3a5244;
+            --hx-ink: #f2f8f4;
+            --hx-text: #d3e2d9;
+            --hx-muted: #9bb3a5;
+            --hx-signal: #62dca0;
+            --hx-signal-soft: rgba(98, 220, 160, .14);
             --hx-ok: #4fd1a0;
             --hx-ok-soft: #12352b;
             --hx-warn: #f2b955;
             --hx-warn-soft: #382b12;
-            --hx-cta: #f2f6fa;
-            --hx-cta-text: #0d141d;
-            --hx-focus: rgba(255, 107, 112, .32);
+        --hx-err: #ff9a9a;
+        --hx-err-soft: rgba(255, 154, 154, .12);
+            --hx-cta: #62dca0;
+            --hx-cta-text: #04241a;
+            --hx-focus: rgba(98, 220, 160, .30);
             --hx-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
         }
     }
@@ -143,7 +149,7 @@
     .hx-alert i { font-size: 1.1rem; margin-top: 1px; }
     .hx-alert ul { margin: 6px 0 0; padding-left: 18px; }
     .hx-alert--ok { background: var(--hx-ok-soft); color: var(--hx-ok); border-color: color-mix(in srgb, var(--hx-ok) 30%, transparent); }
-    .hx-alert--err { background: var(--hx-signal-soft); color: var(--hx-signal); border-color: color-mix(in srgb, var(--hx-signal) 30%, transparent); }
+    .hx-alert--err { background: var(--hx-err-soft); color: var(--hx-err); border-color: color-mix(in srgb, var(--hx-err) 30%, transparent); }
     .hx-alert strong { display: block; }
     .hx-alert-close { margin-left: auto; background: none; border: 0; color: inherit; cursor: pointer; font-size: 1.1rem; }
 
@@ -195,7 +201,7 @@
     }
     .hx-select {
         padding-right: 40px;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='%2366768a'%3E%3Cpath d='M1.5 5.5l6.5 6.5 6.5-6.5z'/%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='%235a6c62'%3E%3Cpath d='M1.5 5.5l6.5 6.5 6.5-6.5z'/%3E%3C/svg%3E");
         background-repeat: no-repeat; background-position: right 15px center;
     }
     .hx-textarea { padding: 12px 14px; min-height: 130px; resize: vertical; line-height: 1.55; }
@@ -205,8 +211,8 @@
         border-color: var(--hx-signal); box-shadow: 0 0 0 4px var(--hx-focus);
     }
     .hx-select option { background: var(--hx-surface); color: var(--hx-ink); }
-    .is-invalid { border-color: var(--hx-signal) !important; }
-    .hx-error { margin-top: 6px; font-size: .84rem; font-weight: 500; color: var(--hx-signal); }
+    .is-invalid { border-color: var(--hx-err) !important; }
+    .hx-error { margin-top: 6px; font-size: .84rem; font-weight: 500; color: var(--hx-err); }
     .hx-help { margin-top: 6px; font-size: .82rem; color: var(--hx-muted); line-height: 1.45; }
 
     /* Phone field */
@@ -322,13 +328,7 @@
         font-variant-numeric: tabular-nums; color: var(--hx-ink); overflow-wrap: anywhere; line-height: 1.1;
     }
     .hx-number.is-empty { color: var(--hx-line-strong); }
-    .hx-call {
-        display: flex; align-items: center; justify-content: center; gap: 9px;
-        margin-top: 14px; min-height: 48px; border-radius: 14px;
-        background: var(--hx-signal); color: #fff; font-weight: 700; font-size: .98rem;
-        pointer-events: none;
-    }
-    .hx-alt { margin-top: 12px; font-size: .88rem; color: var(--hx-muted); display: flex; gap: 8px; align-items: center; }
+    .hx-alt { margin-top: 10px; font-size: .88rem; color: var(--hx-muted); display: flex; gap: 8px; align-items: center; }
     .hx-alt b { color: var(--hx-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 
     .hx-info { border-top: 1px dashed var(--hx-line-strong); padding: 16px 22px 20px; display: grid; gap: 14px; }
@@ -535,7 +535,7 @@
             {{-- ---------- Numbers ---------- --}}
             <section class="hx-block">
                 <h2 class="hx-block-title"><i class="bi bi-telephone-fill"></i> Phone numbers</h2>
-                <p class="hx-block-note">The primary number is the one shown as the main call button.</p>
+                <p class="hx-block-note">The primary number is shown as the main contact number.</p>
 
                 <div class="hx-fields">
 
@@ -668,7 +668,6 @@
 
                 <div class="hx-dial">
                     <div class="hx-number" id="pvNumber">Phone number</div>
-                    <div class="hx-call"><i class="bi bi-telephone-outbound-fill"></i> Call now</div>
                     <div class="hx-alt" id="pvAltWrap" hidden>
                         <i class="bi bi-telephone"></i> Backup <b id="pvAlt"></b>
                     </div>
@@ -719,7 +718,7 @@
     function hueFor(text) {
         let h = 0;
         for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) % 360;
-        return h;
+        return 150 + (h % 110); /* green to blue only: no red/pink tones */
     }
 
     function setText(el, value, emptyText) {

@@ -1,4 +1,3 @@
-
 @extends('layouts.app')
 
 @section('title', 'Attendance Monitoring | e-Poblacion')
@@ -45,83 +44,62 @@
 @endphp
 
 <style>
+    /* =====================================================================
+       ATTENDANCE MONITORING
+       Uses the layout's theme variables, so it follows the watermelon
+       light theme and the dark theme automatically:
+         - light cards / tables  -> dark text
+         - dark theme            -> light text
+       ===================================================================== */
     .attendance-page {
-        --att-text: #0f172a;
-        --att-text-soft: #475569;
-        --att-muted: #64748b;
-        --att-surface: #ffffff;
-        --att-surface-2: #f8fafc;
-        --att-border: #e2e8f0;
-        --att-hover: rgba(15, 23, 42, .04);
-        --att-shadow: 0 4px 16px rgba(15, 23, 42, .06);
-        --att-shadow-hover: 0 10px 26px rgba(15, 23, 42, .10);
-        --att-accent: #2563eb;
+        --att-text: var(--text-dark);
+        --att-soft: color-mix(in srgb, var(--text-dark) 74%, var(--surface));
+        --att-surface: var(--surface);
+        --att-surface-2: var(--surface-secondary);
+        --att-surface-3: var(--surface-tertiary);
+        --att-border: var(--border-color);
+        --att-border-strong: var(--border-soft);
+        --att-hover: var(--table-hover);
+        --att-shadow: var(--shadow);
+        --att-accent: var(--primary-d);
+        --att-accent-soft: var(--accent-soft);
+        --att-on-accent: var(--on-accent);
 
-        --att-primary-fg: #1d4ed8;
-        --att-primary-bg: rgba(37, 99, 235, .10);
-        --att-success-fg: #15803d;
-        --att-success-bg: rgba(22, 163, 74, .12);
-        --att-info-fg: #0e7490;
-        --att-info-bg: rgba(6, 182, 212, .13);
-        --att-warning-fg: #a16207;
-        --att-warning-bg: rgba(234, 179, 8, .18);
-        --att-neutral-fg: #475569;
-        --att-neutral-bg: rgba(100, 116, 139, .14);
+        --att-teal: #0f766e;
+        --att-teal-soft: rgba(15, 118, 110, .13);
 
         color: var(--att-text);
     }
 
-    html[data-theme="dark"] .attendance-page,
-    html[data-bs-theme="dark"] .attendance-page,
-    body[data-theme="dark"] .attendance-page,
-    body.dark .attendance-page,
-    body.dark-mode .attendance-page {
-        --att-text: #f1f5f9;
-        --att-text-soft: #cbd5e1;
-        --att-muted: #94a3b8;
-        --att-surface: #1e293b;
-        --att-surface-2: #172033;
-        --att-border: #334155;
-        --att-hover: rgba(255, 255, 255, .05);
-        --att-shadow: 0 4px 18px rgba(0, 0, 0, .35);
-        --att-shadow-hover: 0 12px 30px rgba(0, 0, 0, .50);
-        --att-accent: #60a5fa;
-
-        --att-primary-fg: #93c5fd;
-        --att-primary-bg: rgba(96, 165, 250, .16);
-        --att-success-fg: #4ade80;
-        --att-success-bg: rgba(74, 222, 128, .15);
-        --att-info-fg: #22d3ee;
-        --att-info-bg: rgba(34, 211, 238, .15);
-        --att-warning-fg: #fbbf24;
-        --att-warning-bg: rgba(251, 191, 36, .16);
-        --att-neutral-fg: #cbd5e1;
-        --att-neutral-bg: rgba(148, 163, 184, .18);
+    html[data-theme="dark"] .attendance-page {
+        --att-teal: #5eead4;
+        --att-teal-soft: rgba(94, 234, 212, .14);
     }
 
+    /* ---------- Heading ---------- */
     .attendance-page .att-eyebrow {
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        margin-bottom: 8px;
+        color: var(--att-accent);
         font-size: .72rem;
         font-weight: 800;
         letter-spacing: .08em;
         text-transform: uppercase;
-        color: var(--att-accent);
-        margin-bottom: 8px;
     }
 
     .attendance-page .att-heading {
-        font-weight: 800;
-        letter-spacing: -.035em;
-        color: var(--att-text);
         margin-bottom: 4px;
+        color: var(--att-text);
+        font-weight: 800;
+        letter-spacing: -.03em;
     }
 
     .attendance-page .att-subtitle {
-        color: var(--att-muted);
-        font-size: .9rem;
         margin: 0;
+        color: var(--att-soft);
+        font-size: .9rem;
     }
 
     .attendance-page .att-date-chip {
@@ -131,40 +109,40 @@
         padding: 10px 16px;
         background: var(--att-surface);
         border: 1px solid var(--att-border);
-        border-radius: 14px;
+        border-radius: 16px;
         box-shadow: var(--att-shadow);
     }
 
     .attendance-page .att-date-chip > i {
-        font-size: 1.3rem;
         color: var(--att-accent);
+        font-size: 1.3rem;
     }
 
     .attendance-page .att-date-label {
+        color: var(--att-soft);
         font-size: .7rem;
         font-weight: 700;
         letter-spacing: .05em;
         text-transform: uppercase;
-        color: var(--att-muted);
     }
 
     .attendance-page .att-date-value {
-        font-size: .9rem;
-        font-weight: 700;
         color: var(--att-text);
+        font-size: .9rem;
+        font-weight: 800;
     }
 
-    /* Upper navigation */
+    /* ---------- Navigation ---------- */
     .attendance-page .att-navigation {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-        gap: 8px;
-        padding: 10px;
+        gap: 6px;
+        padding: 8px;
         margin-bottom: 22px;
         background: var(--att-surface);
         border: 1px solid var(--att-border);
-        border-radius: 15px;
+        border-radius: 16px;
         box-shadow: var(--att-shadow);
     }
 
@@ -173,97 +151,93 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
-        padding: 10px 15px;
+        min-height: 40px;
+        padding: 0 14px;
         border-radius: 10px;
-        color: var(--att-text-soft);
+        color: var(--att-text);
         font-size: .83rem;
-        font-weight: 700;
+        font-weight: 600;
         text-decoration: none;
-        transition: .18s ease;
+        transition: background-color .15s, color .15s;
+    }
+
+    .attendance-page .att-nav-link i {
+        font-size: 1rem;
+        color: var(--att-soft);
+        transition: color .15s;
     }
 
     .attendance-page .att-nav-link:hover {
-        background: var(--att-hover);
+        background: var(--att-surface-3);
+        color: var(--att-text);
+    }
+
+    .attendance-page .att-nav-link.active,
+    .attendance-page .att-nav-link.active:hover {
+        background: var(--att-accent-soft);
+        color: var(--att-accent);
+        font-weight: 800;
+        box-shadow: inset 0 0 0 1px var(--att-accent);
+    }
+
+    .attendance-page .att-nav-link.active i {
         color: var(--att-accent);
     }
 
-    .attendance-page .att-nav-link.active {
-        background: var(--att-primary-bg);
-        color: var(--att-primary-fg);
-    }
-
     .attendance-page .att-nav-kiosk {
-        margin-left: auto;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 8px;
-        padding: 10px 17px;
+        margin-left: auto;
+        min-height: 40px;
+        padding: 0 18px;
         border-radius: 10px;
-        background: #15803d;
-        color: #fff;
+        background: var(--att-accent);
+        color: var(--att-on-accent);
         font-size: .83rem;
         font-weight: 800;
         text-decoration: none;
-        transition: .18s ease;
+        transition: filter .15s, transform .15s;
     }
 
     .attendance-page .att-nav-kiosk:hover {
-        background: #166534;
-        color: #fff;
+        color: var(--att-on-accent);
+        filter: brightness(1.1);
         transform: translateY(-1px);
     }
 
-    /* Summary cards */
+    /* ---------- Summary cards ---------- */
     .attendance-page .att-card {
         position: relative;
         height: 100%;
         padding: 20px;
+        overflow: hidden;
         background: var(--att-surface);
         border: 1px solid var(--att-border);
-        border-radius: 18px;
+        border-radius: 20px;
         box-shadow: var(--att-shadow);
-        overflow: hidden;
-        transition: .2s ease;
+        transition: transform .2s, box-shadow .2s;
     }
 
     .attendance-page .att-card::before {
         content: "";
         position: absolute;
         inset: 0 0 auto 0;
-        height: 3px;
-        background: var(--tone-fg);
+        height: 4px;
+        background: var(--tone-bar);
     }
 
     .attendance-page .att-card:hover {
         transform: translateY(-3px);
-        box-shadow: var(--att-shadow-hover);
+        box-shadow: 0 12px 28px var(--shadow-color);
     }
 
-    .attendance-page .tone-primary {
-        --tone-fg: var(--att-primary-fg);
-        --tone-bg: var(--att-primary-bg);
-    }
-
-    .attendance-page .tone-success {
-        --tone-fg: var(--att-success-fg);
-        --tone-bg: var(--att-success-bg);
-    }
-
-    .attendance-page .tone-info {
-        --tone-fg: var(--att-info-fg);
-        --tone-bg: var(--att-info-bg);
-    }
-
-    .attendance-page .tone-warning {
-        --tone-fg: var(--att-warning-fg);
-        --tone-bg: var(--att-warning-bg);
-    }
-
-    .attendance-page .tone-neutral {
-        --tone-fg: var(--att-neutral-fg);
-        --tone-bg: var(--att-neutral-bg);
-    }
+    .attendance-page .tone-primary { --tone-fg: var(--info);        --tone-bg: var(--info-soft);    --tone-bar: var(--info); }
+    .attendance-page .tone-success { --tone-fg: var(--primary-d);   --tone-bg: var(--accent-soft);  --tone-bar: var(--primary); }
+    .attendance-page .tone-info    { --tone-fg: var(--att-teal);    --tone-bg: var(--att-teal-soft); --tone-bar: var(--att-teal); }
+    .attendance-page .tone-warning { --tone-fg: var(--warning-text); --tone-bg: var(--warning-soft); --tone-bar: var(--warning); }
+    .attendance-page .tone-neutral { --tone-fg: var(--att-soft);    --tone-bg: var(--att-surface-3); --tone-bar: var(--att-border-strong); }
 
     .attendance-page .att-stat-top {
         display: flex;
@@ -273,18 +247,19 @@
     }
 
     .attendance-page .att-stat-eyebrow {
+        color: var(--att-soft);
         font-size: .74rem;
-        font-weight: 700;
+        font-weight: 800;
+        letter-spacing: .03em;
         text-transform: uppercase;
-        color: var(--att-muted);
     }
 
     .attendance-page .att-stat-icon {
         display: grid;
         place-items: center;
+        flex: 0 0 44px;
         width: 44px;
         height: 44px;
-        flex: 0 0 44px;
         border-radius: 14px;
         background: var(--tone-bg);
         color: var(--tone-fg);
@@ -302,17 +277,17 @@
 
     .attendance-page .att-stat-description {
         margin-top: 6px;
-        color: var(--att-muted);
+        color: var(--att-soft);
         font-size: .8rem;
     }
 
-    /* Attendance section */
+    /* ---------- Today's attendance ---------- */
     .attendance-page .att-section {
+        overflow: hidden;
         background: var(--att-surface);
         border: 1px solid var(--att-border);
-        border-radius: 18px;
+        border-radius: 20px;
         box-shadow: var(--att-shadow);
-        overflow: hidden;
     }
 
     .attendance-page .att-section-header {
@@ -321,7 +296,7 @@
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 12px;
-        padding: 19px 22px;
+        padding: 18px 22px;
         border-bottom: 1px solid var(--att-border);
     }
 
@@ -336,18 +311,19 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 7px 14px;
-        border: 1px solid var(--att-accent);
+        padding: 8px 15px;
+        border: 1.5px solid var(--att-accent);
         border-radius: 10px;
         color: var(--att-accent);
         font-size: .8rem;
-        font-weight: 700;
+        font-weight: 800;
         text-decoration: none;
+        transition: background-color .15s, color .15s;
     }
 
     .attendance-page .att-btn-outline:hover {
         background: var(--att-accent);
-        color: #fff;
+        color: var(--att-on-accent);
     }
 
     .attendance-page .att-table {
@@ -356,29 +332,29 @@
         --bs-table-border-color: var(--att-border);
         --bs-table-hover-bg: var(--att-hover);
         --bs-table-hover-color: var(--att-text);
-        color: var(--att-text);
         margin: 0;
+        color: var(--att-text);
     }
 
     .attendance-page .att-table th {
         padding: 13px 20px;
         background: var(--att-surface-2);
-        color: var(--att-muted);
+        border-bottom: 1px solid var(--att-border);
+        color: var(--att-soft);
         font-size: .72rem;
         font-weight: 800;
         letter-spacing: .05em;
         text-transform: uppercase;
         white-space: nowrap;
-        border-bottom: 1px solid var(--att-border);
     }
 
     .attendance-page .att-table td {
         padding: 14px 20px;
+        background: transparent;
+        border-color: var(--att-border);
         color: var(--att-text);
         font-size: .87rem;
         vertical-align: middle;
-        border-color: var(--att-border);
-        background: transparent;
     }
 
     .attendance-page .att-table tbody tr:last-child td {
@@ -388,45 +364,45 @@
     .attendance-page .att-avatar {
         display: grid;
         place-items: center;
+        flex: 0 0 38px;
         width: 38px;
         height: 38px;
-        flex: 0 0 38px;
         border-radius: 12px;
-        background: var(--att-primary-bg);
-        color: var(--att-primary-fg);
+        background: var(--att-accent-soft);
+        color: var(--att-accent);
         font-size: .8rem;
         font-weight: 800;
     }
 
     .attendance-page .att-person-name {
         color: var(--att-text);
-        font-weight: 700;
+        font-weight: 800;
         line-height: 1.3;
     }
 
     .attendance-page .att-person-id {
         margin-top: 2px;
-        color: var(--att-muted);
+        color: var(--att-soft);
         font-size: .75rem;
     }
 
     .attendance-page .att-time {
         color: var(--att-text);
-        font-weight: 700;
+        font-weight: 800;
         font-variant-numeric: tabular-nums;
     }
 
     .attendance-page .att-dash {
-        color: var(--att-muted);
+        color: var(--att-soft);
     }
 
     .attendance-page .att-method {
         display: inline-block;
         padding: 3px 9px;
-        border: 1px solid var(--att-border);
-        border-radius: 8px;
         background: var(--att-surface-2);
-        color: var(--att-text-soft);
+        border: 1px solid var(--att-border-strong);
+        border-radius: 8px;
+        color: var(--att-text);
         font-size: .7rem;
         font-weight: 800;
     }
@@ -451,6 +427,7 @@
         background: currentColor;
     }
 
+    /* ---------- Empty state ---------- */
     .attendance-page .att-empty {
         padding: 52px 20px;
         text-align: center;
@@ -463,8 +440,8 @@
         height: 62px;
         margin: 0 auto 14px;
         border-radius: 20px;
-        background: var(--att-primary-bg);
-        color: var(--att-primary-fg);
+        background: var(--att-accent-soft);
+        color: var(--att-accent);
         font-size: 1.6rem;
     }
 
@@ -477,7 +454,7 @@
     .attendance-page .att-empty p {
         max-width: 460px;
         margin: 0 auto;
-        color: var(--att-muted);
+        color: var(--att-soft);
         font-size: .85rem;
     }
 
@@ -485,19 +462,19 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 8px 16px;
-        border: 1px solid #2563eb;
+        padding: 9px 17px;
+        background: var(--att-accent);
         border-radius: 10px;
-        background: #2563eb;
-        color: #fff;
+        color: var(--att-on-accent);
         font-size: .82rem;
-        font-weight: 700;
+        font-weight: 800;
         text-decoration: none;
+        transition: filter .15s;
     }
 
     .attendance-page .att-btn-solid:hover {
-        background: #1d4ed8;
-        color: #fff;
+        color: var(--att-on-accent);
+        filter: brightness(1.1);
     }
 
     .attendance-page .att-footnote {
@@ -505,17 +482,18 @@
         align-items: center;
         gap: 8px;
         margin-top: 16px;
-        color: var(--att-muted);
+        color: var(--att-soft);
         font-size: .78rem;
     }
 
+    /* ---------- Responsive ---------- */
     @media (max-width: 767.98px) {
         .attendance-page .att-navigation {
             align-items: stretch;
         }
 
         .attendance-page .att-nav-link {
-            flex: 1 1 calc(50% - 8px);
+            flex: 1 1 calc(50% - 6px);
         }
 
         .attendance-page .att-nav-kiosk {
@@ -525,6 +503,10 @@
     }
 
     @media (max-width: 575.98px) {
+        .attendance-page .att-nav-link {
+            flex: 1 1 100%;
+        }
+
         .attendance-page .att-card {
             padding: 16px;
         }
@@ -590,24 +572,10 @@
             Attendance Personnel
         </a>
 
-        @if (strtolower((string) auth()->user()?->role) === 'secretary')
-            <a href="{{ route('attendance.personnel-accounts.index') }}"
-               class="att-nav-link">
-                <i class="bi bi-person-lock"></i>
-                Personnel Account Management
-            </a>
-        @endif
-
         <a href="{{ route('attendance.records') }}"
            class="att-nav-link">
             <i class="bi bi-clock-history"></i>
             Attendance Records
-        </a>
-
-        <a href="{{ route('attendance.reports') }}"
-           class="att-nav-link">
-            <i class="bi bi-file-earmark-bar-graph"></i>
-            Attendance Reports
         </a>
 
         <a href="{{ url('/attendance-kiosk') }}"
