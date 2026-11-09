@@ -1,3 +1,4 @@
+
 <?php
 
 return [
@@ -66,6 +67,23 @@ return [
         'url' => env(
             'GOTENBERG_URL',
             'http://127.0.0.1:3000'
+        ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Document Output Format
+    |--------------------------------------------------------------------------
+    |
+    | Local development uses PDF through Gotenberg.
+    | Production uses DOCX download to avoid requiring a hosted converter.
+    |
+    */
+
+    'documents' => [
+        'output_format' => env(
+            'DOCUMENT_OUTPUT_FORMAT',
+            env('APP_ENV') === 'production' ? 'docx' : 'pdf'
         ),
     ],
 

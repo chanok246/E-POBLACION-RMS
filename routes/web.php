@@ -770,8 +770,8 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
         | Barangay Documents
         |--------------------------------------------------------------------------
         */
-
-        Route::resource('documents', DocumentRequestController::class);
+              Route::resource('documents', DocumentRequestController::class)
+            ->only(['index', 'create', 'store', 'show']);
 
         Route::post(
             '/documents/{document}/advance',

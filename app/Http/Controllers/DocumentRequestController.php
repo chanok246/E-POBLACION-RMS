@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DocumentRequestController extends Controller
 {
@@ -38,6 +39,18 @@ class DocumentRequestController extends Controller
             'Oath of Undertaking',
             'Solo Parent',
         ];
+    }
+
+    /**
+     * Production uses DOCX downloads.
+     * Local development retains the existing PDF workflow.
+     */
+    private function usesDocxOutput(): bool
+    {
+        return strtolower((string) config(
+            'services.documents.output_format',
+            app()->environment('production') ? 'docx' : 'pdf'
+        )) === 'docx';
     }
 
     public function index(Request $request): View
@@ -832,7 +845,7 @@ class DocumentRequestController extends Controller
         DocumentRequest $document,
         OfficialDocumentTemplateService $templateService,
         DocumentConversionService $conversionService
-    ): View|RedirectResponse {
+    ): View|RedirectResponse|BinaryFileResponse {
         $user = $request->user();
 
         if (! $user || ! $user->canProcessDocuments()) {
@@ -853,6 +866,26 @@ class DocumentRequestController extends Controller
                     'workflow' =>
                         'The document must be approved before it can be previewed.',
                 ]);
+        }
+
+        if ($this->usesDocxOutput()) {
+            try {
+                $generatedDocxPath = $this->getOrGenerateDocx(
+                    $document,
+                    $templateService
+                );
+            } catch (RuntimeException $exception) {
+                return redirect()
+                    ->route('documents.show', $document)
+                    ->withErrors([
+                        'workflow' => $exception->getMessage(),
+                    ]);
+            }
+
+            return $this->downloadGeneratedDocx(
+                $document,
+                $generatedDocxPath
+            );
         }
 
         try {
@@ -899,7 +932,7 @@ class DocumentRequestController extends Controller
         AuditLogService $auditLog,
         OfficialDocumentTemplateService $templateService,
         DocumentConversionService $conversionService
-    ): RedirectResponse|View {
+    ): RedirectResponse|View|BinaryFileResponse {
         $user = $request->user();
 
         if (! $user || ! $user->canProcessDocuments()) {
@@ -1012,25 +1045,50 @@ class DocumentRequestController extends Controller
         }
 
         $generatedPdfPath = null;
+        $generatedDocxPath = null;
 
         if ($validated['action'] === 'print_document') {
-            try {
-                $generatedPdfPath = $this->getOrGeneratePdf(
-                    $document,
-                    $templateService,
-                    $conversionService
-                );
-            } catch (RuntimeException $exception) {
-                return back()->withErrors([
-                    'workflow' => $exception->getMessage(),
-                ]);
-            }
+            if ($this->usesDocxOutput()) {
+                try {
+                    $generatedDocxPath = $this->getOrGenerateDocx(
+                        $document,
+                        $templateService
+                    );
+                } catch (RuntimeException $exception) {
+                    return back()->withErrors([
+                        'workflow' => $exception->getMessage(),
+                    ]);
+                }
 
-            if (!$generatedPdfPath || !is_file($generatedPdfPath)) {
-                return back()->withErrors([
-                    'workflow' =>
-                        'The official PDF document was not generated successfully. The document was not marked as printed.',
-                ]);
+                if (
+                    ! $generatedDocxPath ||
+                    ! is_file($generatedDocxPath) ||
+                    filesize($generatedDocxPath) <= 0
+                ) {
+                    return back()->withErrors([
+                        'workflow' =>
+                            'The official DOCX document was not generated successfully. The document was not marked as printed.',
+                    ]);
+                }
+            } else {
+                try {
+                    $generatedPdfPath = $this->getOrGeneratePdf(
+                        $document,
+                        $templateService,
+                        $conversionService
+                    );
+                } catch (RuntimeException $exception) {
+                    return back()->withErrors([
+                        'workflow' => $exception->getMessage(),
+                    ]);
+                }
+
+                if (! $generatedPdfPath || ! is_file($generatedPdfPath)) {
+                    return back()->withErrors([
+                        'workflow' =>
+                            'The official PDF document was not generated successfully. The document was not marked as printed.',
+                    ]);
+                }
             }
         }
 
@@ -1081,7 +1139,14 @@ class DocumentRequestController extends Controller
             description: $transition['audit_description']
         );
 
-        if ($validated['action'] === 'approve_release') {
+        /*
+         * PDF pre-generation is retained for local development.
+         * Production DOCX mode does not call Gotenberg.
+         */
+        if (
+            $validated['action'] === 'approve_release' &&
+            ! $this->usesDocxOutput()
+        ) {
             $documentId = $document->id;
 
             dispatch(function () use ($documentId) {
@@ -1105,6 +1170,13 @@ class DocumentRequestController extends Controller
         }
 
         if ($validated['action'] === 'print_document') {
+            if ($this->usesDocxOutput()) {
+                return $this->downloadGeneratedDocx(
+                    $document,
+                    $generatedDocxPath
+                );
+            }
+
             return view(
                 'documents.print',
                 [
@@ -1132,10 +1204,10 @@ class DocumentRequestController extends Controller
         AuditLogService $auditLog,
         OfficialDocumentTemplateService $templateService,
         DocumentConversionService $conversionService
-    ): View|RedirectResponse {
+    ): View|RedirectResponse|BinaryFileResponse {
         $user = $request->user();
 
-        if (!$user || !$user->canProcessDocuments()) {
+        if (! $user || ! $user->canProcessDocuments()) {
             abort(403, 'You are not authorized to print document requests.');
         }
 
@@ -1146,7 +1218,7 @@ class DocumentRequestController extends Controller
             DocumentRequest::STAGE_RELEASED,
         ];
 
-        if (!in_array($document->workflow_stage, $allowedStages, true)) {
+        if (! in_array($document->workflow_stage, $allowedStages, true)) {
             return redirect()
                 ->route('documents.show', $document)
                 ->withErrors([
@@ -1155,19 +1227,50 @@ class DocumentRequestController extends Controller
                 ]);
         }
 
-        $generatedPdfPath = $this->getOrGeneratePdf(
-            $document,
-            $templateService,
-            $conversionService
-        );
+        $generatedPdfPath = null;
+        $generatedDocxPath = null;
 
-        if (!$generatedPdfPath || !is_file($generatedPdfPath)) {
-            return redirect()
-                ->route('documents.show', $document)
-                ->withErrors([
-                    'workflow' =>
-                        'The official PDF document could not be generated successfully. The document was not marked as printed.',
-                ]);
+        if ($this->usesDocxOutput()) {
+            try {
+                $generatedDocxPath = $this->getOrGenerateDocx(
+                    $document,
+                    $templateService
+                );
+            } catch (RuntimeException $exception) {
+                return redirect()
+                    ->route('documents.show', $document)
+                    ->withErrors([
+                        'workflow' => $exception->getMessage(),
+                    ]);
+            }
+
+            if (
+                ! $generatedDocxPath ||
+                ! is_file($generatedDocxPath) ||
+                filesize($generatedDocxPath) <= 0
+            ) {
+                return redirect()
+                    ->route('documents.show', $document)
+                    ->withErrors([
+                        'workflow' =>
+                            'The official DOCX document could not be generated successfully. The document was not marked as printed.',
+                    ]);
+            }
+        } else {
+            $generatedPdfPath = $this->getOrGeneratePdf(
+                $document,
+                $templateService,
+                $conversionService
+            );
+
+            if (! $generatedPdfPath || ! is_file($generatedPdfPath)) {
+                return redirect()
+                    ->route('documents.show', $document)
+                    ->withErrors([
+                        'workflow' =>
+                            'The official PDF document could not be generated successfully. The document was not marked as printed.',
+                    ]);
+            }
         }
 
         if ($document->workflow_stage === DocumentRequest::STAGE_APPROVED) {
@@ -1208,12 +1311,103 @@ class DocumentRequestController extends Controller
             );
         }
 
+        if ($this->usesDocxOutput()) {
+            return $this->downloadGeneratedDocx(
+                $document,
+                $generatedDocxPath
+            );
+        }
+
         return view(
             'documents.print',
             [
                 'document' => $document,
                 'pdfData' => base64_encode(file_get_contents($generatedPdfPath)),
                 'mode' => 'print',
+            ]
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Generated DOCX Helper
+    |--------------------------------------------------------------------------
+    */
+
+    private function getOrGenerateDocx(
+        DocumentRequest $document,
+        OfficialDocumentTemplateService $templateService
+    ): string {
+        $generate = function () use (
+            $document,
+            $templateService
+        ): string {
+            $generatedDocumentPath = $templateService->generate($document);
+
+            if (
+                ! is_file($generatedDocumentPath) ||
+                filesize($generatedDocumentPath) <= 0
+            ) {
+                throw new RuntimeException(
+                    'The generated DOCX document is missing or empty.'
+                );
+            }
+
+            return $generatedDocumentPath;
+        };
+
+        try {
+            return Cache::lock('document-docx:' . $document->id, 120)
+                ->block(60, $generate);
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $exception) {
+            throw new RuntimeException(
+                'The document is still being generated. Please try again in a few seconds.'
+            );
+        } catch (RuntimeException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            Log::error('DOCX document generation failed.', [
+                'document_id' => $document->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            throw new RuntimeException(
+                'The official DOCX document could not be generated. Please try again.'
+            );
+        }
+    }
+
+    /**
+     * Return the generated DOCX as a browser download.
+     */
+    private function downloadGeneratedDocx(
+        DocumentRequest $document,
+        string $generatedDocxPath
+    ): BinaryFileResponse {
+        if (
+            ! is_file($generatedDocxPath) ||
+            filesize($generatedDocxPath) <= 0
+        ) {
+            throw new RuntimeException(
+                'The generated DOCX document is no longer available.'
+            );
+        }
+
+        $baseName = Str::slug(
+            $document->document_type . '-' . $document->request_code
+        );
+
+        if ($baseName === '') {
+            $baseName = 'official-document';
+        }
+
+        return response()->download(
+            $generatedDocxPath,
+            $baseName . '.docx',
+            [
+                'Content-Type' =>
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'X-Content-Type-Options' => 'nosniff',
             ]
         );
     }
@@ -1231,7 +1425,7 @@ class DocumentRequestController extends Controller
     ): ?string {
         if (
             $document->generatedPdfExists() &&
-            !$this->clearancePdfNeedsRegeneration($document)
+            ! $this->clearancePdfNeedsRegeneration($document)
         ) {
             return $document->getGeneratedPdfAbsolutePath();
         }
@@ -1260,7 +1454,7 @@ class DocumentRequestController extends Controller
                 $document->document_type
             );
 
-            if (!is_file($generatedPdfPath)) {
+            if (! is_file($generatedPdfPath)) {
                 return null;
             }
 
@@ -1299,7 +1493,7 @@ class DocumentRequestController extends Controller
 
         $path = $document->getGeneratedPdfAbsolutePath();
 
-        if (!$path || !is_file($path)) {
+        if (! $path || ! is_file($path)) {
             return false;
         }
 
@@ -1310,7 +1504,7 @@ class DocumentRequestController extends Controller
             $pdf
         ) > 1;
 
-        if (!$isMultiPage) {
+        if (! $isMultiPage) {
             return false;
         }
 
@@ -1377,7 +1571,7 @@ class DocumentRequestController extends Controller
             DocumentRequest::STAGE_ELIGIBLE,
         ];
 
-        if (!in_array($document->workflow_stage, $allowedStages, true)) {
+        if (! in_array($document->workflow_stage, $allowedStages, true)) {
             return back()->withErrors([
                 'workflow' =>
                     'This request can no longer be declined as a third-party request.',
