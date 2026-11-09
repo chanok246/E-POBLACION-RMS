@@ -1,4 +1,3 @@
-
 @extends('layouts.app')
 
 @section('title', 'Document Processing | e-Poblacion')
@@ -7,12 +6,6 @@
 <style>
     /* =========================================================
        DOCUMENT PROCESSING — watermelon theme
-       SEMANTIC COLORS
-         Green = done / primary action
-         Blue  = current step (in progress) / info
-         Gray  = not yet
-         Red   = declined / stop only
-       Click a step to see its details.
        ========================================================= */
     .docs {
         --ink: #3a2a2e; --muted: #8a6f75; --paper: #ffffff; --wash: #fdf1f3; --line: #f0d0d6;
@@ -44,16 +37,30 @@
     .docs * { box-sizing: border-box; }
     .docs [hidden] { display: none !important; }
     .docs .display { letter-spacing: -.02em; }
-    .docs a:focus-visible, .docs button:focus-visible { outline: 3px solid var(--info); outline-offset: 2px; }
+    .docs a:focus-visible, .docs button:focus-visible {
+        outline: 3px solid var(--info);
+        outline-offset: 2px;
+    }
 
-    .back { display: inline-flex; gap: .4rem; align-items: center; color: var(--brand); text-decoration: none; font-weight: 700; font-size: .92rem; }
+    .back {
+        display: inline-flex; gap: .4rem; align-items: center;
+        color: var(--brand); text-decoration: none; font-weight: 700; font-size: .92rem;
+    }
     .back:hover { text-decoration: underline; color: var(--brand); }
-    .head { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-end; margin: .9rem 0 1.5rem; }
+
+    .head {
+        display: flex; flex-wrap: wrap; gap: 1rem;
+        justify-content: space-between; align-items: flex-end; margin: .9rem 0 1.5rem;
+    }
     .head h1 { font-size: clamp(1.7rem, 3.2vw, 2.3rem); font-weight: 800; margin: 0; line-height: 1.1; }
     .head p { margin: .35rem 0 0; color: var(--muted); }
     .head p b { color: var(--ink); }
 
-    .pill { display: inline-flex; align-items: center; gap: .45rem; padding: .35rem .9rem; border-radius: 999px; font-size: .9rem; font-weight: 700; color: var(--c); background: var(--bg); }
+    .pill {
+        display: inline-flex; align-items: center; gap: .45rem;
+        padding: .35rem .9rem; border-radius: 999px; font-size: .9rem;
+        font-weight: 700; color: var(--c); background: var(--bg);
+    }
     .pill::before { content: ''; width: .55rem; height: .55rem; border-radius: 50%; background: var(--c); }
     .st-pending { --c: var(--pending); --bg: var(--pending-bg); }
     .st-processing { --c: var(--processing); --bg: var(--processing-bg); }
@@ -62,30 +69,67 @@
     .st-released { --c: var(--released); --bg: var(--released-bg); }
     .st-disapproved { --c: var(--disapproved); --bg: var(--disapproved-bg); }
 
-    .note { display: flex; gap: .75rem; align-items: flex-start; padding: .9rem 1.1rem; border-radius: 1rem; margin-bottom: 1rem; border: 1px solid var(--c); background: var(--bg); color: var(--ink); }
+    .note {
+        display: flex; gap: .75rem; align-items: flex-start;
+        padding: .9rem 1.1rem; border-radius: 1rem; margin-bottom: 1rem;
+        border: 1px solid var(--c); background: var(--bg); color: var(--ink);
+    }
     .note b, .note i { color: var(--c); }
     .note b { display: block; }
-    .note .x { margin-left: auto; background: none; border: 0; color: var(--c); font-size: 1.2rem; line-height: 1; }
+    .note .x {
+        margin-left: auto; background: none; border: 0;
+        color: var(--c); font-size: 1.2rem; line-height: 1;
+    }
 
-    .card2 { background: var(--paper); border: 1px solid var(--line); border-radius: 1.4rem; margin-bottom: 1rem; overflow: hidden; box-shadow: 0 2px 4px rgba(120,40,55,.04), 0 10px 24px rgba(120,40,55,.05); }
-    .card2-head { padding: .95rem 1.3rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+    .card2 {
+        background: var(--paper); border: 1px solid var(--line);
+        border-radius: 1.4rem; margin-bottom: 1rem; overflow: hidden;
+        box-shadow: 0 2px 4px rgba(120,40,55,.04), 0 10px 24px rgba(120,40,55,.05);
+    }
+    .card2-head {
+        padding: .95rem 1.3rem; border-bottom: 1px solid var(--line);
+        display: flex; justify-content: space-between; align-items: center;
+        gap: .75rem; flex-wrap: wrap;
+    }
     .card2-head h2 { font-size: 1.05rem; font-weight: 800; margin: 0; color: var(--brand); }
     .card2-head small { color: var(--muted); }
     .card2-body { padding: 1.3rem; }
 
     /* THE JOURNEY */
     .journey { overflow-x: auto; padding: .75rem .25rem 1rem; scrollbar-width: thin; }
-    .journey ol { list-style: none; margin: 0; padding: 0; display: flex; min-width: 650px; width: 100%; }
+    .journey ol {
+        list-style: none; margin: 0; padding: 0;
+        display: flex; min-width: 650px; width: 100%;
+    }
     .jstep { flex: 1 0 108px; text-align: center; position: relative; }
-    .jstep:not(:last-child)::after { content: ''; position: absolute; top: 22px; left: calc(50% + 25px); width: calc(100% - 50px); height: 5px; border-radius: 5px; background: var(--line); }
+    .jstep:not(:last-child)::after {
+        content: ''; position: absolute; top: 22px;
+        left: calc(50% + 25px); width: calc(100% - 50px);
+        height: 5px; border-radius: 5px; background: var(--line);
+    }
     .jstep.done:not(:last-child)::after { background: var(--green); }
-    .jbtn { display: block; width: 100%; padding: 0 .2rem; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
-    .jdot { width: 46px; height: 46px; margin: 0 auto .6rem; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--paper); border: 3px solid var(--line); color: var(--muted); position: relative; z-index: 1; transition: transform .15s, box-shadow .15s; }
+    .jbtn {
+        display: block; width: 100%; padding: 0 .2rem;
+        border: 0; background: none; color: inherit; font: inherit; cursor: pointer;
+    }
+    .jdot {
+        width: 46px; height: 46px; margin: 0 auto .6rem; border-radius: 50%;
+        display: grid; place-items: center; font-weight: 800;
+        background: var(--paper); border: 3px solid var(--line);
+        color: var(--muted); position: relative; z-index: 1;
+        transition: transform .15s, box-shadow .15s;
+    }
     .jbtn:hover .jdot { transform: translateY(-2px) scale(1.04); }
     .jstep.done .jdot { background: var(--green); border-color: var(--green); color: #fff; }
-    .jstep.now .jdot { background: var(--info); border-color: var(--info); color: #fff; box-shadow: 0 0 0 5px var(--info-soft), 0 8px 18px rgba(28,126,214,.3); }
-    html[data-theme="dark"] .jstep.done .jdot, html[data-theme="dark"] .jstep.now .jdot { color: #0f1a14; }
-    .jstep.sel .jdot { box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--c-sel, var(--line)); }
+    .jstep.now .jdot {
+        background: var(--info); border-color: var(--info); color: #fff;
+        box-shadow: 0 0 0 5px var(--info-soft), 0 8px 18px rgba(28,126,214,.3);
+    }
+    html[data-theme="dark"] .jstep.done .jdot,
+    html[data-theme="dark"] .jstep.now .jdot { color: #0f1a14; }
+    .jstep.sel .jdot {
+        box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--c-sel, var(--line));
+    }
     .jstep.done { --c-sel: var(--green); }
     .jstep.now { --c-sel: var(--info); }
     .jname { font-size: .83rem; font-weight: 700; color: var(--muted); line-height: 1.25; }
@@ -93,17 +137,34 @@
     .jstep.now .jname { color: var(--info); }
     .jstate { display: block; margin-top: .15rem; font-size: .72rem; font-weight: 600; color: var(--muted); }
 
-    .jd { margin-top: .5rem; padding: 1.1rem 1.2rem; border-radius: 1.2rem; border: 1.5px solid var(--cd, var(--line)); background: var(--bgd, var(--wash)); }
+    .jd {
+        margin-top: .5rem; padding: 1.1rem 1.2rem; border-radius: 1.2rem;
+        border: 1.5px solid var(--cd, var(--line)); background: var(--bgd, var(--wash));
+    }
     .jd.done { --cd: var(--green); --bgd: var(--green-bg); }
     .jd.now { --cd: var(--info); --bgd: var(--info-soft); }
-    .jd-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: .8rem; }
+    .jd-head {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: .75rem; flex-wrap: wrap; margin-bottom: .8rem;
+    }
     .jd-head b { font-size: 1.02rem; font-weight: 800; }
-    .jd-tag { display: inline-flex; align-items: center; gap: .35rem; padding: .22rem .7rem; border-radius: 999px; font-size: .78rem; font-weight: 800; background: var(--paper); color: var(--muted); }
+    .jd-tag {
+        display: inline-flex; align-items: center; gap: .35rem;
+        padding: .22rem .7rem; border-radius: 999px; font-size: .78rem;
+        font-weight: 800; background: var(--paper); color: var(--muted);
+    }
     .jd.done .jd-tag { color: var(--green-d); }
     .jd.now .jd-tag { color: var(--info); }
     .jd ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
-    .jd li { display: flex; gap: .7rem; align-items: flex-start; padding: .65rem .8rem; border-radius: .9rem; background: var(--paper); }
-    .jd li .ck { width: 1.45rem; height: 1.45rem; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: .75rem; border: 2px solid var(--line); color: transparent; }
+    .jd li {
+        display: flex; gap: .7rem; align-items: flex-start;
+        padding: .65rem .8rem; border-radius: .9rem; background: var(--paper);
+    }
+    .jd li .ck {
+        width: 1.45rem; height: 1.45rem; border-radius: 50%; flex: none;
+        display: grid; place-items: center; font-size: .75rem;
+        border: 2px solid var(--line); color: transparent;
+    }
     .jd li.ok .ck { background: var(--green); border-color: var(--green); color: #fff; }
     html[data-theme="dark"] .jd li.ok .ck { color: #0f1a14; }
     .jd li .tx { flex: 1; min-width: 0; }
@@ -111,9 +172,15 @@
     .jd li:not(.ok) b { color: var(--muted); font-weight: 600; }
     .jd li small { color: var(--muted); }
     .jd li .when { text-align: right; color: var(--muted); font-size: .85rem; white-space: nowrap; }
-    @media (max-width: 575.98px) { .jd li { flex-wrap: wrap; } .jd li .when { text-align: left; width: 100%; padding-left: 2.15rem; } }
+    @media (max-width: 575.98px) {
+        .jd li { flex-wrap: wrap; }
+        .jd li .when { text-align: left; width: 100%; padding-left: 2.15rem; }
+    }
 
-    .stopped { display: flex; gap: .7rem; align-items: center; padding: 1rem; border-radius: 1rem; background: var(--disapproved-bg); }
+    .stopped {
+        display: flex; gap: .7rem; align-items: center;
+        padding: 1rem; border-radius: 1rem; background: var(--disapproved-bg);
+    }
     .stopped i { color: var(--disapproved); font-size: 1.3rem; }
 
     /* INFO */
@@ -124,19 +191,35 @@
     .v { font-weight: 700; }
     .v small { display: block; font-weight: 500; color: var(--muted); font-size: .85rem; }
     .who { display: flex; gap: .75rem; align-items: center; }
-    .avatar { width: 2.6rem; height: 2.6rem; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 800; background: var(--brand-soft); color: var(--brand); }
+    .avatar {
+        width: 2.6rem; height: 2.6rem; border-radius: 50%;
+        display: grid; place-items: center; flex: none;
+        font-weight: 800; background: var(--brand-soft); color: var(--brand);
+    }
 
     /* ACTION PANEL */
     .side { position: sticky; top: 1rem; }
     @media (max-width: 991.98px) { .side { position: static; } }
     .side .hint { color: var(--muted); font-size: .92rem; margin: 0 0 1rem; }
     .side .stage-now { font-size: 1.1rem; font-weight: 800; margin: 0 0 .35rem; }
-    .act { display: flex; width: 100%; justify-content: center; align-items: center; gap: .5rem; min-height: 46px; border-radius: 999px; font-weight: 800; border: 1.5px solid transparent; text-decoration: none; padding: .55rem 1rem; transition: filter .15s, transform .15s; }
+    .act {
+        display: flex; width: 100%; justify-content: center; align-items: center;
+        gap: .5rem; min-height: 46px; border-radius: 999px; font-weight: 800;
+        border: 1.5px solid transparent; text-decoration: none;
+        padding: .55rem 1rem; transition: filter .15s, transform .15s;
+    }
     .act:hover { transform: translateY(-1px); }
-    .act-brand, .act-green { background: linear-gradient(135deg, #2f9e44, var(--brand)); color: #fff; box-shadow: 0 8px 18px rgba(35,122,53,.28); }
-    html[data-theme="dark"] .act-brand, html[data-theme="dark"] .act-green { color: #0b2314; background: linear-gradient(135deg, #8fe29a, var(--brand)); box-shadow: none; }
+    .act-brand, .act-green {
+        background: linear-gradient(135deg, #2f9e44, var(--brand));
+        color: #fff; box-shadow: 0 8px 18px rgba(35,122,53,.28);
+    }
+    html[data-theme="dark"] .act-brand,
+    html[data-theme="dark"] .act-green {
+        color: #0b2314; background: linear-gradient(135deg, #8fe29a, var(--brand)); box-shadow: none;
+    }
     .act-brand:hover, .act-green:hover { filter: brightness(1.08); color: #fff; }
-    html[data-theme="dark"] .act-brand:hover, html[data-theme="dark"] .act-green:hover { color: #0b2314; }
+    html[data-theme="dark"] .act-brand:hover,
+    html[data-theme="dark"] .act-green:hover { color: #0b2314; }
     .act-line { background: transparent; border-color: var(--brand); color: var(--brand); }
     .act-line:hover { background: var(--brand-soft); color: var(--brand); }
     .act-danger { background: transparent; border-color: var(--disapproved); color: var(--disapproved); }
@@ -145,12 +228,78 @@
     .stack form { margin: 0; }
     .stack form button:disabled { opacity: .65; cursor: wait; transform: none; }
     .divider { text-align: center; color: var(--muted); font-size: .8rem; margin: .4rem 0; }
-    .state { display: flex; gap: .7rem; padding: .9rem 1rem; border-radius: 1rem; font-size: .92rem; background: var(--bg); color: var(--ink); }
+    .state {
+        display: flex; gap: .7rem; padding: .9rem 1rem;
+        border-radius: 1rem; font-size: .92rem; background: var(--bg); color: var(--ink);
+    }
     .state i { color: var(--c); font-size: 1.15rem; }
     .state.muted { --c: var(--muted); --bg: var(--wash); }
 
+    /* FULL-PAGE PROCESSING OVERLAY */
+    .doc-loading {
+        position: fixed;
+        inset: 0;
+        z-index: 20000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: rgba(253, 241, 243, .94);
+        backdrop-filter: blur(7px);
+        -webkit-backdrop-filter: blur(7px);
+    }
+    html[data-theme="dark"] .doc-loading {
+        background: rgba(15, 26, 20, .94);
+    }
+    .doc-loading[hidden] { display: none !important; }
+    .doc-loading-card {
+        width: min(100%, 360px);
+        padding: 2rem 1.5rem;
+        text-align: center;
+        border: 1px solid #f0d0d6;
+        border-radius: 1.5rem;
+        background: #fff;
+        box-shadow: 0 18px 55px rgba(58, 42, 46, .14);
+    }
+    html[data-theme="dark"] .doc-loading-card {
+        background: #17251d;
+        border-color: #2b4033;
+        box-shadow: 0 18px 55px rgba(0, 0, 0, .3);
+    }
+    .doc-loading-spinner {
+        width: 58px;
+        height: 58px;
+        margin: 0 auto 1.2rem;
+        border: 5px solid rgba(35, 122, 53, .14);
+        border-top-color: #2f9e44;
+        border-right-color: #237a35;
+        border-radius: 50%;
+        animation: doc-loading-spin .8s linear infinite;
+    }
+    @keyframes doc-loading-spin {
+        to { transform: rotate(360deg); }
+    }
+    .doc-loading-title {
+        margin: 0 0 .45rem;
+        color: #237a35;
+        font-size: 1.12rem;
+        font-weight: 800;
+    }
+    .doc-loading-message {
+        margin: 0;
+        color: #8a6f75;
+        font-size: .9rem;
+        line-height: 1.5;
+    }
+    html[data-theme="dark"] .doc-loading-title { color: #8fe29a; }
+    html[data-theme="dark"] .doc-loading-message { color: #a8b8ad; }
+
     @media (prefers-reduced-motion: reduce) {
-        .docs * { transition: none !important; scroll-behavior: auto !important; }
+        .docs *, .doc-loading-spinner {
+            transition: none !important;
+            scroll-behavior: auto !important;
+            animation-duration: 2s !important;
+        }
     }
 </style>
 @endpush
@@ -265,6 +414,17 @@
 @endphp
 
 <div class="docs">
+
+    {{-- Loading overlay shown while a document action is processing --}}
+    <div class="doc-loading" id="documentProcessingOverlay" role="status" aria-live="polite" hidden>
+        <div class="doc-loading-card">
+            <div class="doc-loading-spinner" aria-hidden="true"></div>
+            <h2 class="doc-loading-title" id="documentLoadingTitle">Processing request…</h2>
+            <p class="doc-loading-message" id="documentLoadingMessage">
+                Please wait while we update the document record. Do not close this page.
+            </p>
+        </div>
+    </div>
 
     <a href="{{ route('documents.index') }}" class="back">
         <i class="bi bi-arrow-left"></i> Back to Barangay Documents
@@ -492,6 +652,8 @@
                             <form method="POST"
                                   action="{{ route('documents.advance', $document) }}"
                                   class="js-document-process-form"
+                                  data-loading-title="{{ $action === 'print_document' ? 'Preparing official document…' : 'Processing request…' }}"
+                                  data-loading-message="{{ $action === 'print_document' ? 'Please wait while the official document is being prepared.' : 'Please wait while we update the document record. Do not close this page.' }}"
                                   @if ($action === 'print_document') target="docPrintWindow" onsubmit="return openDocPrintWindow();" @endif>
                                 @csrf
                                 <input type="hidden" name="action" value="{{ $action }}">
@@ -521,7 +683,9 @@
 
                                 <form method="POST"
                                       action="{{ route('documents.advance', $document) }}"
-                                      class="js-document-process-form">
+                                      class="js-document-process-form"
+                                      data-loading-title="Updating document request…"
+                                      data-loading-message="Please wait while this request is being recorded.">
                                     @csrf
                                     <input type="hidden" name="action" value="decline_third_party">
                                     <input type="hidden" name="decline_reason" value="Resident must personally appear and present a valid ID. Third-party release is not allowed.">
@@ -626,109 +790,62 @@
 
 
     /* =========================================================
-       DOCUMENT PROCESSING FORMS
-       Use getAttribute('action') to avoid collision with the
-       hidden input named "action".
+       DOCUMENT PROCESSING
+       - Prevents the intermediate Laravel redirect page.
+       - Uses the literal action attribute, not form.action.
+       - Shows a full-screen loading overlay.
+       - Follows Laravel redirects in the background.
+       - Navigates directly to the final response URL.
        ========================================================= */
-    document.addEventListener('submit', async function (event) {
-        const form = event.target;
+    (function () {
+        const overlay = document.getElementById('documentProcessingOverlay');
+        const loadingTitle = document.getElementById('documentLoadingTitle');
+        const loadingMessage = document.getElementById('documentLoadingMessage');
 
-        if (!(form instanceof HTMLFormElement)) return;
-        if (!form.classList.contains('js-document-process-form')) return;
+        function showLoading(form) {
+            if (!overlay) return;
 
-        event.preventDefault();
+            if (loadingTitle) {
+                loadingTitle.textContent = form.dataset.loadingTitle || 'Processing request…';
+            }
 
-        if (form.dataset.processing === '1') return;
+            if (loadingMessage) {
+                loadingMessage.textContent = form.dataset.loadingMessage ||
+                    'Please wait while we update the document record. Do not close this page.';
+            }
 
-        const actionUrl = form.getAttribute('action');
-
-        if (!actionUrl || actionUrl.includes('[object')) {
-            console.error('Invalid document processing form action:', actionUrl);
-            alert('Invalid document processing URL. Please reload the page and try again.');
-            return;
+            overlay.hidden = false;
+            document.body.style.overflow = 'hidden';
         }
 
-        form.dataset.processing = '1';
+        function hideLoading() {
+            if (!overlay) return;
 
-        const submitButtons = Array.from(
-            form.querySelectorAll('button[type="submit"], button:not([type])')
-        );
-
-        submitButtons.forEach(function (button) {
-            button.disabled = true;
-            button.dataset.originalHtml = button.innerHTML;
-            button.innerHTML =
-                '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing…';
-        });
-
-        const opensPrintWindow = form.getAttribute('target') === 'docPrintWindow';
-        let printWindow = opensPrintWindow ? window.docPrintWindowRef : null;
-
-        if (opensPrintWindow && (!printWindow || printWindow.closed)) {
-            form.dataset.processing = '0';
-            HTMLFormElement.prototype.submit.call(form);
-            return;
+            overlay.hidden = true;
+            document.body.style.overflow = '';
         }
 
-        try {
-            const response = await fetch(actionUrl, {
-                method: (form.getAttribute('method') || 'POST').toUpperCase(),
-                body: new FormData(form),
-                credentials: 'same-origin',
-                redirect: 'follow',
-                headers: {
-                    'Accept': 'text/html',
-                    'X-Requested-With': 'XMLHttpRequest'
+        function setButtonLoading(form) {
+            const buttons = Array.from(
+                form.querySelectorAll('button[type="submit"], button:not([type])')
+            );
+
+            buttons.forEach(function (button) {
+                button.disabled = true;
+
+                if (button.dataset.originalHtml === undefined) {
+                    button.dataset.originalHtml = button.innerHTML;
                 }
+
+                button.innerHTML =
+                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing…';
             });
 
-            if (response.redirected) {
-                if (opensPrintWindow) {
-                    if (printWindow && !printWindow.closed) {
-                        printWindow.location.replace(response.url);
-                    }
-                } else {
-                    window.location.replace(response.url);
-                }
+            return buttons;
+        }
 
-                return;
-            }
-
-            const html = await response.text();
-
-            if (!response.ok) {
-                throw new Error(
-                    'The server returned HTTP ' + response.status +
-                    '. Please reload the page and try again.'
-                );
-            }
-
-            if (opensPrintWindow) {
-                if (!printWindow || printWindow.closed) {
-                    throw new Error('The document preview window was closed.');
-                }
-
-                printWindow.document.open();
-                printWindow.document.write(html);
-                printWindow.document.close();
-
-                return;
-            }
-
-            document.open();
-            document.write(html);
-            document.close();
-
-        } catch (error) {
-            console.error('Document processing failed:', error);
-
-            if (opensPrintWindow && printWindow && !printWindow.closed) {
-                printWindow.close();
-            }
-
-            form.dataset.processing = '0';
-
-            submitButtons.forEach(function (button) {
+        function restoreButtons(buttons) {
+            buttons.forEach(function (button) {
                 button.disabled = false;
 
                 if (button.dataset.originalHtml !== undefined) {
@@ -736,13 +853,136 @@
                     delete button.dataset.originalHtml;
                 }
             });
-
-            alert(
-                error && error.message
-                    ? error.message
-                    : 'Unable to process this document. Please try again.'
-            );
         }
-    });
+
+        document.addEventListener('submit', async function (event) {
+            const form = event.target;
+
+            if (!(form instanceof HTMLFormElement)) return;
+            if (!form.classList.contains('js-document-process-form')) return;
+
+            event.preventDefault();
+
+            if (form.dataset.processing === '1') return;
+
+            /*
+             * IMPORTANT:
+             * Do not use form.action here.
+             * The hidden input named "action" can shadow that property.
+             */
+            const actionUrl = form.getAttribute('action');
+
+            if (!actionUrl || actionUrl.includes('[object')) {
+                console.error('Invalid document processing form action:', actionUrl);
+                alert('Invalid document processing URL. Please reload the page and try again.');
+                return;
+            }
+
+            const opensPrintWindow = form.getAttribute('target') === 'docPrintWindow';
+            let printWindow = opensPrintWindow ? window.docPrintWindowRef : null;
+
+            form.dataset.processing = '1';
+
+            const submitButtons = setButtonLoading(form);
+
+            /*
+             * For print actions, the popup already has its own loading screen.
+             * For all other actions, show the full-page overlay.
+             */
+            if (!opensPrintWindow) {
+                showLoading(form);
+            }
+
+            /*
+             * If the print popup was blocked or closed, use native submission
+             * as a fallback. This avoids losing the actual document action.
+             */
+            if (opensPrintWindow && (!printWindow || printWindow.closed)) {
+                form.dataset.processing = '0';
+                HTMLFormElement.prototype.submit.call(form);
+                return;
+            }
+
+            try {
+                const response = await fetch(actionUrl, {
+                    method: (form.getAttribute('method') || 'POST').toUpperCase(),
+                    body: new FormData(form),
+                    credentials: 'same-origin',
+                    redirect: 'follow',
+                    headers: {
+                        'Accept': 'text/html',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                /*
+                 * Laravel redirects are followed by fetch automatically.
+                 * Navigate directly to the final URL instead of displaying
+                 * Laravel's intermediate "Redirecting to..." HTML response.
+                 */
+                if (response.redirected) {
+                    if (opensPrintWindow) {
+                        if (printWindow && !printWindow.closed) {
+                            printWindow.location.replace(response.url);
+                        } else {
+                            window.location.replace(response.url);
+                        }
+                    } else {
+                        window.location.replace(response.url);
+                    }
+
+                    return;
+                }
+
+                const html = await response.text();
+
+                if (!response.ok) {
+                    throw new Error(
+                        'The server returned HTTP ' + response.status +
+                        '. Please reload the page and try again.'
+                    );
+                }
+
+                if (opensPrintWindow) {
+                    if (!printWindow || printWindow.closed) {
+                        throw new Error('The document preview window was closed.');
+                    }
+
+                    printWindow.document.open();
+                    printWindow.document.write(html);
+                    printWindow.document.close();
+
+                    return;
+                }
+
+                /*
+                 * Some successful Laravel responses may return the final
+                 * page directly without a redirect. Replace the current
+                 * document with that response.
+                 */
+                document.open();
+                document.write(html);
+                document.close();
+
+            } catch (error) {
+                console.error('Document processing failed:', error);
+
+                if (opensPrintWindow && printWindow && !printWindow.closed) {
+                    printWindow.close();
+                }
+
+                form.dataset.processing = '0';
+
+                hideLoading();
+                restoreButtons(submitButtons);
+
+                alert(
+                    error && error.message
+                        ? error.message
+                        : 'Unable to process this document. Please try again.'
+                );
+            }
+        });
+    })();
 </script>
 @endpush
