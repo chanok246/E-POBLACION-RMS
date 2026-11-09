@@ -1138,9 +1138,9 @@ Route::get('/session-check', function () {
         'session_started' => session()->isStarted(),
         'session_test' => session('session_test'),
         'session_cookie' => config('session.cookie'),
-'session_secure' => config('session.secure'),
-'session_domain' => config('session.domain'),
-'session_path' => config('session.path'),
-'session_same_site' => config('session.same_site'),
-    ]);
+        'session_secure' => config('session.secure'),
+        'session_domain' => config('session.domain'),
+        'session_path' => config('session.path'),
+        'session_same_site' => config('session.same_site'),
+    ])->withCookie(cookie('cookie_probe', 'works', 5));
 });
