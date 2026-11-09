@@ -1130,3 +1130,12 @@ Route::middleware(['auth', 'active', 'twofactor'])->group(function () {
         )->name('users.deactivate');
     });
 });
+Route::get('/session-check', function () {
+    session(['session_test' => 'working']);
+
+    return response()->json([
+        'session_driver' => config('session.driver'),
+        'session_started' => session()->isStarted(),
+        'session_test' => session('session_test'),
+    ]);
+});
