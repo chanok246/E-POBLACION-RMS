@@ -27,6 +27,7 @@
         --disapproved: #c92a3b; --disapproved-bg: #fde3e3;
         font-family: var(--font); color: var(--ink);
     }
+
     html[data-theme="dark"] .docs {
         --ink: #f6eff1; --muted: #a8b8ad; --paper: #17251d; --wash: #1c2d23; --line: #2b4033;
         --brand: #5fc062; --brand-soft: rgba(95,192,98,.16);
@@ -34,11 +35,12 @@
         --info: #6cb2ff; --info-soft: rgba(108,178,255,.15);
         --pending: #f5b942;     --pending-bg: #3a2c10;
         --processing: #5ccfe0;  --processing-bg: #0f3038;
-        --approved: #6fd48a;    --approved-bg: #143222;
-        --completed: #b7a0f5;   --completed-bg: #2a2150;
-        --released: #8db6f7;    --released-bg: #182c4d;
+        --approved: #6fd48a;   --approved-bg: #143222;
+        --completed: #b7a0f5;  --completed-bg: #2a2150;
+        --released: #8db6f7;   --released-bg: #182c4d;
         --disapproved: #ff7b87; --disapproved-bg: #401a1d;
     }
+
     .docs * { box-sizing: border-box; }
     .docs [hidden] { display: none !important; }
     .docs .display { letter-spacing: -.02em; }
@@ -71,9 +73,7 @@
     .card2-head small { color: var(--muted); }
     .card2-body { padding: 1.3rem; }
 
-    /* =========================================================
-       THE JOURNEY
-       ========================================================= */
+    /* THE JOURNEY */
     .journey { overflow-x: auto; padding: .75rem .25rem 1rem; scrollbar-width: thin; }
     .journey ol { list-style: none; margin: 0; padding: 0; display: flex; min-width: 650px; width: 100%; }
     .jstep { flex: 1 0 108px; text-align: center; position: relative; }
@@ -86,7 +86,8 @@
     .jstep.now .jdot { background: var(--info); border-color: var(--info); color: #fff; box-shadow: 0 0 0 5px var(--info-soft), 0 8px 18px rgba(28,126,214,.3); }
     html[data-theme="dark"] .jstep.done .jdot, html[data-theme="dark"] .jstep.now .jdot { color: #0f1a14; }
     .jstep.sel .jdot { box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--c-sel, var(--line)); }
-    .jstep.done { --c-sel: var(--green); } .jstep.now { --c-sel: var(--info); }
+    .jstep.done { --c-sel: var(--green); }
+    .jstep.now { --c-sel: var(--info); }
     .jname { font-size: .83rem; font-weight: 700; color: var(--muted); line-height: 1.25; }
     .jstep.done .jname { color: var(--green-d); }
     .jstep.now .jname { color: var(--info); }
@@ -115,7 +116,7 @@
     .stopped { display: flex; gap: .7rem; align-items: center; padding: 1rem; border-radius: 1rem; background: var(--disapproved-bg); }
     .stopped i { color: var(--disapproved); font-size: 1.3rem; }
 
-    /* ---------- Info ---------- */
+    /* INFO */
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1.5rem; }
     @media (max-width: 575.98px) { .grid { grid-template-columns: 1fr; } }
     .grid .full { grid-column: 1 / -1; }
@@ -125,7 +126,7 @@
     .who { display: flex; gap: .75rem; align-items: center; }
     .avatar { width: 2.6rem; height: 2.6rem; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 800; background: var(--brand-soft); color: var(--brand); }
 
-    /* ---------- Action panel ---------- */
+    /* ACTION PANEL */
     .side { position: sticky; top: 1rem; }
     @media (max-width: 991.98px) { .side { position: static; } }
     .side .hint { color: var(--muted); font-size: .92rem; margin: 0 0 1rem; }
@@ -147,10 +148,12 @@
     .state { display: flex; gap: .7rem; padding: .9rem 1rem; border-radius: 1rem; font-size: .92rem; background: var(--bg); color: var(--ink); }
     .state i { color: var(--c); font-size: 1.15rem; }
     .state.muted { --c: var(--muted); --bg: var(--wash); }
-    @media (prefers-reduced-motion: reduce) { .docs * { transition: none !important; scroll-behavior: auto !important; } }
+
+    @media (prefers-reduced-motion: reduce) {
+        .docs * { transition: none !important; scroll-behavior: auto !important; }
+    }
 </style>
 @endpush
-
 
 @section('content')
 
@@ -161,35 +164,35 @@
 
     $isDeclined = $document->isThirdPartyDeclined();
     $isReleased = $document->workflow_stage === \App\Models\DocumentRequest::STAGE_RELEASED;
-    $stage      = $document->workflow_stage;
+    $stage = $document->workflow_stage;
 
     $journey = [
         'request' => [
-            'label'  => 'Request Created',
+            'label' => 'Request Created',
             'checks' => [['Request created', $document->requested_at, null]],
         ],
         'verified' => [
-            'label'  => 'Verified',
+            'label' => 'Verified',
             'checks' => [
-                ['Inspection',      $document->inspection_at,   $document->inspectionOfficer],
-                ['ID verified',     $document->id_verified_at,  $document->idVerifiedOfficer],
-                ['Marked eligible', $document->eligible_at,     $document->eligibleOfficer],
+                ['Inspection', $document->inspection_at, $document->inspectionOfficer],
+                ['ID verified', $document->id_verified_at, $document->idVerifiedOfficer],
+                ['Marked eligible', $document->eligible_at, $document->eligibleOfficer],
             ],
         ],
         'approved' => [
-            'label'  => 'Approved',
+            'label' => 'Approved',
             'checks' => [['Approved for release', $document->approved_at, $document->approvedOfficer]],
         ],
         'printed' => [
-            'label'  => 'Printed',
+            'label' => 'Printed',
             'checks' => [['Printed', $document->printed_at, $document->printedOfficer]],
         ],
         'signed' => [
-            'label'  => 'Signed & Sealed',
+            'label' => 'Signed & Sealed',
             'checks' => [['Physical signature and seal', $document->signed_sealed_at, $document->signedSealedOfficer]],
         ],
         'released' => [
-            'label'  => 'Released',
+            'label' => 'Released',
             'checks' => [['Released', $document->released_at, $document->releasedOfficer]],
         ],
     ];
@@ -201,28 +204,28 @@
     ];
 
     $journeyCurrent = match (true) {
-        $stage === \App\Models\DocumentRequest::STAGE_REQUESTED     => 'request',
-        in_array($stage, $verifiedStages, true)                     => 'verified',
-        $stage === \App\Models\DocumentRequest::STAGE_APPROVED      => 'approved',
-        $stage === \App\Models\DocumentRequest::STAGE_PRINTED       => 'printed',
+        $stage === \App\Models\DocumentRequest::STAGE_REQUESTED => 'request',
+        in_array($stage, $verifiedStages, true) => 'verified',
+        $stage === \App\Models\DocumentRequest::STAGE_APPROVED => 'approved',
+        $stage === \App\Models\DocumentRequest::STAGE_PRINTED => 'printed',
         $stage === \App\Models\DocumentRequest::STAGE_SIGNED_SEALED => 'signed',
-        $stage === \App\Models\DocumentRequest::STAGE_RELEASED      => 'released',
-        default                                                     => 'request',
+        $stage === \App\Models\DocumentRequest::STAGE_RELEASED => 'released',
+        default => 'request',
     };
 
-    $journeyKeys  = array_keys($journey);
+    $journeyKeys = array_keys($journey);
     $journeyIndex = array_search($journeyCurrent, $journeyKeys, true);
     $journeyIndex = $journeyIndex === false ? 0 : $journeyIndex;
 
     $stateOf = fn ($i) => ($i < $journeyIndex || $isReleased) ? 'done' : ($i === $journeyIndex ? 'now' : 'todo');
 
     $statusClass = match ($document->status) {
-        'Released'    => 'st-released',
-        'Approved'    => 'st-approved',
-        'Completed'   => 'st-completed',
+        'Released' => 'st-released',
+        'Approved' => 'st-approved',
+        'Completed' => 'st-completed',
         'Disapproved' => 'st-disapproved',
-        'Processing'  => 'st-processing',
-        default       => 'st-pending',
+        'Processing' => 'st-processing',
+        default => 'st-pending',
     };
 
     $name = $resident?->full_name ?? 'Resident not found';
@@ -261,7 +264,6 @@
     $next = $actions[$stage] ?? null;
 @endphp
 
-
 <div class="docs">
 
     <a href="{{ route('documents.index') }}" class="back">
@@ -276,7 +278,6 @@
 
         <span class="pill {{ $statusClass }}">{{ $document->status }}</span>
     </div>
-
 
     @if ($errors->has('workflow') || $errors->has('action'))
         <div class="note st-disapproved" role="alert">
@@ -296,10 +297,8 @@
         </div>
     @endif
 
-
-    {{-- ===================== THE JOURNEY ===================== --}}
+    {{-- THE JOURNEY --}}
     <section class="card2">
-
         <div class="card2-head">
             <div>
                 <h2 class="display">Processing journey</h2>
@@ -312,21 +311,17 @@
         </div>
 
         <div class="card2-body">
-
             @if ($isDeclined)
-
                 <div class="stopped">
                     <i class="bi bi-person-x-fill"></i>
                     <span>Processing stopped because the registered resident was not personally present.</span>
                 </div>
-
             @else
-
                 <div class="journey">
                     <ol role="tablist" aria-label="Processing journey">
                         @foreach ($journey as $key => $step)
                             @php
-                                $i     = array_search($key, $journeyKeys, true);
+                                $i = array_search($key, $journeyKeys, true);
                                 $state = $stateOf($i);
                                 $label = ['done' => 'Done', 'now' => 'In progress', 'todo' => 'Not yet'][$state];
                             @endphp
@@ -337,7 +332,11 @@
                                         aria-controls="jd-{{ $key }}"
                                         @if ($state === 'now') aria-current="step" @endif>
                                     <span class="jdot">
-                                        @if ($state === 'done') <i class="bi bi-check-lg"></i> @else {{ $i + 1 }} @endif
+                                        @if ($state === 'done')
+                                            <i class="bi bi-check-lg"></i>
+                                        @else
+                                            {{ $i + 1 }}
+                                        @endif
                                     </span>
                                     <span class="jname">{{ $step['label'] }}</span>
                                     <span class="jstate">{{ $label }}</span>
@@ -349,7 +348,7 @@
 
                 @foreach ($journey as $key => $step)
                     @php
-                        $i     = array_search($key, $journeyKeys, true);
+                        $i = array_search($key, $journeyKeys, true);
                         $state = $stateOf($i);
                     @endphp
 
@@ -357,9 +356,13 @@
                         <div class="jd-head">
                             <b>{{ $i + 1 }}. {{ $step['label'] }}</b>
                             <span class="jd-tag">
-                                @if ($state === 'done') <i class="bi bi-check-circle-fill"></i> Completed
-                                @elseif ($state === 'now') <i class="bi bi-hourglass-split"></i> Current step
-                                @else <i class="bi bi-clock"></i> Not started yet @endif
+                                @if ($state === 'done')
+                                    <i class="bi bi-check-circle-fill"></i> Completed
+                                @elseif ($state === 'now')
+                                    <i class="bi bi-hourglass-split"></i> Current step
+                                @else
+                                    <i class="bi bi-clock"></i> Not started yet
+                                @endif
                             </span>
                         </div>
 
@@ -379,19 +382,14 @@
                         </ul>
                     </div>
                 @endforeach
-
             @endif
-
         </div>
-
     </section>
-
 
     <div class="row g-4">
 
-        {{-- ===================== LEFT ===================== --}}
+        {{-- LEFT --}}
         <div class="col-lg-8">
-
             <section class="card2">
                 <div class="card2-head">
                     <h2 class="display">Request information</h2>
@@ -399,7 +397,6 @@
 
                 <div class="card2-body">
                     <div class="grid">
-
                         <div>
                             <div class="k">Resident</div>
                             <div class="who">
@@ -454,48 +451,35 @@
                                 </div>
                             </div>
                         @endif
-
                     </div>
                 </div>
             </section>
-
         </div>
 
-
-        {{-- ===================== RIGHT: ACTIONS ===================== --}}
+        {{-- RIGHT: ACTIONS --}}
         <div class="col-lg-4">
-
             <aside class="card2 side">
-
                 <div class="card2-head">
                     <h2 class="display">Processing actions</h2>
                 </div>
 
                 <div class="card2-body">
-
                     @if (! auth()->user()->canProcessDocuments())
-
                         <div class="state muted">
                             <i class="bi bi-lock-fill"></i>
                             <span>You can view this request, but you are not authorized to process or release documents.</span>
                         </div>
-
                     @elseif ($isDeclined)
-
                         <div class="state st-disapproved">
                             <i class="bi bi-person-x-fill"></i>
                             <span>This request has been marked as not released.</span>
                         </div>
-
                     @elseif ($isReleased)
-
                         <div class="state st-approved">
                             <i class="bi bi-check-circle-fill"></i>
                             <span>This document was released to the resident.</span>
                         </div>
-
                     @elseif ($next)
-
                         @php
                             [$hint, $action, $btnLabel, $icon, $style] = $next;
                             $confirm = $next[5] ?? null;
@@ -505,7 +489,6 @@
                         <p class="hint">{{ $hint }}</p>
 
                         <div class="stack">
-
                             <form method="POST"
                                   action="{{ route('documents.advance', $document) }}"
                                   class="js-document-process-form"
@@ -519,7 +502,6 @@
                                 </button>
                             </form>
 
-                            {{-- Approved: preview without changing the workflow state --}}
                             @if ($stage === \App\Models\DocumentRequest::STAGE_APPROVED)
                                 <a href="{{ route('documents.preview', $document) }}" class="act act-line"
                                    target="docPrintWindow" onclick="return openDocPrintWindow();">
@@ -527,7 +509,6 @@
                                 </a>
                             @endif
 
-                            {{-- Printed: reopen the printable copy --}}
                             @if ($stage === \App\Models\DocumentRequest::STAGE_PRINTED)
                                 <a href="{{ route('documents.print', $document) }}" class="act act-line"
                                    target="docPrintWindow" onclick="return openDocPrintWindow();">
@@ -535,7 +516,6 @@
                                 </a>
                             @endif
 
-                            {{-- Inspection: requester is not the resident --}}
                             @if ($stage === \App\Models\DocumentRequest::STAGE_INSPECTION)
                                 <div class="divider">or, if the requester is not the resident</div>
 
@@ -552,23 +532,15 @@
                                     </button>
                                 </form>
                             @endif
-
                         </div>
-
                     @endif
-
                 </div>
-
             </aside>
-
         </div>
-
     </div>
-
 </div>
 
 @endsection
-
 
 @push('scripts')
 <script>
@@ -611,7 +583,6 @@
     /* =========================================================
        PRINT WINDOW
        Open a named window immediately to avoid popup blocking.
-       The actual server response is loaded into this window.
        ========================================================= */
     window.docPrintWindowRef = null;
 
@@ -625,9 +596,9 @@
 
         window.docPrintWindowRef = win;
 
-        var dark  = document.documentElement.getAttribute('data-theme') === 'dark';
-        var bg    = dark ? '#0f1a14' : '#f4d9df';
-        var fg    = dark ? '#f6eff1' : '#3a2a2e';
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var bg = dark ? '#0f1a14' : '#f4d9df';
+        var fg = dark ? '#f6eff1' : '#3a2a2e';
         var muted = dark ? '#a8b8ad' : '#8a6f75';
         var brand = dark ? '#5fc062' : '#237a35';
         var track = dark ? 'rgba(255,255,255,.12)' : 'rgba(58,42,46,.12)';
@@ -656,9 +627,8 @@
 
     /* =========================================================
        DOCUMENT PROCESSING FORMS
-       Follow Laravel redirects in the background so the browser
-       opens the final page directly instead of showing Laravel's
-       temporary "Redirecting to..." response page.
+       Use getAttribute('action') to avoid collision with the
+       hidden input named "action".
        ========================================================= */
     document.addEventListener('submit', async function (event) {
         const form = event.target;
@@ -670,6 +640,14 @@
 
         if (form.dataset.processing === '1') return;
 
+        const actionUrl = form.getAttribute('action');
+
+        if (!actionUrl || actionUrl.includes('[object')) {
+            console.error('Invalid document processing form action:', actionUrl);
+            alert('Invalid document processing URL. Please reload the page and try again.');
+            return;
+        }
+
         form.dataset.processing = '1';
 
         const submitButtons = Array.from(
@@ -679,16 +657,13 @@
         submitButtons.forEach(function (button) {
             button.disabled = true;
             button.dataset.originalHtml = button.innerHTML;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing…';
+            button.innerHTML =
+                '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing…';
         });
 
         const opensPrintWindow = form.getAttribute('target') === 'docPrintWindow';
         let printWindow = opensPrintWindow ? window.docPrintWindowRef : null;
 
-        /*
-         * If the print popup was blocked, preserve normal browser
-         * form submission as a fallback.
-         */
         if (opensPrintWindow && (!printWindow || printWindow.closed)) {
             form.dataset.processing = '0';
             HTMLFormElement.prototype.submit.call(form);
@@ -696,8 +671,8 @@
         }
 
         try {
-            const response = await fetch(form.action, {
-                method: (form.method || 'POST').toUpperCase(),
+            const response = await fetch(actionUrl, {
+                method: (form.getAttribute('method') || 'POST').toUpperCase(),
                 body: new FormData(form),
                 credentials: 'same-origin',
                 redirect: 'follow',
@@ -707,11 +682,6 @@
                 }
             });
 
-            /*
-             * Laravel redirects are followed by fetch automatically.
-             * Navigate directly to the final URL, not the temporary
-             * redirect response.
-             */
             if (response.redirected) {
                 if (opensPrintWindow) {
                     if (printWindow && !printWindow.closed) {
@@ -733,10 +703,6 @@
                 );
             }
 
-            /*
-             * Print action returns the printable Blade view directly.
-             * Load that HTML into the already-open print window.
-             */
             if (opensPrintWindow) {
                 if (!printWindow || printWindow.closed) {
                     throw new Error('The document preview window was closed.');
@@ -749,9 +715,6 @@
                 return;
             }
 
-            /*
-             * Fallback for a successful non-redirect HTML response.
-             */
             document.open();
             document.write(html);
             document.close();
