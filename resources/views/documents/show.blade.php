@@ -1,3 +1,4 @@
+
 @extends('layouts.app')
 
 @section('title', 'Document Processing | e-Poblacion')
@@ -71,8 +72,7 @@
     .card2-body { padding: 1.3rem; }
 
     /* =========================================================
-       THE JOURNEY (single, clickable, colour-coded)
-       done = green · current = blue · next = grey
+       THE JOURNEY
        ========================================================= */
     .journey { overflow-x: auto; padding: .75rem .25rem 1rem; scrollbar-width: thin; }
     .journey ol { list-style: none; margin: 0; padding: 0; display: flex; min-width: 650px; width: 100%; }
@@ -92,7 +92,6 @@
     .jstep.now .jname { color: var(--info); }
     .jstate { display: block; margin-top: .15rem; font-size: .72rem; font-weight: 600; color: var(--muted); }
 
-    /* Detail panel for the clicked step */
     .jd { margin-top: .5rem; padding: 1.1rem 1.2rem; border-radius: 1.2rem; border: 1.5px solid var(--cd, var(--line)); background: var(--bgd, var(--wash)); }
     .jd.done { --cd: var(--green); --bgd: var(--green-bg); }
     .jd.now { --cd: var(--info); --bgd: var(--info-soft); }
@@ -133,7 +132,6 @@
     .side .stage-now { font-size: 1.1rem; font-weight: 800; margin: 0 0 .35rem; }
     .act { display: flex; width: 100%; justify-content: center; align-items: center; gap: .5rem; min-height: 46px; border-radius: 999px; font-weight: 800; border: 1.5px solid transparent; text-decoration: none; padding: .55rem 1rem; transition: filter .15s, transform .15s; }
     .act:hover { transform: translateY(-1px); }
-    /* every forward step = primary action = green */
     .act-brand, .act-green { background: linear-gradient(135deg, #2f9e44, var(--brand)); color: #fff; box-shadow: 0 8px 18px rgba(35,122,53,.28); }
     html[data-theme="dark"] .act-brand, html[data-theme="dark"] .act-green { color: #0b2314; background: linear-gradient(135deg, #8fe29a, var(--brand)); box-shadow: none; }
     .act-brand:hover, .act-green:hover { filter: brightness(1.08); color: #fff; }
@@ -144,6 +142,7 @@
     .act-danger:hover { background: var(--disapproved-bg); }
     .stack { display: grid; gap: .6rem; }
     .stack form { margin: 0; }
+    .stack form button:disabled { opacity: .65; cursor: wait; transform: none; }
     .divider { text-align: center; color: var(--muted); font-size: .8rem; margin: .4rem 0; }
     .state { display: flex; gap: .7rem; padding: .9rem 1rem; border-radius: 1rem; font-size: .92rem; background: var(--bg); color: var(--ink); }
     .state i { color: var(--c); font-size: 1.15rem; }
@@ -158,18 +157,12 @@
 @php
     $resident = $document->resident;
 
-    /* Detailed backend workflow (unchanged: still drives the processing logic) */
     $steps = \App\Models\DocumentRequest::workflowSteps();
 
     $isDeclined = $document->isThirdPartyDeclined();
     $isReleased = $document->workflow_stage === \App\Models\DocumentRequest::STAGE_RELEASED;
     $stage      = $document->workflow_stage;
 
-    /* ---------------------------------------------------------
-       THE ONE JOURNEY
-       Each step lists the checks recorded inside it, so the old
-       "audit record" is now shown by clicking a step.
-       --------------------------------------------------------- */
     $journey = [
         'request' => [
             'label'  => 'Request Created',
@@ -178,9 +171,9 @@
         'verified' => [
             'label'  => 'Verified',
             'checks' => [
-                ['Inspection',     $document->inspection_at,   $document->inspectionOfficer],
-                ['ID verified',    $document->id_verified_at,  $document->idVerifiedOfficer],
-                ['Marked eligible', $document->eligible_at,    $document->eligibleOfficer],
+                ['Inspection',      $document->inspection_at,   $document->inspectionOfficer],
+                ['ID verified',     $document->id_verified_at,  $document->idVerifiedOfficer],
+                ['Marked eligible', $document->eligible_at,     $document->eligibleOfficer],
             ],
         ],
         'approved' => [
@@ -241,21 +234,6 @@
 
     $detailLabels = ['ctc_number' => 'CTC Number'];
 
-    /* =========================================================
-       PROCESSING ACTIONS — ONE VISIBLE JOURNEY STEP PER ACTION
-       ---------------------------------------------------------
-       The controller now accepts only these workflow actions:
-
-       Request Created -> Verified
-       Verified        -> Approved
-       Approved        -> Printed
-       Printed         -> Signed & Sealed
-       Signed & Sealed -> Released
-
-       Inspection, ID verification, and eligibility remain recorded
-       as detailed verification/audit fields; they are not extra
-       visible journey slots.
-       ========================================================= */
     $actions = [
         \App\Models\DocumentRequest::STAGE_REQUESTED => [
             'Record the resident inspection and valid-ID verification, then advance this request to the Verified stage.',
@@ -528,7 +506,9 @@
 
                         <div class="stack">
 
-                            <form method="POST" action="{{ route('documents.advance', $document) }}"
+                            <form method="POST"
+                                  action="{{ route('documents.advance', $document) }}"
+                                  class="js-document-process-form"
                                   @if ($action === 'print_document') target="docPrintWindow" onsubmit="return openDocPrintWindow();" @endif>
                                 @csrf
                                 <input type="hidden" name="action" value="{{ $action }}">
@@ -559,7 +539,9 @@
                             @if ($stage === \App\Models\DocumentRequest::STAGE_INSPECTION)
                                 <div class="divider">or, if the requester is not the resident</div>
 
-                                <form method="POST" action="{{ route('documents.advance', $document) }}">
+                                <form method="POST"
+                                      action="{{ route('documents.advance', $document) }}"
+                                      class="js-document-process-form">
                                     @csrf
                                     <input type="hidden" name="action" value="decline_third_party">
                                     <input type="hidden" name="decline_reason" value="Resident must personally appear and present a valid ID. Third-party release is not allowed.">
@@ -601,7 +583,11 @@
             steps.forEach(function (s) {
                 const on = s === step;
                 s.classList.toggle('sel', on);
-                s.querySelector('.jbtn').setAttribute('aria-selected', on ? 'true' : 'false');
+
+                const button = s.querySelector('.jbtn');
+                if (button) {
+                    button.setAttribute('aria-selected', on ? 'true' : 'false');
+                }
 
                 const panel = document.getElementById('jd-' + s.dataset.step);
                 if (panel) panel.hidden = !on;
@@ -609,10 +595,14 @@
         }
 
         steps.forEach(function (s) {
-            s.querySelector('.jbtn').addEventListener('click', function () { select(s); });
+            const button = s.querySelector('.jbtn');
+            if (button) {
+                button.addEventListener('click', function () {
+                    select(s);
+                });
+            }
         });
 
-        /* On small screens, bring the current step into view. */
         const now = document.querySelector('.jstep.now');
         if (now) now.scrollIntoView({ inline: 'center', block: 'nearest' });
     })();
@@ -620,12 +610,20 @@
 
     /* =========================================================
        PRINT WINDOW
-       Opens (or reuses) a named window immediately, so a loading
-       screen shows while the server generates the PDF.
+       Open a named window immediately to avoid popup blocking.
+       The actual server response is loaded into this window.
        ========================================================= */
+    window.docPrintWindowRef = null;
+
     function openDocPrintWindow() {
         var win = window.open('', 'docPrintWindow');
-        if (!win) return true;
+
+        if (!win) {
+            window.docPrintWindowRef = null;
+            return true;
+        }
+
+        window.docPrintWindowRef = win;
 
         var dark  = document.documentElement.getAttribute('data-theme') === 'dark';
         var bg    = dark ? '#0f1a14' : '#f4d9df';
@@ -638,24 +636,150 @@
         win.document.write(
             '<!DOCTYPE html><html><head><meta charset="utf-8">' +
             '<meta name="viewport" content="width=device-width, initial-scale=1">' +
-            '<title>Opening document…</title><style>' +
+            '<title>Preparing document…</title><style>' +
             'html,body{height:100%;margin:0;}' +
             'body{display:flex;align-items:center;justify-content:center;background:' + bg + ';color:' + fg + ';' +
             'font-family:ui-rounded,"Nunito","Trebuchet MS",system-ui,sans-serif;}' +
-            '.box{text-align:center;}' +
+            '.box{text-align:center;padding:1rem;}' +
             '.spinner{width:46px;height:46px;margin:0 auto 1.1rem;border-radius:50%;border:4px solid ' + track + ';' +
             'border-top-color:' + brand + ';animation:spin .8s linear infinite;}' +
             '@keyframes spin{to{transform:rotate(360deg);}}' +
             'p{margin:0;font-size:.95rem;font-weight:600;color:' + muted + ';}' +
             '</style></head><body><div class="box"><div class="spinner"></div>' +
-            '<p id="docPrintMsg">Opening document…</p></div><script>' +
-            'var m=["Opening document…","Generating official copy…","Converting to PDF…","Almost ready…"],i=0;' +
-            'setInterval(function(){i=(i+1)%m.length;var e=document.getElementById("docPrintMsg");if(e){e.textContent=m[i];}},1600);' +
-            '<' + '/script></body></html>'
+            '<p>Preparing official document…</p></div></body></html>'
         );
         win.document.close();
 
         return true;
     }
+
+
+    /* =========================================================
+       DOCUMENT PROCESSING FORMS
+       Follow Laravel redirects in the background so the browser
+       opens the final page directly instead of showing Laravel's
+       temporary "Redirecting to..." response page.
+       ========================================================= */
+    document.addEventListener('submit', async function (event) {
+        const form = event.target;
+
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!form.classList.contains('js-document-process-form')) return;
+
+        event.preventDefault();
+
+        if (form.dataset.processing === '1') return;
+
+        form.dataset.processing = '1';
+
+        const submitButtons = Array.from(
+            form.querySelectorAll('button[type="submit"], button:not([type])')
+        );
+
+        submitButtons.forEach(function (button) {
+            button.disabled = true;
+            button.dataset.originalHtml = button.innerHTML;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing…';
+        });
+
+        const opensPrintWindow = form.getAttribute('target') === 'docPrintWindow';
+        let printWindow = opensPrintWindow ? window.docPrintWindowRef : null;
+
+        /*
+         * If the print popup was blocked, preserve normal browser
+         * form submission as a fallback.
+         */
+        if (opensPrintWindow && (!printWindow || printWindow.closed)) {
+            form.dataset.processing = '0';
+            HTMLFormElement.prototype.submit.call(form);
+            return;
+        }
+
+        try {
+            const response = await fetch(form.action, {
+                method: (form.method || 'POST').toUpperCase(),
+                body: new FormData(form),
+                credentials: 'same-origin',
+                redirect: 'follow',
+                headers: {
+                    'Accept': 'text/html',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            /*
+             * Laravel redirects are followed by fetch automatically.
+             * Navigate directly to the final URL, not the temporary
+             * redirect response.
+             */
+            if (response.redirected) {
+                if (opensPrintWindow) {
+                    if (printWindow && !printWindow.closed) {
+                        printWindow.location.replace(response.url);
+                    }
+                } else {
+                    window.location.replace(response.url);
+                }
+
+                return;
+            }
+
+            const html = await response.text();
+
+            if (!response.ok) {
+                throw new Error(
+                    'The server returned HTTP ' + response.status +
+                    '. Please reload the page and try again.'
+                );
+            }
+
+            /*
+             * Print action returns the printable Blade view directly.
+             * Load that HTML into the already-open print window.
+             */
+            if (opensPrintWindow) {
+                if (!printWindow || printWindow.closed) {
+                    throw new Error('The document preview window was closed.');
+                }
+
+                printWindow.document.open();
+                printWindow.document.write(html);
+                printWindow.document.close();
+
+                return;
+            }
+
+            /*
+             * Fallback for a successful non-redirect HTML response.
+             */
+            document.open();
+            document.write(html);
+            document.close();
+
+        } catch (error) {
+            console.error('Document processing failed:', error);
+
+            if (opensPrintWindow && printWindow && !printWindow.closed) {
+                printWindow.close();
+            }
+
+            form.dataset.processing = '0';
+
+            submitButtons.forEach(function (button) {
+                button.disabled = false;
+
+                if (button.dataset.originalHtml !== undefined) {
+                    button.innerHTML = button.dataset.originalHtml;
+                    delete button.dataset.originalHtml;
+                }
+            });
+
+            alert(
+                error && error.message
+                    ? error.message
+                    : 'Unable to process this document. Please try again.'
+            );
+        }
+    });
 </script>
 @endpush
