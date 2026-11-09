@@ -6,6 +6,7 @@ use App\Models\DocumentRequest;
 use App\Models\DocumentTemplate;
 use App\Models\Resident;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use ZipArchive;
 use DOMDocument;
@@ -33,15 +34,31 @@ class OfficialDocumentTemplateService
             );
         }
 
-        $templatePath = storage_path(
-            'app/private/' . ltrim($template->file_path, '/\\')
-        );
+       $templateStoragePath = ltrim(
+    str_replace('\\', '/', $template->file_path),
+    '/'
+);
 
-        if (! is_file($templatePath)) {
-            throw new RuntimeException(
-                'The registered official document template file could not be found.'
-            );
-        }
+try {
+    $templateContents = Storage::disk('s3')->get(
+        $templateStoragePath
+    );
+} catch (\Throwable $exception) {
+    throw new RuntimeException(
+        'The registered official document template could not be retrieved from storage.',
+        0,
+        $exception
+    );
+}
+
+if (
+    ! is_string($templateContents) ||
+    $templateContents === ''
+) {
+    throw new RuntimeException(
+        'The registered official document template file is empty or unavailable.'
+    );
+}
 
         $document->loadMissing('resident');
 
@@ -79,11 +96,19 @@ class OfficialDocumentTemplateService
             DIRECTORY_SEPARATOR .
             $fileName;
 
-        if (! copy($templatePath, $outputPath)) {
-            throw new RuntimeException(
-                'The official document template could not be copied.'
-            );
-        }
+       $writtenBytes = file_put_contents(
+    $outputPath,
+    $templateContents,
+    LOCK_EX
+);
+
+unset($templateContents);
+
+if ($writtenBytes === false || $writtenBytes === 0) {
+    throw new RuntimeException(
+        'The official document template could not be written to the generated-document directory.'
+    );
+}
 
         $values = $this->buildValues(
             $document,
