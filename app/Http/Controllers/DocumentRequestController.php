@@ -17,7 +17,6 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DocumentRequestController extends Controller
 {
@@ -42,7 +41,7 @@ class DocumentRequestController extends Controller
     }
 
     /**
-     * Production uses DOCX downloads.
+     * Production uses browser-rendered DOCX.
      * Local development retains the existing PDF workflow.
      */
     private function usesDocxOutput(): bool
@@ -130,17 +129,6 @@ class DocumentRequestController extends Controller
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Active Respondent Cases
-        |--------------------------------------------------------------------------
-        |
-        | Only subject_resident_id is checked.
-        | Complainants are not restricted merely for filing a complaint.
-        | Archived unresolved cases remain restrictive.
-        |
-        */
 
         $activeRespondentCasesByResident = ReportComplaint::query()
             ->whereIn(
@@ -265,111 +253,92 @@ class DocumentRequestController extends Controller
                 'required',
                 'exists:residents,id',
             ],
-
             'document_type' => [
                 'required',
                 Rule::in(self::documentTypes()),
             ],
-
             'purpose' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'remarks' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'document_details' => [
                 'nullable',
                 'array',
             ],
-
             'document_details.ctc_number' => [
                 'nullable',
                 'string',
                 'max:50',
             ],
-
             'document_details.birthplace' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'document_details.father_name' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'document_details.mother_name' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'document_details.permit_to_cut_no' => [
                 'nullable',
                 'string',
                 'max:100',
             ],
-
             'document_details.permit_to_cut_date' => [
                 'nullable',
                 'date',
             ],
-
             'document_details.permit_issued_by' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
-
             'document_details.tree_count' => [
                 'nullable',
                 'integer',
                 'min:1',
             ],
-
             'document_details.tree_type' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'document_details.location' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'document_details.location_description' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'document_details.tree_owner' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'document_details.cutter_name' => [
                 'nullable',
                 'string',
                 'max:1000',
             ],
-
             'document_details.child_resident_ids' => [
                 'nullable',
                 'array',
             ],
-
             'document_details.child_resident_ids.*' => [
                 'required',
                 'string',
@@ -403,7 +372,7 @@ class DocumentRequestController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | RESPONDENT ACTIVE CASE RESTRICTION
+        | Respondent Active Case Restriction
         |--------------------------------------------------------------------------
         */
 
@@ -788,12 +757,6 @@ class DocumentRequestController extends Controller
             'generated_pdf_path' => null,
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Audit Trail
-        |--------------------------------------------------------------------------
-        */
-
         $auditLog->log(
             action: 'Created',
             module: 'Barangay Documents',
@@ -845,7 +808,7 @@ class DocumentRequestController extends Controller
         DocumentRequest $document,
         OfficialDocumentTemplateService $templateService,
         DocumentConversionService $conversionService
-    ): View|RedirectResponse|BinaryFileResponse {
+    ): View|RedirectResponse {
         $user = $request->user();
 
         if (! $user || ! $user->canProcessDocuments()) {
@@ -874,6 +837,12 @@ class DocumentRequestController extends Controller
                     $document,
                     $templateService
                 );
+
+                return $this->renderGeneratedDocx(
+                    $document,
+                    $generatedDocxPath,
+                    'preview'
+                );
             } catch (RuntimeException $exception) {
                 return redirect()
                     ->route('documents.show', $document)
@@ -881,11 +850,6 @@ class DocumentRequestController extends Controller
                         'workflow' => $exception->getMessage(),
                     ]);
             }
-
-            return $this->downloadGeneratedDocx(
-                $document,
-                $generatedDocxPath
-            );
         }
 
         try {
@@ -932,7 +896,7 @@ class DocumentRequestController extends Controller
         AuditLogService $auditLog,
         OfficialDocumentTemplateService $templateService,
         DocumentConversionService $conversionService
-    ): RedirectResponse|View|BinaryFileResponse {
+    ): RedirectResponse|View {
         $user = $request->user();
 
         if (! $user || ! $user->canProcessDocuments()) {
@@ -951,7 +915,6 @@ class DocumentRequestController extends Controller
                     'decline_third_party',
                 ]),
             ],
-
             'decline_reason' => [
                 'nullable',
                 'string',
@@ -1046,6 +1009,7 @@ class DocumentRequestController extends Controller
 
         $generatedPdfPath = null;
         $generatedDocxPath = null;
+        $generatedDocxView = null;
 
         if ($validated['action'] === 'print_document') {
             if ($this->usesDocxOutput()) {
@@ -1068,6 +1032,19 @@ class DocumentRequestController extends Controller
                     return back()->withErrors([
                         'workflow' =>
                             'The official DOCX document was not generated successfully. The document was not marked as printed.',
+                    ]);
+                }
+
+                try {
+                    // Prepare the preview before changing the workflow status.
+                    $generatedDocxView = $this->renderGeneratedDocx(
+                        $document,
+                        $generatedDocxPath,
+                        'print'
+                    );
+                } catch (RuntimeException $exception) {
+                    return back()->withErrors([
+                        'workflow' => $exception->getMessage(),
                     ]);
                 }
             } else {
@@ -1171,10 +1148,7 @@ class DocumentRequestController extends Controller
 
         if ($validated['action'] === 'print_document') {
             if ($this->usesDocxOutput()) {
-                return $this->downloadGeneratedDocx(
-                    $document,
-                    $generatedDocxPath
-                );
+                return $generatedDocxView;
             }
 
             return view(
@@ -1204,7 +1178,7 @@ class DocumentRequestController extends Controller
         AuditLogService $auditLog,
         OfficialDocumentTemplateService $templateService,
         DocumentConversionService $conversionService
-    ): View|RedirectResponse|BinaryFileResponse {
+    ): View|RedirectResponse {
         $user = $request->user();
 
         if (! $user || ! $user->canProcessDocuments()) {
@@ -1229,6 +1203,7 @@ class DocumentRequestController extends Controller
 
         $generatedPdfPath = null;
         $generatedDocxPath = null;
+        $generatedDocxView = null;
 
         if ($this->usesDocxOutput()) {
             try {
@@ -1256,12 +1231,35 @@ class DocumentRequestController extends Controller
                             'The official DOCX document could not be generated successfully. The document was not marked as printed.',
                     ]);
             }
+
+            try {
+                // Prepare the preview before updating the print workflow.
+                $generatedDocxView = $this->renderGeneratedDocx(
+                    $document,
+                    $generatedDocxPath,
+                    'print'
+                );
+            } catch (RuntimeException $exception) {
+                return redirect()
+                    ->route('documents.show', $document)
+                    ->withErrors([
+                        'workflow' => $exception->getMessage(),
+                    ]);
+            }
         } else {
-            $generatedPdfPath = $this->getOrGeneratePdf(
-                $document,
-                $templateService,
-                $conversionService
-            );
+            try {
+                $generatedPdfPath = $this->getOrGeneratePdf(
+                    $document,
+                    $templateService,
+                    $conversionService
+                );
+            } catch (RuntimeException $exception) {
+                return redirect()
+                    ->route('documents.show', $document)
+                    ->withErrors([
+                        'workflow' => $exception->getMessage(),
+                    ]);
+            }
 
             if (! $generatedPdfPath || ! is_file($generatedPdfPath)) {
                 return redirect()
@@ -1312,10 +1310,7 @@ class DocumentRequestController extends Controller
         }
 
         if ($this->usesDocxOutput()) {
-            return $this->downloadGeneratedDocx(
-                $document,
-                $generatedDocxPath
-            );
+            return $generatedDocxView;
         }
 
         return view(
@@ -1324,6 +1319,53 @@ class DocumentRequestController extends Controller
                 'document' => $document,
                 'pdfData' => base64_encode(file_get_contents($generatedPdfPath)),
                 'mode' => 'print',
+            ]
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Generated DOCX Preview Helper
+    |--------------------------------------------------------------------------
+    */
+
+    private function renderGeneratedDocx(
+        DocumentRequest $document,
+        string $generatedDocxPath,
+        string $mode
+    ): View {
+        if (
+            ! is_file($generatedDocxPath) ||
+            filesize($generatedDocxPath) <= 0
+        ) {
+            throw new RuntimeException(
+                'The generated DOCX document is missing or empty.'
+            );
+        }
+
+        $docxContents = file_get_contents($generatedDocxPath);
+
+        if ($docxContents === false || $docxContents === '') {
+            throw new RuntimeException(
+                'The generated DOCX document could not be read for browser preview.'
+            );
+        }
+
+        $baseName = Str::slug(
+            $document->document_type . '-' . $document->request_code
+        );
+
+        if ($baseName === '') {
+            $baseName = 'official-document';
+        }
+
+        return view(
+            'documents.print',
+            [
+                'document' => $document,
+                'docxData' => base64_encode($docxContents),
+                'docxFileName' => $baseName . '.docx',
+                'mode' => $mode,
             ]
         );
     }
@@ -1375,41 +1417,6 @@ class DocumentRequestController extends Controller
                 'The official DOCX document could not be generated. Please try again.'
             );
         }
-    }
-
-    /**
-     * Return the generated DOCX as a browser download.
-     */
-    private function downloadGeneratedDocx(
-        DocumentRequest $document,
-        string $generatedDocxPath
-    ): BinaryFileResponse {
-        if (
-            ! is_file($generatedDocxPath) ||
-            filesize($generatedDocxPath) <= 0
-        ) {
-            throw new RuntimeException(
-                'The generated DOCX document is no longer available.'
-            );
-        }
-
-        $baseName = Str::slug(
-            $document->document_type . '-' . $document->request_code
-        );
-
-        if ($baseName === '') {
-            $baseName = 'official-document';
-        }
-
-        return response()->download(
-            $generatedDocxPath,
-            $baseName . '.docx',
-            [
-                'Content-Type' =>
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'X-Content-Type-Options' => 'nosniff',
-            ]
-        );
     }
 
     /*
