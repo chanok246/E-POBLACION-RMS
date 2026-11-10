@@ -58,25 +58,11 @@ RUN composer install \
 # Copy application source.
 COPY . .
 
-# Prepare Laravel writable directories and clear/cache configuration.
-RUN mkdir -p \
-        storage/app/private \
-        storage/app/public \
-        storage/framework/cache/data \
-        storage/framework/sessions \
-        storage/framework/views \
-        storage/logs \
-        bootstrap/cache \
-    && composer dump-autoload \
-        --no-dev \
-        --optimize \
-        --no-interaction \
-    && php artisan config:clear \
+# Gumawa ng database directory at blangkong file para sa SQLite build checks
+RUN mkdir -p database && touch database/database.sqlite
+
+# Mga Artisan at Cache commands
+RUN php artisan config:clear \
     && php artisan cache:clear \
     && php artisan config:cache \
-    && php artisan route:cache \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
-
-# Render supplies PORT.
-CMD ["bash", "-lc", "set -e; PORT=\"${PORT:-10000}\"; sed -ri \"s/^Listen 80$/Listen ${PORT}/\" /etc/apache2/ports.conf; sed -ri \"s#<VirtualHost \\*:80>#<VirtualHost *:${PORT}>#\" /etc/apache2/sites-available/000-default.conf; apache2-foreground"]
+    && php artisan route:cache
