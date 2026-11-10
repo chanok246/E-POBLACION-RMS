@@ -28,8 +28,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         xml \
         zip \
     && a2enmod rewrite headers \
-    && sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
-        /etc/apache2/sites-available/000-default.conf \
+    && printf '%s\n' \
+        '<VirtualHost *:80>' \
+        '    DocumentRoot /var/www/html/public' \
+        '    <Directory /var/www/html/public>' \
+        '        AllowOverride All' \
+        '        Require all granted' \
+        '    </Directory>' \
+        '</VirtualHost>' \
+        > /etc/apache2/sites-available/000-default.conf \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -49,10 +56,9 @@ RUN composer install \
     --no-scripts
 
 # Copy application source.
-# .dockerignore must exclude .env, local databases, resident records and uploads.
 COPY . .
 
-# Prepare Laravel writable directories before package discovery.
+# Prepare Laravel writable directories and clear/cache configuration.
 RUN mkdir -p \
         storage/app/private \
         storage/app/public \
@@ -65,8 +71,12 @@ RUN mkdir -p \
         --no-dev \
         --optimize \
         --no-interaction \
+    && php artisan config:clear \
+    && php artisan cache:clear \
+    && php artisan config:cache \
+    && php artisan route:cache \
     && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R ug+rwX storage bootstrap/cache
+    && chmod -R 775 storage bootstrap/cache
 
-# Render supplies PORT. Configure Apache to listen on that port.
-CMD ["bash", "-lc", "set -e; PORT=\"${PORT:-10000}\"; sed -ri \"s/^Listen 80$/Listen ${PORT}/\" /etc/apache2/ports.conf; sed -ri \"s#<VirtualHost [^>]+>#<VirtualHost *:${PORT}>#\" /etc/apache2/sites-available/000-default.conf; apache2-foreground"]
+# Render supplies PORT.
+CMD ["bash", "-lc", "set -e; PORT=\"${PORT:-10000}\"; sed -ri \"s/^Listen 80$/Listen ${PORT}/\" /etc/apache2/ports.conf; sed -ri \"s#<VirtualHost \\*:80>#<VirtualHost *:${PORT}>#\" /etc/apache2/sites-available/000-default.conf; apache2-foreground"]
