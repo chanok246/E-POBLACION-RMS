@@ -742,7 +742,7 @@
                     @endif
 
                     @if ($emailRecoveryStage === 'verify')
-                        <form method="POST" action="{{ route('password-recovery.reset') }}" id="emailPasswordRecoveryForm">
+                        <form method="POST" action="{{ route('password-recovery.reset', [], false) }}" id="emailPasswordRecoveryForm">
                             @csrf
 
                             <div class="form-group">
@@ -825,7 +825,7 @@
                             </button>
                         </form>
 
-                        <form method="POST" action="{{ route('password-recovery.send-code') }}" style="margin-top:12px;">
+                        <form method="POST" action="{{ route('password-recovery.send-code', [], false) }}" style="margin-top:12px;">
                             @csrf
                             <input type="hidden" name="email" value="{{ $emailRecoveryAddress }}">
                             <button type="submit" class="assist-link">
@@ -833,7 +833,7 @@
                             </button>
                         </form>
                     @else
-                        <form method="POST" action="{{ route('password-recovery.send-code') }}" id="emailPasswordRecoveryForm">
+                        <form method="POST" action="{{ route('password-recovery.send-code', [], false) }}" id="emailPasswordRecoveryForm">
                             @csrf
 
                             <div class="form-group">
@@ -876,7 +876,7 @@
             @endif
 
             {{-- Normal login form remains in the page so existing login scripts stay intact. --}}
-            <form method="POST" action="{{ route('login.authenticate') }}" id="loginForm" novalidate
+            <form method="POST" action="{{ route('login.authenticate', [], false) }}" id="loginForm" novalidate
                   class="{{ ($showEmailPasswordRecoveryForm ?? false) ? 'recovery-mode-hidden' : '' }}">
                 @csrf
 
@@ -1395,7 +1395,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var kioskMinimizeButton = $('minimizeAttendanceKiosk');
     var kioskCloseButton = $('closeAttendanceKiosk');
     var previousKioskFocus = null;
-    var kioskUrl = @json(route('attendance.kiosk'));
+    var kioskUrl = @json(route('attendance.kiosk', [], false));
 
     function openAttendanceKiosk() {
         if (!kioskOverlay || !kioskFrame) return;
